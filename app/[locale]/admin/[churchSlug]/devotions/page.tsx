@@ -5,6 +5,7 @@ import type { ContentItem } from "@/app/lib/demo/types";
 import { createT, hasLocale, localize } from "@/app/lib/i18n";
 import { formatDateKey } from "@/app/lib/utils";
 import { AdminShell } from "@/app/components/admin/AdminShell";
+import { DeleteDevotionButton } from "@/app/components/admin/DeleteDevotionButton";
 import {
   Badge,
   ButtonLink,
@@ -139,9 +140,17 @@ export default async function AdminDevotionsPage({
                             {prayedById.get(dev.id) ?? 0}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 text-right">
-                            <ButtonLink href={editHref(dev.id)} variant="secondary" size="sm">
-                              {t("common.edit")}
-                            </ButtonLink>
+                            <div className="inline-flex items-center gap-2">
+                              <ButtonLink href={editHref(dev.id)} variant="secondary" size="sm">
+                                {t("common.edit")}
+                              </ButtonLink>
+                              <DeleteDevotionButton
+                                churchId={church.id}
+                                churchSlug={church.slug}
+                                contentId={dev.id}
+                                label={`${dateLabel(dev)} — ${localize(dev.title, locale as "ja" | "en", church.defaultLocale) || "—"}`}
+                              />
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -181,10 +190,17 @@ export default async function AdminDevotionsPage({
                       </span>
                     </div>
 
-                    <div>
+                    <div className="grid grid-cols-2 gap-2">
                       <ButtonLink href={editHref(dev.id)} variant="secondary" size="sm" fullWidth>
                         {t("common.edit")}
                       </ButtonLink>
+                      <DeleteDevotionButton
+                        churchId={church.id}
+                        churchSlug={church.slug}
+                        contentId={dev.id}
+                        label={`${dateLabel(dev)} — ${localize(dev.title, locale as "ja" | "en", church.defaultLocale) || "—"}`}
+                        fullWidth
+                      />
                     </div>
                   </CardBody>
                 </Card>

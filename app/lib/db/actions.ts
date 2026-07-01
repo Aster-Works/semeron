@@ -331,3 +331,43 @@ export async function updateChurchSettings(input: {
   revalidatePath(`/${input.locale}/admin/${input.churchSlug}/settings`);
   return { ok: true };
 }
+
+/* ---------- デボーション削除（配信済み・アーカイブの整理用）---------- */
+export async function deleteDevotion(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  contentId: string;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const membershipId = await myMembershipId(supabase, input.churchId);
+  if (!membershipId) return { ok: false, error: "not a member" };
+
+  // RLS(content_delete)=作者本人 or 教会管理者。type/church を明示して誤削除を防ぐ。
+  // reactions / completion_logs / moderation_reviews は FK cascade で一緒に消える。
+  const { data, error } = await supabase
+    .from("content_items")
+    .delete()
+    .eq("id", input.contentId)
+    .eq("church_id", input.churchId)
+    .eq("type", "devotion")
+    .select("id, status, devotion_date");
+  if (error) return { ok: false, error: error.message };
+  if (!data || data.length === 0) return { ok: false, error: "not found or not permitted" };
+
+  // 監査: 削除は不可逆なので記録する（本文は残さない）。失敗は握り潰さずログへ。
+  const { error: auditError } = await supabase.from("audit_logs").insert({
+    church_id: input.churchId,
+    actor_membership_id: membershipId,
+    action: "devotion.deleted",
+    target_type: "content_item",
+    target_id: input.contentId,
+    metadata: { status: data[0].status, devotion_date: data[0].devotion_date },
+  });
+  if (auditError) {
+    console.error(`[devotions] audit log insert failed for delete: ${auditError.message}`);
+  }
+
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/devotions`);
+  return { ok: true };
+}

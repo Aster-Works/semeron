@@ -256,6 +256,17 @@ export const messages = {
   "devotions.localeBoth": { ja: "日英", en: "JA / EN" },
   "devotions.localeJaOnly": { ja: "日本語のみ", en: "JA only" },
   "devotions.localeEnOnly": { ja: "英語のみ", en: "EN only" },
+  "devotions.delete": { ja: "削除", en: "Delete" },
+  "devotions.deleteTitle": { ja: "デボーションを削除しますか？", en: "Delete this devotion?" },
+  "devotions.deleteBody": {
+    ja: "この操作は元に戻せません。会員の既読・祈りの記録と応答へのリアクションも一緒に削除されます。",
+    en: "This cannot be undone. Members' read/prayed records and reactions will also be deleted.",
+  },
+  "devotions.deleteConfirm": { ja: "削除する", en: "Delete" },
+  "devotions.deleteError": {
+    ja: "削除できませんでした。時間をおいて再度お試しください。",
+    en: "Could not delete. Please try again in a moment.",
+  },
 
   // --- editor ---
   "editor.newTitle": { ja: "デボーションを作成", en: "New devotion" },
