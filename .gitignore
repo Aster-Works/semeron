@@ -41,3 +41,4 @@ next-env.d.ts
 
 # supabase CLI link state
 supabase/.temp/
+supabase/.env

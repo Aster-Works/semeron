@@ -245,13 +245,14 @@ app/components/admin/PastorAssistSettingsEditor.tsx  設定トグル（owner/pas
 | Supabase | プロジェクト `Semeron`（ref `nlbowtgpchzkmzyligic`・東京）。migrations 7本適用済み・seed なし（クリーン） |
 | cron | `/api/notifications/dispatch` を毎日 21:30 UTC（=朝6:30 JST）。Hobby は daily 限定（10分毎にするには Pro） |
 | 実鍵 | VAPID（本番用に新規生成）+ `CRON_SECRET` 設定済み。`ANTHROPIC_API_KEY` / `RESEND_API_KEY` は未設定（機能は自動オフ、後から Vercel env に追加可） |
-| 認証 | **ID+パスワードのみ**（新規登録は即時・メール確認なし=autoconfirm。マジックリンク廃止でメール送信への依存なし）。教会所属は招待コードがゲート |
+| 認証 | **ID+パスワード**（新規登録は即時・メール確認なし=autoconfirm。マジックリンク廃止でメール送信への依存なし）＋ **Google ログイン**（`/auth/v1/settings` を見てプロバイダ有効時のみボタン表示。有効化は Supabase 側で Google クレデンシャル設定→自動で出現）。教会所属は招待コードがゲート |
 
 本番検証済み: ルート→/ja、ログイン画面、PWA manifest / sw.js 配信、cron（未認証401/認証200・pushConfigured:true）、**auth+RPC+RLSのE2E**（一時ユーザーでログイン→教会作成→RLSで自教会のみ→anonのRPC実行は401→掃除済み）。Supabase security advisor は ERROR 0（migration 0007 で anon/public の RPC 実行権を revoke。残る WARN 3件は「認証ユーザーが実行可能」＝設計どおりの意図的な挙動）。
 
 運用フロー: `git push origin main` → Vercel 自動デプロイ。DB変更は `supabase/migrations/` に追加 → `npx supabase db push`。
 
 残タスク（任意）:
+- **Google ログイン有効化** → Google Cloud Console で OAuth クライアント（Web）を作成し、承認済みリダイレクト URI に `https://nlbowtgpchzkmzyligic.supabase.co/auth/v1/callback` を登録 → Supabase の Auth > Providers > Google に Client ID / Secret を設定。設定した瞬間、ログイン画面に「Google で続ける」が自動で現れる（コード変更・再デプロイ不要）
 - Pastor Assist を本番で使う → Vercel env に `ANTHROPIC_API_KEY` を追加して再デプロイ
 - メール通知 → `RESEND_API_KEY` + `NOTIFICATIONS_FROM_EMAIL`
 - 独自ドメイン / Vercel Pro（10分毎cron・private repo連携）
