@@ -532,11 +532,10 @@ export const messages = {
   // --- login / join ---
   "login.title": { ja: "Semeron にサインイン", en: "Sign in to Semeron" },
   "login.subtitle": {
-    ja: "メールにマジックリンクを送ります。パスワードは不要です。",
-    en: "We'll email you a magic link. No password needed.",
+    ja: "メールアドレスとパスワードでサインインします。",
+    en: "Sign in with your email and password.",
   },
   "login.email": { ja: "メールアドレス", en: "Email address" },
-  "login.magicLink": { ja: "マジックリンクを送る", en: "Send magic link" },
   "login.demoNote": {
     ja: "これはデモです。下から視点を選んで、実際の画面を体験できます。",
     en: "This is a demo. Choose a view below to explore the real screens.",

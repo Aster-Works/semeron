@@ -30,14 +30,16 @@ export async function signInWithPassword(email: string, password: string): Promi
   return { ok: true };
 }
 
-export async function signInWithMagicLink(email: string): Promise<ActionResult> {
+/**
+ * パスワードでの新規登録（マジックリンクは廃止済み）。
+ * autoconfirm 前提で即セッションが張られる。教会への所属は招待コードが実際のゲート。
+ */
+export async function signUpWithPassword(email: string, password: string): Promise<ActionResult> {
   const supabase = await createServerSupabase();
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3070";
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: `${appUrl}/auth/callback` },
-  });
+  const { data, error } = await supabase.auth.signUp({ email, password });
   if (error) return { ok: false, error: error.message };
+  // メール確認が必須の環境ではセッションが張られない。その場合は明示的に失敗を返す。
+  if (!data.session) return { ok: false, error: "confirmation required" };
   return { ok: true };
 }
 
