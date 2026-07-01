@@ -530,9 +530,9 @@ export const messages = {
   },
 
   // --- login / join ---
-  "login.title": { ja: "Semeron にサインイン", en: "Sign in to Semeron" },
+  "login.title": { ja: "Semeron にログイン", en: "Sign in to Semeron" },
   "login.subtitle": {
-    ja: "メールアドレスとパスワードでサインインします。",
+    ja: "メールアドレスとパスワードでログインします。",
     en: "Sign in with your email and password.",
   },
   "login.email": { ja: "メールアドレス", en: "Email address" },

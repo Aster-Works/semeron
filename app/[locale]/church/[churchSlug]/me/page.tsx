@@ -96,7 +96,7 @@ export default async function MePage({
 
           <Callout tone="neutral" icon={Info}>
             {locale === "ja"
-              ? "これはあなたの実際のアカウントです。サインイン中の情報が表示されています。"
+              ? "これはあなたの実際のアカウントです。ログイン中の情報が表示されています。"
               : "This is your real, signed-in account. The details above reflect your live membership."}
           </Callout>
         </div>

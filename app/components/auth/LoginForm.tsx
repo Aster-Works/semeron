@@ -82,7 +82,7 @@ export function LoginForm({ locale }: { locale: Locale }) {
           setError(
             res.error.includes("already")
               ? ja
-                ? "このメールアドレスは登録済みです。サインインしてください。"
+                ? "このメールアドレスは登録済みです。ログインしてください。"
                 : "This email is already registered. Please sign in."
               : ja
                 ? "登録できませんでした。パスワードは8文字以上にしてください。"
@@ -111,7 +111,7 @@ export function LoginForm({ locale }: { locale: Locale }) {
               )}
             >
               {m === "signin"
-                ? ja ? "サインイン" : "Sign in"
+                ? ja ? "ログイン" : "Sign in"
                 : ja ? "新規登録" : "Create account"}
             </button>
           ))}
@@ -145,7 +145,7 @@ export function LoginForm({ locale }: { locale: Locale }) {
             {pending
               ? ja ? "処理中…" : "Working…"
               : mode === "signin"
-                ? ja ? "サインイン" : "Sign in"
+                ? ja ? "ログイン" : "Sign in"
                 : ja ? "アカウントを作成" : "Create account"}
           </Button>
         </form>

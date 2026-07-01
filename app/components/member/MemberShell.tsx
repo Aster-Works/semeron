@@ -8,7 +8,7 @@ import { MemberTabBar, type MemberTab } from "./MemberTabBar";
 
 /**
  * 会員体験の外殻（スマホファースト・中央 max-w-2xl 一列）。
- * DemoBar は廃止し、実ユーザーのヘッダ（教会名 + 設定/サインアウト）に置き換え。
+ * DemoBar は廃止し、実ユーザーのヘッダ（教会名 + 設定/ログアウト）に置き換え。
  */
 export async function MemberShell({
   locale,

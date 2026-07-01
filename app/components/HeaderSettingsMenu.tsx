@@ -128,7 +128,7 @@ export function HeaderSettingsMenu({
               className="flex w-full items-center gap-2.5 rounded-xl px-2 py-2.5 text-sm font-medium text-ink-soft hover:bg-mist"
             >
               <LogOut className="h-4 w-4 text-muted" aria-hidden />
-              {locale === "ja" ? "サインアウト" : "Sign out"}
+              {locale === "ja" ? "ログアウト" : "Sign out"}
             </button>
           </div>
         </div>
