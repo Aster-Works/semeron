@@ -56,9 +56,14 @@ export function ReflectionComposer({
           rows={3}
         />
         {error ? <Callout tone="rose">{error}</Callout> : null}
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-muted text-balance-safe">{t("today.reflectionNote")}</p>
-          <Button size="sm" disabled={value.trim().length === 0 || pending} onClick={submit}>
+          <Button
+            size="sm"
+            className="w-full shrink-0 whitespace-nowrap sm:w-auto"
+            disabled={value.trim().length === 0 || pending}
+            onClick={submit}
+          >
             {t("today.reflectionPost")}
           </Button>
         </div>
