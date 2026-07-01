@@ -152,12 +152,12 @@ RLS の核心:
 
 ## Phase 3 — 実 Supabase 接続（実認証・実データ）
 
-デモデータ層を実 Supabase に置き換え。`@supabase/ssr` によるメール+パスワード / マジックリンク認証、教会作成・招待コード参加（RPC）、デボーション CRUD、祈祷課題の投稿→承認待ち→承認/却下（監査ログ付き）、Read/Prayed 完了ログ、実データのダッシュボード。DemoBar は廃止し、実ユーザーのヘッダ（教会名＋歯車→設定/サインアウト）に。
+デモデータ層を実 Supabase に置き換え。`@supabase/ssr` による**メール+パスワード認証**（サインイン/新規登録。マジックリンクは当初実装したが廃止済み・パスワードのみ）、教会作成・招待コード参加（RPC）、デボーション CRUD、祈祷課題の投稿→承認待ち→承認/却下（監査ログ付き）、Read/Prayed 完了ログ、実データのダッシュボード。DemoBar は廃止し、実ユーザーのヘッダ（教会名＋歯車→設定/サインアウト）に。
 
 ```
 app/lib/supabase/   browser / server / admin(service role) client + middleware
 app/lib/db/         map(行→ドメイン) / context(requireChurchContext) / queries / actions(server actions)
-app/auth/callback/  マジックリンク交換
+
 supabase/migrations/…_rpcs.sql  create_church / join_church / moderate_prayer
 ```
 
@@ -245,7 +245,7 @@ app/components/admin/PastorAssistSettingsEditor.tsx  設定トグル（owner/pas
 | Supabase | プロジェクト `Semeron`（ref `nlbowtgpchzkmzyligic`・東京）。migrations 7本適用済み・seed なし（クリーン） |
 | cron | `/api/notifications/dispatch` を毎日 21:30 UTC（=朝6:30 JST）。Hobby は daily 限定（10分毎にするには Pro） |
 | 実鍵 | VAPID（本番用に新規生成）+ `CRON_SECRET` 設定済み。`ANTHROPIC_API_KEY` / `RESEND_API_KEY` は未設定（機能は自動オフ、後から Vercel env に追加可） |
-| 認証 | Site URL / redirect を本番URLに設定済み。メールはSupabase内蔵送信（レート制限あり・パイロット用） |
+| 認証 | **ID+パスワードのみ**（新規登録は即時・メール確認なし=autoconfirm。マジックリンク廃止でメール送信への依存なし）。教会所属は招待コードがゲート |
 
 本番検証済み: ルート→/ja、ログイン画面、PWA manifest / sw.js 配信、cron（未認証401/認証200・pushConfigured:true）、**auth+RPC+RLSのE2E**（一時ユーザーでログイン→教会作成→RLSで自教会のみ→anonのRPC実行は401→掃除済み）。Supabase security advisor は ERROR 0（migration 0007 で anon/public の RPC 実行権を revoke。残る WARN 3件は「認証ユーザーが実行可能」＝設計どおりの意図的な挙動）。
 
