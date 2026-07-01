@@ -1,0 +1,70 @@
+import { FileUp, HeartHandshake } from "lucide-react";
+import { requireChurchContext } from "@/app/lib/db/context";
+import { getModerationQueue } from "@/app/lib/db/queries";
+import { createT } from "@/app/lib/i18n";
+import { AdminShell } from "@/app/components/admin/AdminShell";
+import { ModerationCard } from "@/app/components/admin/ModerationCard";
+import { ButtonLink, EmptyState, SectionHeading } from "@/app/components/ui";
+
+export default async function PrayerModerationPage({
+  params,
+}: {
+  params: Promise<{ locale: string; churchSlug: string }>;
+}) {
+  const { locale, churchSlug } = await params;
+  const { supabase, viewer } = await requireChurchContext(locale, churchSlug);
+  const church = viewer.church;
+  const t = createT(locale as "ja" | "en");
+
+  const queue = await getModerationQueue(supabase, viewer);
+
+  return (
+    <AdminShell
+      locale={locale as "ja" | "en"}
+      church={church}
+      viewer={viewer}
+      active="prayers"
+      require="moderate"
+    >
+      <div className="space-y-5">
+        <SectionHeading
+          title={t("moderation.title")}
+          description={
+            locale === "ja"
+              ? "承認待ちの祈祷課題です。公開範囲を見直し、投稿者の意図を尊重しながら祈りへつなぎましょう。"
+              : "Prayer requests awaiting review. Revisit the visibility, honor each author's intent, and carry them into prayer."
+          }
+          right={
+            <ButtonLink
+              href={`/${locale}/admin/${church.slug}/prayer-requests/import`}
+              variant="secondary"
+              size="sm"
+            >
+              <FileUp className="h-4 w-4" aria-hidden />
+              {t("import.link")}
+            </ButtonLink>
+          }
+        />
+
+        {queue.length === 0 ? (
+          <EmptyState icon={HeartHandshake} title={t("moderation.empty")} />
+        ) : (
+          <div className="space-y-4">
+            {queue.map((q) => (
+              <ModerationCard
+                key={q.item.id}
+                item={q.item}
+                authorName={q.authorName}
+                churchSlug={church.slug}
+                locale={locale as "ja" | "en"}
+                churchDefaultLocale={church.defaultLocale}
+                assistEnabled={church.pastorAssistEnabled}
+                allowPrayerAi={church.allowPrayerAi}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </AdminShell>
+  );
+}

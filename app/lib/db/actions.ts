@@ -1,0 +1,331 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { createServerSupabase } from "@/app/lib/supabase/server";
+import type { Locale, ReactionType, Visibility } from "@/app/lib/demo/types";
+
+export type ActionResult = { ok: true; data?: unknown } | { ok: false; error: string };
+
+async function myMembershipId(supabase: SupabaseClient, churchId: string): Promise<string | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from("memberships")
+    .select("id")
+    .eq("church_id", churchId)
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
+/* ---------- Auth ---------- */
+export async function signInWithPassword(email: string, password: string): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function signInWithMagicLink(email: string): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3070";
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: `${appUrl}/auth/callback` },
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function signOut(): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  await supabase.auth.signOut();
+  return { ok: true };
+}
+
+/* ---------- Onboarding ---------- */
+export async function createChurch(input: {
+  name: string;
+  slug: string;
+  displayName: string;
+  defaultLocale: Locale;
+  timezone: string;
+  inviteCode?: string;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const { data, error } = await supabase.rpc("create_church", {
+    p_name: { [input.defaultLocale]: input.name },
+    p_slug: input.slug,
+    p_display_name: input.displayName,
+    p_default_locale: input.defaultLocale,
+    p_content_languages: [input.defaultLocale],
+    p_timezone: input.timezone,
+    p_invite_code: input.inviteCode ?? null,
+  });
+  if (error) return { ok: false, error: error.message };
+  const rows = data as { slug?: string } | { slug?: string }[] | null;
+  const slug = Array.isArray(rows) ? rows[0]?.slug : rows?.slug;
+  return { ok: true, data: { slug } };
+}
+
+export async function joinChurch(inviteCode: string, displayName: string): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const { data, error } = await supabase.rpc("join_church", {
+    p_invite_code: inviteCode,
+    p_display_name: displayName,
+  });
+  if (error) return { ok: false, error: error.message };
+  const rows = data as { slug?: string } | { slug?: string }[] | null;
+  const slug = Array.isArray(rows) ? rows[0]?.slug : rows?.slug;
+  return { ok: true, data: { slug } };
+}
+
+/* ---------- Member: completion / reactions / reflection ---------- */
+export async function setCompletion(
+  churchId: string,
+  contentId: string,
+  kind: "read" | "prayed",
+  value: boolean,
+): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const membershipId = await myMembershipId(supabase, churchId);
+  if (!membershipId) return { ok: false, error: "not a member" };
+  const col = kind === "read" ? "completed_read_at" : "completed_prayed_at";
+  const { error } = await supabase.from("completion_logs").upsert(
+    {
+      church_id: churchId,
+      content_item_id: contentId,
+      membership_id: membershipId,
+      [col]: value ? new Date().toISOString() : null,
+    },
+    { onConflict: "content_item_id,membership_id" },
+  );
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function toggleReaction(
+  churchId: string,
+  contentId: string,
+  type: ReactionType,
+): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const membershipId = await myMembershipId(supabase, churchId);
+  if (!membershipId) return { ok: false, error: "not a member" };
+  const { data: existing } = await supabase
+    .from("reactions")
+    .select("id")
+    .eq("content_item_id", contentId)
+    .eq("membership_id", membershipId)
+    .eq("type", type)
+    .maybeSingle();
+  if (existing) {
+    const { error } = await supabase.from("reactions").delete().eq("id", existing.id);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, data: { active: false } };
+  }
+  const { error } = await supabase
+    .from("reactions")
+    .insert({ church_id: churchId, content_item_id: contentId, membership_id: membershipId, type });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, data: { active: true } };
+}
+
+export async function postReflection(
+  churchId: string,
+  churchSlug: string,
+  locale: Locale,
+  body: string,
+): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const membershipId = await myMembershipId(supabase, churchId);
+  if (!membershipId) return { ok: false, error: "not a member" };
+  const { error } = await supabase.from("content_items").insert({
+    church_id: churchId,
+    author_membership_id: membershipId,
+    type: "reflection",
+    status: "published",
+    visibility: "church",
+    title: {},
+    body: { [locale]: body },
+    published_at: new Date().toISOString(),
+  });
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/${locale}/church/${churchSlug}/today`);
+  return { ok: true };
+}
+
+/* ---------- Prayer requests ---------- */
+export async function submitPrayerRequest(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  title: string;
+  body: string;
+  visibility: Visibility;
+  anonymous: boolean;
+  includesThirdParty: boolean;
+  expiresAt?: string | null;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const membershipId = await myMembershipId(supabase, input.churchId);
+  if (!membershipId) return { ok: false, error: "not a member" };
+  const { error } = await supabase.from("content_items").insert({
+    church_id: input.churchId,
+    author_membership_id: membershipId,
+    type: "prayer_request",
+    status: "pending_review",
+    visibility: input.visibility,
+    requested_visibility: input.visibility,
+    title: { [input.locale]: input.title },
+    body: { [input.locale]: input.body },
+    anonymous: input.anonymous,
+    includes_third_party: input.includesThirdParty,
+    expires_at: input.expiresAt || null,
+    prayer_outcome: "open",
+  });
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/${input.locale}/church/${input.churchSlug}/prayers`);
+  return { ok: true };
+}
+
+export async function moderatePrayer(input: {
+  churchSlug: string;
+  locale: Locale;
+  contentId: string;
+  decision: "approved" | "rejected" | "needs_revision";
+  visibility?: Visibility;
+  publicTitle?: string;
+  publicBody?: string;
+  note?: string;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const { error } = await supabase.rpc("moderate_prayer", {
+    p_content: input.contentId,
+    p_decision: input.decision,
+    p_visibility: input.visibility ?? null,
+    p_public_title: input.publicTitle ? { [input.locale]: input.publicTitle } : null,
+    p_public_body: input.publicBody ? { [input.locale]: input.publicBody } : null,
+    p_note: input.note ?? null,
+  });
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/prayer-requests`);
+  return { ok: true };
+}
+
+/* ---------- Devotion CRUD ---------- */
+export async function saveDevotion(input: {
+  id?: string;
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  status: "draft" | "scheduled" | "published";
+  devotionDate?: string | null;
+  scheduledAt?: string | null;
+  visibility: Visibility;
+  scriptureReference?: string;
+  scriptureTranslation?: string;
+  scriptureQuote?: Record<string, string>;
+  title: Record<string, string>;
+  body: Record<string, string>;
+  reflectionQuestion?: Record<string, string>;
+  prayerGuide?: Record<string, string>;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const membershipId = await myMembershipId(supabase, input.churchId);
+  if (!membershipId) return { ok: false, error: "not a member" };
+
+  const row = {
+    church_id: input.churchId,
+    author_membership_id: membershipId,
+    type: "devotion" as const,
+    status: input.status,
+    visibility: input.visibility,
+    devotion_date: input.devotionDate || null,
+    scheduled_at: input.scheduledAt || null,
+    published_at: input.status === "published" ? new Date().toISOString() : null,
+    scripture_reference: input.scriptureReference || null,
+    scripture_translation: input.scriptureTranslation || null,
+    scripture_quote: input.scriptureQuote ?? {},
+    title: input.title,
+    body: input.body,
+    reflection_question: input.reflectionQuestion ?? {},
+    prayer_guide: input.prayerGuide ?? {},
+  };
+
+  const res = input.id
+    ? await supabase.from("content_items").update(row).eq("id", input.id)
+    : await supabase.from("content_items").insert(row);
+  if (res.error) return { ok: false, error: res.error.message };
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/devotions`);
+  return { ok: true };
+}
+
+/* ---------- Web Push 購読（Phase 4）---------- */
+export interface PushSubscriptionInput {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  userAgent?: string;
+}
+
+/**
+ * 端末の Push 購読を保存（RLS が本人=自分の membership を担保）。
+ * 再購読・鍵ローテーションに備え、同一 endpoint は一旦削除してから挿入する。
+ */
+export async function savePushSubscription(
+  churchId: string,
+  sub: PushSubscriptionInput,
+): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const membershipId = await myMembershipId(supabase, churchId);
+  if (!membershipId) return { ok: false, error: "not a member" };
+
+  await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+  const { error } = await supabase.from("push_subscriptions").insert({
+    church_id: churchId,
+    membership_id: membershipId,
+    endpoint: sub.endpoint,
+    p256dh: sub.p256dh,
+    auth: sub.auth,
+    user_agent: sub.userAgent ?? null,
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function deletePushSubscription(endpoint: string): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const { error } = await supabase.from("push_subscriptions").delete().eq("endpoint", endpoint);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+/* ---------- 教会設定（Pastor Assist トグルなど。owner/pastor 限定=RLS）---------- */
+export async function updateChurchSettings(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  pastorAssistEnabled?: boolean;
+  allowPrayerAi?: boolean;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const patch: Record<string, boolean> = {};
+  if (input.pastorAssistEnabled !== undefined) patch.pastor_assist_enabled = input.pastorAssistEnabled;
+  if (input.allowPrayerAi !== undefined) patch.allow_prayer_ai = input.allowPrayerAi;
+  if (Object.keys(patch).length === 0) return { ok: true };
+  // RLS(churches_update) が owner/pastor に限定。非権限者は 0 行更新（エラーにならない）。
+  const { data, error } = await supabase
+    .from("churches")
+    .update(patch)
+    .eq("id", input.churchId)
+    .select("id");
+  if (error) return { ok: false, error: error.message };
+  if (!data || data.length === 0) return { ok: false, error: "not permitted" };
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/settings`);
+  return { ok: true };
+}

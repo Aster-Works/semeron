@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Semeron">
+  <rect width="512" height="512" fill="#5F7D6B"/>
+  <g fill="#FAF8F2">
+    <g>
+      <ellipse cx="256" cy="150" rx="30" ry="86"/>
+      <ellipse cx="256" cy="150" rx="30" ry="86" transform="rotate(45 256 256)"/>
+      <ellipse cx="256" cy="150" rx="30" ry="86" transform="rotate(90 256 256)"/>
+      <ellipse cx="256" cy="150" rx="30" ry="86" transform="rotate(135 256 256)"/>
+      <ellipse cx="256" cy="150" rx="30" ry="86" transform="rotate(180 256 256)"/>
+      <ellipse cx="256" cy="150" rx="30" ry="86" transform="rotate(225 256 256)"/>
+      <ellipse cx="256" cy="150" rx="30" ry="86" transform="rotate(270 256 256)"/>
+      <ellipse cx="256" cy="150" rx="30" ry="86" transform="rotate(315 256 256)"/>
+    </g>
+  </g>
+  <circle cx="256" cy="256" r="52" fill="#C89B3C"/>
+</svg>

@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+/* =============================================================
+   Semeron — デザイントークン
+   出典パレット: 05_UI_UX Spec_Aster Daily.md
+     Ink #172026 / Paper #FAF8F2 / Mist #EEF2EF / Sage #7E9A89
+     Cedar #6E5B45 / Gold #C89B3C / Rose #B97972 / Blue Gray #5D7180
+   方針: 静か・清潔・牧会的・信頼できる。祈り／朝／紙／木／光を感じる控えめな配色。
+   - 一色の紫/青に寄せない。装飾グラデーションorbは使わない。
+   - 状態は「色のみ」で表さない（必ずアイコン＋ラベルを併用する）。
+   - 文字色は明背景で WCAG AA(>=4.5:1) を満たす *-ink 変種を用意する。
+   ============================================================= */
+@theme {
+  /* ---- ベース面 ---- */
+  --color-paper: #faf8f2; /* ページ背景（温かいオフホワイト） */
+  --color-surface: #ffffff; /* カード面（紙より少し明るく浮かせる） */
+  --color-mist: #eef2ef; /* 微妙なサーフェス／落ち着いた面 */
+  --color-line: #e5e2d8; /* 紙に馴染む温かいボーダー */
+  --color-line-strong: #d6d2c4;
+
+  /* ---- テキスト ---- */
+  --color-ink: #172026; /* 主要テキスト */
+  --color-ink-soft: #38434b; /* 副見出し */
+  --color-muted: #55636e; /* 副次テキスト（AA on paper） */
+
+  /* ---- Sage（主アクセント：祈り・いのち・落ち着き） ---- */
+  --color-sage: #7e9a89;
+  --color-sage-strong: #5f7d6b; /* ボタン等の面。白文字でAA */
+  --color-sage-ink: #4c6a58; /* 明背景の文字用（AA） */
+  --color-sage-soft: #e9f0ea;
+
+  /* ---- Cedar（木・温かみ・落ち着いた強調） ---- */
+  --color-cedar: #6e5b45;
+  --color-cedar-ink: #5a4834;
+  --color-cedar-soft: #f0e9df;
+
+  /* ---- Gold（光・みことば・注意喚起：使いすぎない） ---- */
+  --color-gold: #c89b3c;
+  --color-gold-ink: #8a6a1f; /* 明背景の文字用（AA） */
+  --color-gold-soft: #f6eedb;
+
+  /* ---- Rose（センシティブ・やさしい注意：赤で煽らない） ---- */
+  --color-rose: #b97972;
+  --color-rose-ink: #96524b; /* 明背景の文字用（AA） */
+  --color-rose-soft: #f6e7e4;
+
+  /* ---- Blue Gray（副次情報・静かなラベル） ---- */
+  --color-slate: #5d7180;
+  --color-slate-ink: #465663; /* 明背景の文字用（AA） */
+  --color-slate-soft: #e9eef1;
+
+  /* ---- フォント（next/font が変数を注入） ---- */
+  --font-sans: var(--font-inter), var(--font-noto), ui-sans-serif, system-ui,
+    -apple-system, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo,
+    sans-serif;
+  --font-serif: "Georgia", "Times New Roman", "Hiragino Mincho ProN",
+    "Yu Mincho", "YuMincho", serif;
+
+  /* ---- 角丸 ---- */
+  --radius-card: 1rem;
+}
+
+/* =============================================================
+   ベーススタイル
+   ============================================================= */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    /* 高齢の会衆も読みやすいよう本文を小さくしすぎない */
+    font-size: 16px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: var(--color-ink);
+    line-height: 1.3;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  /* フォーカスは常に見えるように（アクセシビリティ） */
+  :focus-visible {
+    outline: 2px solid var(--color-sage-strong);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background-color: var(--color-gold-soft);
+    color: var(--color-ink);
+  }
+
+  /* 動きに敏感な人へ配慮 */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* =============================================================
+   ユーティリティ
+   ============================================================= */
+@layer utilities {
+  /* みことば・聖句はセリフで、静かに際立たせる */
+  .font-scripture {
+    font-family: var(--font-serif);
+    font-feature-settings: "palt";
+  }
+
+  /* 静かな縦リズム（祈りに集中できる余白） */
+  .stack-quiet > * + * {
+    margin-top: 1rem;
+  }
+
+  /* モバイルで本文が崩れないための保険（長い祈祷課題・URL等） */
+  .text-balance-safe {
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+  /* iOS のセーフエリア（PWA ホーム画面） */
+  .pb-safe {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+}
