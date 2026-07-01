@@ -49,7 +49,18 @@ export function OnboardingForm({
           defaultLocale: lang,
           timezone: tz,
         });
-        if (!res.ok) { setError(res.error); return; }
+        if (!res.ok) {
+          // slug重複などのDBエラーを平易な文言に変換する
+          const dup = /duplicate|unique|already exists/i.test(res.error);
+          setError(
+            dup
+              ? ja
+                ? "このURL識別子は既に使われています。別の識別子を入力してください（すでに教会を作成済みの場合は、トップページを開くとそのまま入れます）。"
+                : "That URL identifier is already taken. Try another one (if you already created your church, just open the home page)."
+              : res.error,
+          );
+          return;
+        }
         done((res.data as { slug: string }).slug);
       } else {
         const res = await joinChurch(code.trim(), joinName.trim());
