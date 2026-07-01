@@ -234,13 +234,28 @@ app/components/admin/PastorAssistSettingsEditor.tsx  設定トグル（owner/pas
 
 > 実生成には Jimi の実 `ANTHROPIC_API_KEY` が必要。ローカルでは「ゲート・確認・リダクション・監査・graceful 未設定」までを検証済み。
 
-## 次のフェーズ（本番化）
+## 本番環境（2026-07-02 デプロイ済み）
 
-Phase 1〜5（デモ UI → RLS → 実データ → 通知/PWA → Pastor Assist）は実装・検証済み。残るは本番運用の準備:
+**https://semeron-app.vercel.app** で稼働中。
 
-- hosted Supabase プロジェクトへの移行（現状はローカル移行のみ）と Vercel デプロイ（`vercel.json` の cron 込み）。
-- 実鍵の設定（VAPID / Resend / `ANTHROPIC_API_KEY` / `CRON_SECRET`）と実端末での Web Push 配信確認。
-- 招待メール・表示名編集などの磨き込み、パイロット教会での試用。
+| 項目 | 値 |
+|---|---|
+| Vercel | チーム `asterworks` / プロジェクト `semeron`（Hobby） |
+| GitHub | [Aster-Works/semeron](https://github.com/Aster-Works/semeron)（public）→ main への push で自動デプロイ |
+| Supabase | プロジェクト `Semeron`（ref `nlbowtgpchzkmzyligic`・東京）。migrations 7本適用済み・seed なし（クリーン） |
+| cron | `/api/notifications/dispatch` を毎日 21:30 UTC（=朝6:30 JST）。Hobby は daily 限定（10分毎にするには Pro） |
+| 実鍵 | VAPID（本番用に新規生成）+ `CRON_SECRET` 設定済み。`ANTHROPIC_API_KEY` / `RESEND_API_KEY` は未設定（機能は自動オフ、後から Vercel env に追加可） |
+| 認証 | Site URL / redirect を本番URLに設定済み。メールはSupabase内蔵送信（レート制限あり・パイロット用） |
+
+本番検証済み: ルート→/ja、ログイン画面、PWA manifest / sw.js 配信、cron（未認証401/認証200・pushConfigured:true）、**auth+RPC+RLSのE2E**（一時ユーザーでログイン→教会作成→RLSで自教会のみ→anonのRPC実行は401→掃除済み）。Supabase security advisor は ERROR 0（migration 0007 で anon/public の RPC 実行権を revoke。残る WARN 3件は「認証ユーザーが実行可能」＝設計どおりの意図的な挙動）。
+
+運用フロー: `git push origin main` → Vercel 自動デプロイ。DB変更は `supabase/migrations/` に追加 → `npx supabase db push`。
+
+残タスク（任意）:
+- Pastor Assist を本番で使う → Vercel env に `ANTHROPIC_API_KEY` を追加して再デプロイ
+- メール通知 → `RESEND_API_KEY` + `NOTIFICATIONS_FROM_EMAIL`
+- 独自ドメイン / Vercel Pro（10分毎cron・private repo連携）
+- 実端末での Web Push 受信確認（ホーム画面追加 → 自分 > 通知）
 
 ---
 
