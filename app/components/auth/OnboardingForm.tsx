@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Building2, TicketCheck } from "lucide-react";
 import type { Locale } from "@/app/lib/demo/types";
 import { createChurch, joinChurch } from "@/app/lib/db/actions";
@@ -17,7 +16,6 @@ export function OnboardingForm({
   initialMode?: "create" | "join";
   initialCode?: string;
 }) {
-  const router = useRouter();
   const ja = locale === "ja";
   const [mode, setMode] = useState<"create" | "join">(initialMode);
   const [error, setError] = useState<string | null>(null);
@@ -34,8 +32,11 @@ export function OnboardingForm({
   const [joinName, setJoinName] = useState("");
 
   const done = (slugValue: string) => {
-    router.push(`/${locale}/church/${slugValue}/today`);
-    router.refresh();
+    // router.push + router.refresh の組合せは、遷移がキャンセルされて
+    // 「処理中…」のまま止まる不具合を本番・ローカル両方で再現したため、
+    // 教会作成/参加の完了時はハードナビゲーションで確実に移動する
+    // （router キャッシュも新しい会員状態でリセットされる）。
+    window.location.assign(`/${locale}/church/${slugValue}/today`);
   };
 
   const submit = () => {
