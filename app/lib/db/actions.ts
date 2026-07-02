@@ -588,3 +588,253 @@ export async function markAllNotificationsRead(input: {
   revalidatePath(`/${input.locale}/church/${input.churchSlug}/inbox`);
   return { ok: true };
 }
+
+/* ═════════════ グループ管理（管理者・RLS groups_write/group_memberships_write）═════════════ */
+
+/** グループが自教会のものであることをサーバー側で確認して返す（越境防止）。 */
+async function assertGroupInChurch(
+  supabase: SupabaseClient,
+  groupId: string,
+  churchId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data } = await supabase
+    .from("groups")
+    .select("id, church_id")
+    .eq("id", groupId)
+    .eq("church_id", churchId)
+    .maybeSingle();
+  if (!data) return { ok: false, error: "group not found" };
+  return { ok: true };
+}
+
+export async function createGroup(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  /** 主言語での名前・説明（教会の contentLanguages[0] キーで保存） */
+  primaryLang: string;
+  name: string;
+  description?: string;
+}): Promise<ActionResult> {
+  const name = input.name.trim();
+  if (!name || name.length > 80) return { ok: false, error: "invalid name" };
+  const supabase = await createServerSupabase();
+  const membershipId = await myMembershipId(supabase, input.churchId);
+  if (!membershipId) return { ok: false, error: "not a member" };
+
+  const { data, error } = await supabase
+    .from("groups")
+    .insert({
+      church_id: input.churchId,
+      name: { [input.primaryLang]: name },
+      description: input.description?.trim() ? { [input.primaryLang]: input.description.trim() } : null,
+    })
+    .select("id")
+    .single();
+  if (error) return { ok: false, error: error.message };
+
+  await supabase.from("audit_logs").insert({
+    church_id: input.churchId,
+    actor_membership_id: membershipId,
+    action: "group.created",
+    target_type: "group",
+    target_id: data.id,
+    metadata: {},
+  });
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/groups`);
+  return { ok: true, data };
+}
+
+export async function addGroupMember(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  groupId: string;
+  membershipId: string;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const guard = await assertGroupInChurch(supabase, input.groupId, input.churchId);
+  if (!guard.ok) return guard;
+  const { error } = await supabase
+    .from("group_memberships")
+    .upsert(
+      { group_id: input.groupId, membership_id: input.membershipId, role: "member" },
+      { onConflict: "group_id,membership_id" },
+    );
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/groups`);
+  return { ok: true };
+}
+
+export async function removeGroupMember(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  groupId: string;
+  membershipId: string;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const guard = await assertGroupInChurch(supabase, input.groupId, input.churchId);
+  if (!guard.ok) return guard;
+  const { error } = await supabase
+    .from("group_memberships")
+    .delete()
+    .eq("group_id", input.groupId)
+    .eq("membership_id", input.membershipId);
+  if (error) return { ok: false, error: error.message };
+  // 外したメンバーがリーダーだったらリーダーも解除する
+  await supabase
+    .from("groups")
+    .update({ leader_membership_id: null })
+    .eq("id", input.groupId)
+    .eq("leader_membership_id", input.membershipId);
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/groups`);
+  return { ok: true };
+}
+
+/** リーダー設定（null で解除）。リーダーは自動的にグループメンバーにする。 */
+export async function setGroupLeader(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  groupId: string;
+  membershipId: string | null;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const guard = await assertGroupInChurch(supabase, input.groupId, input.churchId);
+  if (!guard.ok) return guard;
+
+  if (input.membershipId) {
+    const { error: upErr } = await supabase
+      .from("group_memberships")
+      .upsert(
+        { group_id: input.groupId, membership_id: input.membershipId, role: "leader" },
+        { onConflict: "group_id,membership_id" },
+      );
+    if (upErr) return { ok: false, error: upErr.message };
+  }
+  // 前リーダーの group 内 role を member に戻す
+  await supabase
+    .from("group_memberships")
+    .update({ role: "member" })
+    .eq("group_id", input.groupId)
+    .neq("membership_id", input.membershipId ?? "00000000-0000-0000-0000-000000000000");
+  const { error } = await supabase
+    .from("groups")
+    .update({ leader_membership_id: input.membershipId })
+    .eq("id", input.groupId);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/groups`);
+  return { ok: true };
+}
+
+export async function setGroupArchived(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  groupId: string;
+  archived: boolean;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const guard = await assertGroupInChurch(supabase, input.groupId, input.churchId);
+  if (!guard.ok) return guard;
+  const { error } = await supabase
+    .from("groups")
+    .update({ status: input.archived ? "archived" : "active" })
+    .eq("id", input.groupId);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/groups`);
+  return { ok: true };
+}
+
+/* ═════════════ メンバーの役割編集（owner/pastor のみ・最後のオーナー保護）═════════════ */
+
+const ASSIGNABLE_ROLES = [
+  "owner", "pastor", "elder", "staff", "prayer_team", "group_leader", "member", "guest",
+] as const;
+
+export async function updateMemberRoles(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  membershipId: string;
+  roles: string[];
+}): Promise<ActionResult> {
+  // 入力検証: 許可リスト外のロールは拒否。空なら member にフォールバック。
+  const roles = [...new Set(input.roles.filter((r) => (ASSIGNABLE_ROLES as readonly string[]).includes(r)))];
+  if (roles.length === 0) roles.push("member");
+
+  const supabase = await createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "not signed in" };
+
+  // 実行者が owner/pastor であることをサーバー側で確認（RLSも0010で同基準）
+  const { data: meRow } = await supabase
+    .from("memberships")
+    .select("id, membership_roles(role)")
+    .eq("church_id", input.churchId)
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+  const myRoles: string[] = (meRow?.membership_roles ?? []).map((r: { role: string }) => r.role);
+  if (!meRow || !myRoles.some((r) => r === "owner" || r === "pastor")) {
+    return { ok: false, error: "owner/pastor role required" };
+  }
+
+  // 対象が自教会の会員であることを確認（越境防止）
+  const { data: target } = await supabase
+    .from("memberships")
+    .select("id, membership_roles(role)")
+    .eq("id", input.membershipId)
+    .eq("church_id", input.churchId)
+    .maybeSingle();
+  if (!target) return { ok: false, error: "member not found" };
+  const before: string[] = (target.membership_roles ?? []).map((r: { role: string }) => r.role);
+
+  // 最後のオーナー保護: owner を外す変更のとき、他に active な owner がいなければ拒否
+  if (before.includes("owner") && !roles.includes("owner")) {
+    const { count } = await supabase
+      .from("membership_roles")
+      .select("membership_id, memberships!inner(church_id, status)", { count: "exact", head: true })
+      .eq("role", "owner")
+      .eq("memberships.church_id", input.churchId)
+      .eq("memberships.status", "active")
+      .neq("membership_id", input.membershipId);
+    if (!count || count === 0) {
+      return { ok: false, error: "last owner" };
+    }
+  }
+
+  // 置換: 消えるロールを削除し、増えるロールを追加（既存はそのまま）
+  const toRemove = before.filter((r) => !roles.includes(r));
+  const toAdd = roles.filter((r) => !before.includes(r));
+  if (toRemove.length > 0) {
+    const { error } = await supabase
+      .from("membership_roles")
+      .delete()
+      .eq("membership_id", input.membershipId)
+      .in("role", toRemove);
+    if (error) return { ok: false, error: error.message };
+  }
+  if (toAdd.length > 0) {
+    const { error } = await supabase
+      .from("membership_roles")
+      .insert(toAdd.map((role) => ({ membership_id: input.membershipId, role })));
+    if (error) return { ok: false, error: error.message };
+  }
+
+  // 監査: 役割変更は必ず記録（04 監査対象）
+  await supabase.from("audit_logs").insert({
+    church_id: input.churchId,
+    actor_membership_id: meRow.id,
+    action: "roles.updated",
+    target_type: "membership",
+    target_id: input.membershipId,
+    metadata: { before, after: roles },
+  });
+
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/members`);
+  return { ok: true };
+}

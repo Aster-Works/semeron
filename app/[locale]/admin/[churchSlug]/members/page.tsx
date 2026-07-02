@@ -4,6 +4,7 @@ import { getChurchGroups, getMembers } from "@/app/lib/db/queries";
 import type { Group, Membership, Role } from "@/app/lib/demo/types";
 import { createT, localize } from "@/app/lib/i18n";
 import { AdminShell } from "@/app/components/admin/AdminShell";
+import { EditRolesButton } from "@/app/components/admin/EditRolesButton";
 import {
   Avatar,
   Badge,
@@ -33,6 +34,11 @@ export default async function AdminMembersPage({
   const members = (await getMembers(supabase, church.id)).sort(sortMembers);
   const groups = await getChurchGroups(supabase, church.id);
   const groupsById = new Map<string, Group>(groups.map((g) => [g.id, g]));
+
+  // 役割編集は owner/pastor のみ（RLS 0010 と同一基準。サーバーアクション側でも再確認）
+  const canEditRoles = (viewer.membership?.roles ?? []).some(
+    (r) => r === "owner" || r === "pastor",
+  );
 
   function statusBadge(m: Membership) {
     switch (m.status) {
@@ -105,6 +111,11 @@ export default async function AdminMembersPage({
                         <th scope="col" className="px-4 py-3 font-medium">{t("members.colRoles")}</th>
                         <th scope="col" className="px-4 py-3 font-medium">{t("members.colGroups")}</th>
                         <th scope="col" className="px-4 py-3 font-medium">{t("members.colStatus")}</th>
+                        {canEditRoles ? (
+                          <th scope="col" className="px-4 py-3">
+                            <span className="sr-only">{t("members.editRoles")}</span>
+                          </th>
+                        ) : null}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-line">
@@ -122,6 +133,18 @@ export default async function AdminMembersPage({
                           <td className="px-4 py-3">{rolesRow(m)}</td>
                           <td className="px-4 py-3">{groupBadges(m)}</td>
                           <td className="px-4 py-3">{statusBadge(m)}</td>
+                          {canEditRoles ? (
+                            <td className="whitespace-nowrap px-4 py-3 text-right">
+                              <EditRolesButton
+                                locale={locale}
+                                churchId={church.id}
+                                churchSlug={church.slug}
+                                membershipId={m.id}
+                                memberName={m.displayName}
+                                currentRoles={m.roles}
+                              />
+                            </td>
+                          ) : null}
                         </tr>
                       ))}
                     </tbody>
@@ -154,6 +177,18 @@ export default async function AdminMembersPage({
                         {groupBadges(m)}
                       </div>
                     </div>
+                    {canEditRoles ? (
+                      <div className="border-t border-line pt-3">
+                        <EditRolesButton
+                          locale={locale}
+                          churchId={church.id}
+                          churchSlug={church.slug}
+                          membershipId={m.id}
+                          memberName={m.displayName}
+                          currentRoles={m.roles}
+                        />
+                      </div>
+                    ) : null}
                   </CardBody>
                 </Card>
               ))}
