@@ -507,6 +507,13 @@ export const messages = {
   "members.colGroups": { ja: "グループ", en: "Groups" },
   "members.colStatus": { ja: "状態", en: "Status" },
   "members.invite": { ja: "招待", en: "Invite" },
+  "members.filterActive": { ja: "有効", en: "Active" },
+  "members.filterInactive": { ja: "休止", en: "Inactive" },
+  "members.filterAll": { ja: "すべて", en: "All" },
+  "members.emptyFiltered": {
+    ja: "この条件に当てはまるメンバーはいません。",
+    en: "No members match this filter.",
+  },
   "members.editRoles": { ja: "役割を編集", en: "Edit roles" },
   "members.editRolesHint": {
     ja: "この教会での役割を選びます。複数選択できます。役割の変更は監査ログに記録されます。",

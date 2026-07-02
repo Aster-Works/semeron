@@ -75,6 +75,19 @@ export async function dispatchQueuedNotifications(): Promise<DispatchSummary> {
   for (const n of queued ?? []) {
     summary.processed++;
 
+    const { data: recipient } = await admin
+      .from("memberships")
+      .select("id, status")
+      .eq("id", n.recipient_membership_id as string)
+      .eq("church_id", n.church_id as string)
+      .maybeSingle();
+
+    if (recipient?.status !== "active") {
+      await mark(admin, n.id, "skipped", "recipient_inactive");
+      summary.skipped++;
+      continue;
+    }
+
     // Push 未設定なら送信対象なし → skipped（in-app は Inbox に残る）
     if (!pushOn) {
       await mark(admin, n.id, "skipped", "push_not_configured");

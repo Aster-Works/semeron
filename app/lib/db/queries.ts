@@ -214,7 +214,10 @@ export async function getGroupMembers(supabase: SupabaseClient, groupId: string)
     .from("group_memberships")
     .select("membership:memberships(*)")
     .eq("group_id", groupId);
-  return (data ?? []).map((r: any) => r.membership).filter(Boolean).map((m: any) => mapMembership(m));
+  return (data ?? [])
+    .map((r: any) => r.membership)
+    .filter((m: any) => m?.status === "active")
+    .map((m: any) => mapMembership(m));
 }
 export async function getGroupPrayers(
   supabase: SupabaseClient,

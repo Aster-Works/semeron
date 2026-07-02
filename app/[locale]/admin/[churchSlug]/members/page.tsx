@@ -12,6 +12,7 @@ import { MemberStatusButton } from "@/app/components/admin/MemberStatusButton";
 import {
   Avatar,
   Badge,
+  ButtonLink,
   Card,
   CardBody,
   EmptyState,
@@ -22,13 +23,17 @@ import {
 const ROLE_ORDER: Role[] = [
   "owner", "pastor", "elder", "staff", "prayer_team", "group_leader", "member", "guest",
 ];
+type MemberStatusFilter = "active" | "inactive" | "all";
 
 export default async function AdminMembersPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; churchSlug: string }>;
+  searchParams?: Promise<{ status?: string }>;
 }) {
   const { locale: rawLocale, churchSlug } = await params;
+  const { status: rawStatus } = (await searchParams) ?? {};
   const locale = rawLocale as "ja" | "en";
   const { supabase, viewer } = await requireChurchContext(locale, churchSlug);
   if (!isChurchAdmin(viewer)) {
@@ -41,7 +46,16 @@ export default async function AdminMembersPage({
     getMembers(supabase, church.id),
     getChurchGroups(supabase, church.id),
   ]);
-  const members = membersRaw.sort(sortMembers);
+  const statusFilter: MemberStatusFilter =
+    rawStatus === "inactive" ? "inactive" : rawStatus === "all" ? "all" : "active";
+  const statusCounts = {
+    active: membersRaw.filter((m) => m.status === "active").length,
+    inactive: membersRaw.filter((m) => m.status === "inactive").length,
+    all: membersRaw.length,
+  };
+  const members = membersRaw
+    .filter((m) => statusFilter === "all" || m.status === statusFilter)
+    .sort(sortMembers);
   const groupsById = new Map<string, Group>(groups.map((g) => [g.id, g]));
 
   const roleLabelMap = resolveRoleLabels(church, locale);
@@ -105,14 +119,33 @@ export default async function AdminMembersPage({
       />
     </div>
   );
+  const filterBaseHref = `/${locale}/admin/${church.slug}/members`;
+  const filterLinks: { key: MemberStatusFilter; label: string; href: string; count: number }[] = [
+    { key: "active", label: t("members.filterActive"), href: filterBaseHref, count: statusCounts.active },
+    { key: "inactive", label: t("members.filterInactive"), href: `${filterBaseHref}?status=inactive`, count: statusCounts.inactive },
+    { key: "all", label: t("members.filterAll"), href: `${filterBaseHref}?status=all`, count: statusCounts.all },
+  ];
 
   return (
     <>
       <div className="space-y-5">
         <SectionHeading title={t("members.title")} right={inviteCard} />
+        <div className="flex flex-wrap gap-2">
+          {filterLinks.map((item) => (
+            <ButtonLink
+              key={item.key}
+              href={item.href}
+              variant={statusFilter === item.key ? "primary" : "secondary"}
+              size="sm"
+            >
+              {item.label}
+              <span className="tabular-nums">{item.count}</span>
+            </ButtonLink>
+          ))}
+        </div>
 
         {members.length === 0 ? (
-          <EmptyState icon={Users} title={locale === "ja" ? "まだメンバーがいません。" : "No members yet."} />
+          <EmptyState icon={Users} title={t("members.emptyFiltered")} />
         ) : (
           <>
             <div className="hidden sm:block">
