@@ -232,6 +232,22 @@ export const messages = {
     en: "After this, you will no longer be able to enter this church space. Your account, prayer requests, and response history are not deleted.",
   },
   "me.leaveConfirm": { ja: "抜ける", en: "Leave" },
+  "me.deleteAccount": { ja: "アカウントを削除", en: "Delete account" },
+  "me.deleteTitle": { ja: "アカウントを削除", en: "Delete account" },
+  "me.deleteHint": {
+    ja: "ログインできなくなります。教会内の履歴は削除ではなく匿名化されます。",
+    en: "You will no longer be able to sign in. Church history is anonymized, not erased.",
+  },
+  "me.deleteBody": {
+    ja: "この操作は元に戻せません。ログイン用アカウントを削除し、Semeron上の表示名とメールアドレスを匿名化します。過去の祈祷課題・応答・監査ログは教会の記録として残ります。",
+    en: "This cannot be undone. Your sign-in account will be deleted, and your display name and email in Semeron will be anonymized. Past prayer requests, responses, and audit logs remain as church records.",
+  },
+  "me.deleteTypeLabel": { ja: "確認のため DELETE と入力", en: "Type DELETE to confirm" },
+  "me.deleteTypeHint": {
+    ja: "半角大文字で DELETE と入力すると削除できます。",
+    en: "Enter DELETE in uppercase to enable deletion.",
+  },
+  "me.deleteConfirm": { ja: "削除する", en: "Delete" },
   "me.demoNote": {
     ja: "これはデモです。ログインや実データはまだありません。",
     en: "This is a demo. No real login or data yet.",

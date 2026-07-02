@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/app/lib/supabase/admin";
 import { createServerSupabase } from "@/app/lib/supabase/server";
 import type { Locale, ReactionType, Visibility } from "@/app/lib/demo/types";
 
@@ -974,6 +975,110 @@ export async function leaveChurch(input: {
 
   revalidatePath(`/${input.locale}`);
   revalidatePath(`/${input.locale}/church/${input.churchSlug}/me`);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+type AccountMembershipRow = {
+  id: string;
+  church_id: string;
+  status: string;
+  membership_roles?: { role: string }[] | null;
+};
+
+export async function deleteMyAccount(input: {
+  locale: Locale;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "not signed in" };
+
+  const admin = createAdminClient();
+  const { data: memberships, error: membershipsError } = await admin
+    .from("memberships")
+    .select("id, church_id, status, membership_roles(role)")
+    .eq("user_id", user.id);
+  if (membershipsError) return { ok: false, error: membershipsError.message };
+
+  const membershipRows = (memberships ?? []) as AccountMembershipRow[];
+  for (const membership of membershipRows) {
+    const roles = (membership.membership_roles ?? []).map((r) => r.role);
+    if (membership.status === "active" && roles.includes("owner")) {
+      const { count, error } = await admin
+        .from("membership_roles")
+        .select("membership_id, memberships!inner(church_id, status)", { count: "exact", head: true })
+        .eq("role", "owner")
+        .eq("memberships.church_id", membership.church_id)
+        .eq("memberships.status", "active")
+        .neq("membership_id", membership.id);
+      if (error) return { ok: false, error: error.message };
+      if (!count || count === 0) {
+        return { ok: false, error: "last owner" };
+      }
+    }
+  }
+
+  const membershipIds = membershipRows.map((m) => m.id);
+  if (membershipIds.length > 0) {
+    const { error: pushError } = await admin
+      .from("push_subscriptions")
+      .delete()
+      .in("membership_id", membershipIds);
+    if (pushError) return { ok: false, error: pushError.message };
+
+    const { error: leaderError } = await admin
+      .from("groups")
+      .update({ leader_membership_id: null })
+      .in("leader_membership_id", membershipIds);
+    if (leaderError) return { ok: false, error: leaderError.message };
+
+    const { error: groupMembershipError } = await admin
+      .from("group_memberships")
+      .delete()
+      .in("membership_id", membershipIds);
+    if (groupMembershipError) return { ok: false, error: groupMembershipError.message };
+
+    const { error: membershipUpdateError } = await admin
+      .from("memberships")
+      .update({
+        status: "removed",
+        display_name: "Deleted account",
+        email: null,
+        user_id: null,
+      })
+      .in("id", membershipIds)
+      .eq("user_id", user.id);
+    if (membershipUpdateError) return { ok: false, error: membershipUpdateError.message };
+
+    const { error: auditError } = await admin.from("audit_logs").insert(
+      membershipRows.map((membership) => ({
+        church_id: membership.church_id,
+        actor_membership_id: membership.id,
+        action: "account.deleted",
+        target_type: "membership",
+        target_id: membership.id,
+        metadata: {
+          before: membership.status,
+          after: "removed",
+          roles: (membership.membership_roles ?? []).map((r) => r.role),
+        },
+      })),
+    );
+    if (auditError) return { ok: false, error: auditError.message };
+  }
+
+  const { error: profileError } = await admin.from("profiles").delete().eq("user_id", user.id);
+  if (profileError) return { ok: false, error: profileError.message };
+
+  await supabase.auth.signOut();
+
+  // Soft-delete removes Auth PII while retaining an irreversible hashed identifier in auth schema.
+  const { error: deleteError } = await admin.auth.admin.deleteUser(user.id, true);
+  if (deleteError) return { ok: false, error: deleteError.message };
+
+  revalidatePath(`/${input.locale}`);
   revalidatePath("/", "layout");
   return { ok: true };
 }

@@ -5,6 +5,7 @@ import { createT, localize } from "@/app/lib/i18n";
 import { DisplayNameEditor } from "@/app/components/member/DisplayNameEditor";
 import { NotificationSettings } from "@/app/components/member/NotificationSettings";
 import { InstallPrompt } from "@/app/components/member/InstallPrompt";
+import { DeleteAccountButton } from "@/app/components/member/DeleteAccountButton";
 import { LeaveChurchButton } from "@/app/components/member/LeaveChurchButton";
 import { LocaleSwitcher } from "@/app/components/LocaleSwitcher";
 import {
@@ -113,6 +114,16 @@ export default async function MePage({
                 churchSlug={church.slug}
                 churchName={churchName}
               />
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardBody className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-ink">{t("me.deleteTitle")}</p>
+                <p className="mt-1 text-sm text-muted text-balance-safe">{t("me.deleteHint")}</p>
+              </div>
+              <DeleteAccountButton locale={locale as "ja" | "en"} />
             </CardBody>
           </Card>
 
