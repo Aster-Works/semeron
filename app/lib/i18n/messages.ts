@@ -178,7 +178,7 @@ export const messages = {
   "prayerForm.submit": { ja: "確認のために送る", en: "Submit for review" },
   "prayerForm.noticeTitle": { ja: "共有の前に", en: "Before you share" },
   "prayerForm.notice": {
-    ja: "この内容には、病気、家庭、経済、信仰状態、未成年、本人以外の情報など、慎重に扱うべき情報が含まれる場合があります。公開範囲を確認し、必要であれば「牧師のみ」または「祈祷チームのみ」を選んでください。",
+    ja: "病気、家庭、経済、信仰状態、未成年、本人以外の情報など、慎重に扱うべき情報が含まれる場合は、公開範囲を確認し、必要であれば「牧師のみ」または「祈祷チームのみ」を選んでください。",
     en: "Prayer requests may include sensitive information such as health, family, finances, faith struggles, minors, or information about someone else. Please choose the visibility carefully. When in doubt, share with pastors only.",
   },
   "prayerForm.broadWarningTitle": { ja: "公開範囲の確認", en: "Confirm visibility" },
