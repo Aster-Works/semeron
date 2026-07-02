@@ -35,10 +35,22 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+/**
+ * ダークモード初期化。描画前に localStorage / OS設定を読んで html.dark を確定させ、
+ * ライト→ダークのちらつき（FOUC）を防ぐ。設定キーは 'semeron-theme'（'dark'|'light'）。
+ * 未設定時は OS の prefers-color-scheme に従う。
+ */
+const THEME_INIT = `(function(){try{var t=localStorage.getItem('semeron-theme');var d=t?t==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;var c=document.documentElement.classList;d?c.add('dark'):c.remove('dark');var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',d?'#12181d':'#FAF8F2');}catch(e){}})();`;
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ja" className={`${inter.variable} ${notoSansJP.variable} h-full antialiased`}>
+    <html
+      lang="ja"
+      className={`${inter.variable} ${notoSansJP.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
       <body className="min-h-full bg-paper text-ink">
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-sage-strong focus:px-4 focus:py-2 focus:text-sm focus:text-white"

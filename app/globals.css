@@ -61,6 +61,55 @@
 }
 
 /* =============================================================
+   ダークモード（ヘッダー歯車メニューで切替）
+   html.dark で全トークンを「夜の祈り」の配色に反転する。
+   コンポーネントは semantic トークンのみ参照しているため、
+   ここの変数上書きだけで全画面が追従する（dark: 修飾子は使わない）。
+   文字系は暗背景で WCAG AA を満たす明度に調整済み。
+   ============================================================= */
+.dark {
+  color-scheme: dark;
+
+  /* ---- ベース面（純黒にせず、温かみのある夜の紙） ---- */
+  --color-paper: #12181d;
+  --color-surface: #1b242b;
+  --color-mist: #212c33;
+  --color-line: #2d3941;
+  --color-line-strong: #3c4a54;
+
+  /* ---- テキスト ---- */
+  --color-ink: #e9e5da;
+  --color-ink-soft: #c7c2b5;
+  --color-muted: #9aa5a1;
+
+  /* ---- Sage ---- */
+  --color-sage: #7e9a89;
+  --color-sage-strong: #5f7d6b; /* ボタン面は共通（白文字でAA維持） */
+  --color-sage-ink: #a9c6b4;
+  --color-sage-soft: #22332a;
+
+  /* ---- Cedar ---- */
+  --color-cedar: #8a7358;
+  --color-cedar-ink: #c4ab8a;
+  --color-cedar-soft: #2d251a;
+
+  /* ---- Gold ---- */
+  --color-gold: #c89b3c;
+  --color-gold-ink: #dcb562;
+  --color-gold-soft: #332a16;
+
+  /* ---- Rose ---- */
+  --color-rose: #b97972;
+  --color-rose-ink: #dba39c;
+  --color-rose-soft: #342220;
+
+  /* ---- Blue Gray ---- */
+  --color-slate: #7d92a1;
+  --color-slate-ink: #a8b8c4;
+  --color-slate-soft: #212b32;
+}
+
+/* =============================================================
    ベーススタイル
    ============================================================= */
 @layer base {
