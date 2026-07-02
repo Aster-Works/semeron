@@ -411,3 +411,40 @@ export async function updateMyDisplayName(input: {
   revalidatePath(`/${input.locale}/church/${input.churchSlug}/me`);
   return { ok: true };
 }
+
+/* ---------- 受信箱の既読化（本人のみ・RLS準拠）---------- */
+/** 1件を既読にする。RLS(notifications_update=本人=recipient)が他人の通知を弾く。 */
+export async function markNotificationRead(input: {
+  churchSlug: string;
+  locale: Locale;
+  notificationId: string;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read: true })
+    .eq("id", input.notificationId)
+    .eq("read", false);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/${input.locale}/church/${input.churchSlug}/inbox`);
+  return { ok: true };
+}
+
+/** 自分の未読をすべて既読にする。 */
+export async function markAllNotificationsRead(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const membershipId = await myMembershipId(supabase, input.churchId);
+  if (!membershipId) return { ok: false, error: "not a member" };
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read: true })
+    .eq("recipient_membership_id", membershipId)
+    .eq("read", false);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/${input.locale}/church/${input.churchSlug}/inbox`);
+  return { ok: true };
+}

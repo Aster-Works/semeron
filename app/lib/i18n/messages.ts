@@ -213,6 +213,8 @@ export const messages = {
     ja: "ここは静かな祈りのリマインダーです。",
     en: "A quiet place for prayer reminders.",
   },
+  "inbox.markAllRead": { ja: "すべて既読にする", en: "Mark all as read" },
+  "inbox.tapToRead": { ja: "タップで既読にする", en: "Tap to mark as read" },
 
   // --- me ---
   "me.title": { ja: "自分", en: "Me" },

@@ -4,7 +4,8 @@ import { getInbox } from "@/app/lib/db/queries";
 import { createT, localize } from "@/app/lib/i18n";
 import { formatMonthDay } from "@/app/lib/utils";
 import { MemberShell } from "@/app/components/member/MemberShell";
-import { Card, CardBody, EmptyState, SectionHeading } from "@/app/components/ui";
+import { InboxList, type InboxItemVM } from "@/app/components/member/InboxList";
+import { EmptyState, SectionHeading } from "@/app/components/ui";
 
 export default async function InboxPage({
   params,
@@ -18,46 +19,29 @@ export default async function InboxPage({
 
   const items = await getInbox(supabase, viewer);
 
+  // 多言語・日付整形はサーバー側で解決し、クライアントには確定文字列を渡す。
+  const vm: InboxItemVM[] = items.map((n) => ({
+    id: n.id,
+    title: localize(n.title, locale as "ja" | "en", church.defaultLocale),
+    body: localize(n.body, locale as "ja" | "en", church.defaultLocale),
+    dateLabel: formatMonthDay(n.createdAt, locale as "ja" | "en", church.timezone),
+    read: Boolean(n.read),
+  }));
+
   return (
     <MemberShell locale={locale as "ja" | "en"} church={church} viewer={viewer} active="inbox">
       <div className="space-y-4">
         <SectionHeading title={t("inbox.title")} description={t("inbox.quietNote")} />
 
-        {items.length === 0 ? (
+        {vm.length === 0 ? (
           <EmptyState icon={Bell} title={t("inbox.empty")} />
         ) : (
-          <div className="space-y-3">
-            {items.map((n) => {
-              const body = localize(n.body, locale as "ja" | "en", church.defaultLocale);
-              return (
-                <Card key={n.id}>
-                  <CardBody className="flex items-start gap-3">
-                    {!n.read ? (
-                      <span
-                        className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-sage"
-                        aria-hidden
-                      />
-                    ) : (
-                      <span className="mt-1.5 h-2 w-2 shrink-0" aria-hidden />
-                    )}
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex items-baseline justify-between gap-3">
-                        <p className="text-sm font-medium text-ink text-balance-safe">
-                          {localize(n.title, locale as "ja" | "en", church.defaultLocale)}
-                        </p>
-                        <time className="shrink-0 text-xs text-muted">
-                          {formatMonthDay(n.createdAt, locale as "ja" | "en", church.timezone)}
-                        </time>
-                      </div>
-                      {body ? (
-                        <p className="text-sm text-muted text-balance-safe">{body}</p>
-                      ) : null}
-                    </div>
-                  </CardBody>
-                </Card>
-              );
-            })}
-          </div>
+          <InboxList
+            locale={locale as "ja" | "en"}
+            churchId={church.id}
+            churchSlug={church.slug}
+            items={vm}
+          />
         )}
       </div>
     </MemberShell>
