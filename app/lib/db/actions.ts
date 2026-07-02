@@ -8,6 +8,7 @@ import type { Locale, ReactionType, Visibility } from "@/app/lib/demo/types";
 export type ActionResult = { ok: true; data?: unknown } | { ok: false; error: string };
 
 const CHURCH_ADMIN_ROLES = new Set(["owner", "pastor", "elder", "staff"]);
+const MEMBER_MANAGER_ROLES = new Set(["owner", "pastor"]);
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 async function myMembership(
@@ -38,6 +39,10 @@ async function myMembershipId(supabase: SupabaseClient, churchId: string): Promi
 
 function isChurchAdminRole(roles: string[]): boolean {
   return roles.some((role) => CHURCH_ADMIN_ROLES.has(role));
+}
+
+function canManageMembers(roles: string[]): boolean {
+  return roles.some((role) => MEMBER_MANAGER_ROLES.has(role));
 }
 
 function normalizeDateKey(value?: string | null): string | null {
@@ -807,7 +812,7 @@ export async function updateMemberRoles(input: {
     .eq("status", "active")
     .maybeSingle();
   const myRoles: string[] = (meRow?.membership_roles ?? []).map((r: { role: string }) => r.role);
-  if (!meRow || !myRoles.some((r) => r === "owner" || r === "pastor")) {
+  if (!meRow || !canManageMembers(myRoles)) {
     return { ok: false, error: "owner/pastor role required" };
   }
 
@@ -867,6 +872,76 @@ export async function updateMemberRoles(input: {
   return { ok: true };
 }
 
+export async function setMemberStatus(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  membershipId: string;
+  status: "active" | "inactive";
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const me = await myMembership(supabase, input.churchId);
+  if (!me) return { ok: false, error: "not a member" };
+  if (!canManageMembers(me.roles)) return { ok: false, error: "owner/pastor role required" };
+
+  const { data: target } = await supabase
+    .from("memberships")
+    .select("id, display_name, status, membership_roles(role)")
+    .eq("id", input.membershipId)
+    .eq("church_id", input.churchId)
+    .maybeSingle();
+  if (!target) return { ok: false, error: "member not found" };
+
+  const currentStatus = target.status as "invited" | "active" | "inactive" | "removed";
+  if (currentStatus === input.status) return { ok: true };
+  if (currentStatus === "removed") return { ok: false, error: "member removed" };
+  if (input.status === "inactive" && currentStatus !== "active") {
+    return { ok: false, error: "member not active" };
+  }
+  if (input.status === "active" && currentStatus !== "inactive") {
+    return { ok: false, error: "member not inactive" };
+  }
+  if (input.status === "inactive" && target.id === me.id) {
+    return { ok: false, error: "cannot suspend self" };
+  }
+
+  const targetRoles: string[] = (target.membership_roles ?? []).map((r: { role: string }) => r.role);
+  if (input.status === "inactive" && targetRoles.includes("owner")) {
+    const { count } = await supabase
+      .from("membership_roles")
+      .select("membership_id, memberships!inner(church_id, status)", { count: "exact", head: true })
+      .eq("role", "owner")
+      .eq("memberships.church_id", input.churchId)
+      .eq("memberships.status", "active")
+      .neq("membership_id", input.membershipId);
+    if (!count || count === 0) {
+      return { ok: false, error: "last owner" };
+    }
+  }
+
+  const { data, error } = await supabase
+    .from("memberships")
+    .update({ status: input.status })
+    .eq("id", input.membershipId)
+    .eq("church_id", input.churchId)
+    .select("id");
+  if (error) return { ok: false, error: error.message };
+  if (!data || data.length === 0) return { ok: false, error: "not permitted" };
+
+  await supabase.from("audit_logs").insert({
+    church_id: input.churchId,
+    actor_membership_id: me.id,
+    action: input.status === "inactive" ? "member.suspended" : "member.restored",
+    target_type: "membership",
+    target_id: input.membershipId,
+    metadata: { before: currentStatus, after: input.status },
+  });
+
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/members`);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 /* ═════════════ 役割の呼び方カスタマイズ（owner/pastor のみ・方針A）═════════════ */
 
 const LABELABLE_ROLES = [
@@ -898,7 +973,7 @@ export async function updateRoleLabels(input: {
     .eq("status", "active")
     .maybeSingle();
   const myRoles: string[] = (meRow?.membership_roles ?? []).map((r: { role: string }) => r.role);
-  if (!meRow || !myRoles.some((r) => r === "owner" || r === "pastor")) {
+  if (!meRow || !canManageMembers(myRoles)) {
     return { ok: false, error: "owner/pastor role required" };
   }
 

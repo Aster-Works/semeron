@@ -512,6 +512,24 @@ export const messages = {
     ja: "この教会での役割を選びます。複数選択できます。役割の変更は監査ログに記録されます。",
     en: "Choose this member's roles in the church. Multiple allowed. Role changes are recorded in the audit log.",
   },
+  "members.suspend": { ja: "休止", en: "Suspend" },
+  "members.restore": { ja: "復帰", en: "Restore" },
+  "members.suspendTitle": { ja: "メンバーを休止しますか？", en: "Suspend this member?" },
+  "members.restoreTitle": { ja: "メンバーを復帰しますか？", en: "Restore this member?" },
+  "members.suspendBody": {
+    ja: "休止すると、このメンバーは教会スペースに入れなくなります。アカウントや投稿履歴は削除されません。",
+    en: "Suspending this member removes access to the church space. Their account and history are not deleted.",
+  },
+  "members.restoreBody": {
+    ja: "復帰すると、このメンバーは再び教会スペースに入れるようになります。",
+    en: "Restoring this member gives them access to the church space again.",
+  },
+  "members.suspendConfirm": { ja: "休止する", en: "Suspend" },
+  "members.restoreConfirm": { ja: "復帰する", en: "Restore" },
+  "members.suspendSelf": {
+    ja: "自分自身は休止できません。",
+    en: "You cannot suspend yourself.",
+  },
 
   // --- グループ管理（管理 > グループ） ---
   "groupsAdmin.create": { ja: "グループを作成", en: "Create group" },
@@ -530,6 +548,7 @@ export const messages = {
   "members.statusActive": { ja: "有効", en: "Active" },
   "members.statusInvited": { ja: "招待中", en: "Invited" },
   "members.statusInactive": { ja: "休止", en: "Inactive" },
+  "members.statusRemoved": { ja: "削除済み", en: "Removed" },
 
   // --- notifications (admin) ---
   "notifications.title": { ja: "通知", en: "Notifications" },

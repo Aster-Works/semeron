@@ -8,6 +8,7 @@ import { resolveRoleLabels } from "@/app/lib/roleLabels";
 import { AccessDenied } from "@/app/components/admin/AdminShell";
 import { EditRolesButton } from "@/app/components/admin/EditRolesButton";
 import { InviteButton } from "@/app/components/admin/InviteButton";
+import { MemberStatusButton } from "@/app/components/admin/MemberStatusButton";
 import {
   Avatar,
   Badge,
@@ -56,6 +57,8 @@ export default async function AdminMembersPage({
         return <Badge tone="sage">{t("members.statusActive")}</Badge>;
       case "invited":
         return <Badge tone="gold">{t("members.statusInvited")}</Badge>;
+      case "removed":
+        return <Badge tone="neutral">{t("members.statusRemoved")}</Badge>;
       default:
         return <Badge tone="neutral">{t("members.statusInactive")}</Badge>;
     }
@@ -146,15 +149,26 @@ export default async function AdminMembersPage({
                           <td className="px-4 py-3">{statusBadge(m)}</td>
                           {canEditRoles ? (
                             <td className="whitespace-nowrap px-4 py-3 text-right">
-                              <EditRolesButton
-                                locale={locale}
-                                churchId={church.id}
-                                churchSlug={church.slug}
-                                membershipId={m.id}
-                                memberName={m.displayName}
-                                currentRoles={m.roles}
-                                roleLabels={roleLabelMap}
-                              />
+                              <div className="flex justify-end gap-2">
+                                <EditRolesButton
+                                  locale={locale}
+                                  churchId={church.id}
+                                  churchSlug={church.slug}
+                                  membershipId={m.id}
+                                  memberName={m.displayName}
+                                  currentRoles={m.roles}
+                                  roleLabels={roleLabelMap}
+                                />
+                                <MemberStatusButton
+                                  locale={locale}
+                                  churchId={church.id}
+                                  churchSlug={church.slug}
+                                  membershipId={m.id}
+                                  memberName={m.displayName}
+                                  status={m.status}
+                                  isSelf={m.id === viewer.membership?.id}
+                                />
+                              </div>
                             </td>
                           ) : null}
                         </tr>
@@ -190,7 +204,7 @@ export default async function AdminMembersPage({
                       </div>
                     </div>
                     {canEditRoles ? (
-                      <div className="border-t border-line pt-3">
+                      <div className="flex flex-wrap gap-2 border-t border-line pt-3">
                         <EditRolesButton
                           locale={locale}
                           churchId={church.id}
@@ -199,6 +213,15 @@ export default async function AdminMembersPage({
                           memberName={m.displayName}
                           currentRoles={m.roles}
                           roleLabels={roleLabelMap}
+                        />
+                        <MemberStatusButton
+                          locale={locale}
+                          churchId={church.id}
+                          churchSlug={church.slug}
+                          membershipId={m.id}
+                          memberName={m.displayName}
+                          status={m.status}
+                          isSelf={m.id === viewer.membership?.id}
                         />
                       </div>
                     ) : null}
