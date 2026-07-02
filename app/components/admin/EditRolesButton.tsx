@@ -23,6 +23,7 @@ export function EditRolesButton({
   membershipId,
   memberName,
   currentRoles,
+  roleLabels,
 }: {
   locale: Locale;
   churchId: string;
@@ -30,6 +31,8 @@ export function EditRolesButton({
   membershipId: string;
   memberName: string;
   currentRoles: Role[];
+  /** 教会別の呼び方（resolveRoleLabels）。省略時は標準ラベル。 */
+  roleLabels?: Partial<Record<Role, string>>;
 }) {
   const { t } = useLocale();
   const ja = locale === "ja";
@@ -109,7 +112,7 @@ export function EditRolesButton({
                   onChange={() => toggle(role)}
                   className="h-4 w-4 accent-[var(--color-sage-strong)]"
                 />
-                <span className="text-ink">{t(`role.${role}`)}</span>
+                <span className="text-ink">{roleLabels?.[role] ?? t(`role.${role}`)}</span>
               </label>
             ))}
           </div>

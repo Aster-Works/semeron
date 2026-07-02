@@ -4,6 +4,7 @@ import { getModerationQueue } from "@/app/lib/db/queries";
 import { createT } from "@/app/lib/i18n";
 import { ModerationCard } from "@/app/components/admin/ModerationCard";
 import { ButtonLink, EmptyState, SectionHeading } from "@/app/components/ui";
+import { resolveVisibilityLabels } from "@/app/lib/roleLabels";
 
 export default async function PrayerModerationPage({
   params,
@@ -14,6 +15,7 @@ export default async function PrayerModerationPage({
   const { supabase, viewer } = await requireChurchContext(locale, churchSlug);
   const church = viewer.church;
   const t = createT(locale as "ja" | "en");
+  const visLabels = resolveVisibilityLabels(viewer.church, locale as "ja" | "en");
 
   const queue = await getModerationQueue(supabase, viewer);
 
@@ -57,6 +59,7 @@ export default async function PrayerModerationPage({
           <div className="space-y-4">
             {queue.map((q) => (
               <ModerationCard
+                visLabels={visLabels}
                 key={q.item.id}
                 item={q.item}
                 authorName={q.authorName}

@@ -56,6 +56,7 @@ export function DevotionForm({
   contentLanguages,
   initial,
   assistEnabled = false,
+  visLabels,
 }: {
   locale: Locale;
   churchId: string;
@@ -65,6 +66,8 @@ export function DevotionForm({
   initial?: ContentItem;
   /** 教会設定 pastor_assist_enabled。true のとき AI 補助が対話的になる。 */
   assistEnabled?: boolean;
+  /** 教会別の公開範囲の呼び方。省略時は標準ラベル。 */
+  visLabels?: Partial<Record<Visibility, string>>;
 }) {
   const { t } = useLocale();
 
@@ -169,7 +172,7 @@ export function DevotionForm({
                 <Select id="dv-vis" value={visibility} onChange={(e) => setVisibility(e.target.value as Visibility)}>
                   {VIS.map((v) => (
                     <option key={v} value={v}>
-                      {t(`visibility.${v}`)}
+                      {visLabels?.[v] ?? t(`visibility.${v}`)}
                     </option>
                   ))}
                 </Select>

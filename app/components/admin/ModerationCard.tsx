@@ -29,6 +29,7 @@ export function ModerationCard({
   churchDefaultLocale,
   assistEnabled = false,
   allowPrayerAi = false,
+  visLabels,
 }: {
   item: ContentItem;
   authorName: string;
@@ -39,6 +40,8 @@ export function ModerationCard({
   assistEnabled?: boolean;
   /** 教会設定 allow_prayer_ai（祈祷本文の AI 送信可否）。 */
   allowPrayerAi?: boolean;
+  /** 教会別の公開範囲の呼び方。省略時は標準ラベル。 */
+  visLabels?: Partial<Record<Visibility, string>>;
 }) {
   const { t } = useLocale();
 
@@ -104,7 +107,7 @@ export function ModerationCard({
           <div className="space-y-1 text-right">
             <div className="flex items-center justify-end gap-1.5">
               <span className="text-xs text-muted">{t("moderation.requestedVisibility")}:</span>
-              <VisibilityBadge visibility={requested} locale={locale} />
+              <VisibilityBadge visibility={requested} locale={locale} label={visLabels?.[requested]} />
             </div>
           </div>
         </div>
@@ -132,6 +135,7 @@ export function ModerationCard({
 
         {/* センシティブ確認（AI）。承認とは分離。提案のみ。 */}
         <PrayerAssistPanel
+          visLabels={visLabels}
           churchSlug={churchSlug}
           contentId={item.id}
           assistEnabled={assistEnabled}
@@ -165,7 +169,7 @@ export function ModerationCard({
                     : "border-line-strong bg-surface text-muted hover:text-ink")
                 }
               >
-                {t(`visibility.${v}`)}
+                {visLabels?.[v] ?? t(`visibility.${v}`)}
               </button>
             ))}
           </div>

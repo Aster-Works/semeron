@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Lock } from "lucide-react";
 import type { Church, Locale } from "@/app/lib/demo/types";
 import { createT, localize } from "@/app/lib/i18n";
+import { resolveRoleLabels } from "@/app/lib/roleLabels";
 import { HeaderSettingsMenu } from "@/app/components/HeaderSettingsMenu";
 import { ButtonLink } from "@/app/components/ui";
 import { AdminNav } from "./AdminNav";
@@ -79,6 +80,7 @@ export function AdminShell({
 
 export function AccessDenied({ locale, church }: { locale: Locale; church: Church }) {
   const jaMode = locale === "ja";
+  const rl = resolveRoleLabels(church, locale);
   return (
     <div className="mx-auto max-w-md rounded-2xl border border-line bg-surface p-8 text-center">
       <span className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-cedar-soft text-cedar-ink">
@@ -89,8 +91,8 @@ export function AccessDenied({ locale, church }: { locale: Locale; church: Churc
       </h2>
       <p className="mt-2 text-sm text-muted text-balance-safe">
         {jaMode
-          ? "管理画面は牧師・長老・スタッフなどの役割に限定されています。"
-          : "The admin area is limited to roles like pastor, elder, and staff."}
+          ? `管理画面は${rl.owner}・${rl.pastor}・${rl.elder}・${rl.staff}などの役割に限定されています。`
+          : `The admin area is limited to roles like ${rl.owner}, ${rl.pastor}, ${rl.elder}, and ${rl.staff}.`}
       </p>
       <div className="mt-5">
         <ButtonLink href={`/${locale}/church/${church.slug}/today`} variant="secondary" size="sm">

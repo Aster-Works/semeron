@@ -4,6 +4,7 @@ import { getMyPrayerRequests, getPrayerFeed } from "@/app/lib/db/queries";
 import { createT } from "@/app/lib/i18n";
 import { PrayerCard } from "@/app/components/member/PrayerCard";
 import { ButtonLink, EmptyState, SectionHeading } from "@/app/components/ui";
+import { fmt, resolveRoleLabels } from "@/app/lib/roleLabels";
 
 export default async function PrayersPage({
   params,
@@ -14,6 +15,7 @@ export default async function PrayersPage({
   const { supabase, viewer } = await requireChurchContext(locale, churchSlug);
   const church = viewer.church;
   const t = createT(locale as "ja" | "en");
+  const rl = resolveRoleLabels(viewer.church, locale as "ja" | "en");
 
   const newHref = `/${locale}/church/${church.slug}/prayers/new`;
   const [feed, myRequests] = await Promise.all([
@@ -50,7 +52,7 @@ export default async function PrayersPage({
         {feed.length === 0 && myPending.length === 0 ? (
           <EmptyState
             icon={HeartHandshake}
-            title={t("prayer.empty")}
+            title={fmt(t("prayer.empty"), { pastor: rl.pastor })}
             action={
               <ButtonLink href={newHref} variant="secondary" size="sm">
                 {t("prayer.new")}

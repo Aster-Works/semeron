@@ -866,3 +866,74 @@ export async function updateMemberRoles(input: {
   revalidatePath(`/${input.locale}/admin/${input.churchSlug}/members`);
   return { ok: true };
 }
+
+/* ═════════════ 役割の呼び方カスタマイズ（owner/pastor のみ・方針A）═════════════ */
+
+const LABELABLE_ROLES = [
+  "owner", "pastor", "elder", "staff", "prayer_team", "group_leader", "member", "guest",
+] as const;
+
+/**
+ * churches.role_labels を更新する。権限は変えず表示名のみ。
+ * 入力は { role: { lang: label } }。空文字は「標準に戻す」として除去する。
+ */
+export async function updateRoleLabels(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  labels: Record<string, Record<string, string>>;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "not signed in" };
+
+  // 実行者が owner/pastor であることを確認（RLS churches_update と同じ層）
+  const { data: meRow } = await supabase
+    .from("memberships")
+    .select("id, membership_roles(role)")
+    .eq("church_id", input.churchId)
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+  const myRoles: string[] = (meRow?.membership_roles ?? []).map((r: { role: string }) => r.role);
+  if (!meRow || !myRoles.some((r) => r === "owner" || r === "pastor")) {
+    return { ok: false, error: "owner/pastor role required" };
+  }
+
+  // サニタイズ: 既知ロールのみ・言語コードは英数2-8字・ラベルは1〜20字。空は除去。
+  const clean: Record<string, Record<string, string>> = {};
+  for (const [role, byLang] of Object.entries(input.labels ?? {})) {
+    if (!(LABELABLE_ROLES as readonly string[]).includes(role)) continue;
+    if (!byLang || typeof byLang !== "object") continue;
+    const entry: Record<string, string> = {};
+    for (const [lang, raw] of Object.entries(byLang)) {
+      if (!/^[a-z]{2,8}$/i.test(lang)) continue;
+      const v = String(raw ?? "").trim();
+      if (!v) continue;
+      if (v.length > 20) return { ok: false, error: "label too long" };
+      entry[lang] = v;
+    }
+    if (Object.keys(entry).length > 0) clean[role] = entry;
+  }
+
+  const { error } = await supabase
+    .from("churches")
+    .update({ role_labels: clean })
+    .eq("id", input.churchId);
+  if (error) return { ok: false, error: error.message };
+
+  await supabase.from("audit_logs").insert({
+    church_id: input.churchId,
+    actor_membership_id: meRow.id,
+    action: "church.role_labels_updated",
+    target_type: "church",
+    target_id: input.churchId,
+    metadata: { labels: clean },
+  });
+
+  // 呼び方は全画面に影響するためルーターキャッシュごと無効化
+  revalidatePath("/", "layout");
+  return { ok: true };
+}

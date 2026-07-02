@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   public: {
     Tables: {
       audit_logs: {
@@ -69,6 +74,7 @@ export type Database = {
           name: Json
           pastor_assist_enabled: boolean
           plan: string
+          role_labels: Json
           slug: string
           soft_gate_mode: string
           status: string
@@ -86,6 +92,7 @@ export type Database = {
           name?: Json
           pastor_assist_enabled?: boolean
           plan?: string
+          role_labels?: Json
           slug: string
           soft_gate_mode?: string
           status?: string
@@ -103,6 +110,7 @@ export type Database = {
           name?: Json
           pastor_assist_enabled?: boolean
           plan?: string
+          role_labels?: Json
           slug?: string
           soft_gate_mode?: string
           status?: string
@@ -858,6 +866,7 @@ export type Database = {
           name: Json
           pastor_assist_enabled: boolean
           plan: string
+          role_labels: Json
           slug: string
           soft_gate_mode: string
           status: string
@@ -891,6 +900,7 @@ export type Database = {
           name: Json
           pastor_assist_enabled: boolean
           plan: string
+          role_labels: Json
           slug: string
           soft_gate_mode: string
           status: string
@@ -914,6 +924,23 @@ export type Database = {
           p_visibility?: string
         }
         Returns: undefined
+      }
+      update_my_display_name: {
+        Args: { p_church: string; p_display_name: string }
+        Returns: undefined
+      }
+      weekly_summary: {
+        Args: { target_church: string }
+        Returns: {
+          devotions_published: number
+          new_members: number
+          prayed_count: number
+          prayers_approved: number
+          prayers_pending: number
+          prayers_submitted: number
+          read_count: number
+          reflection_count: number
+        }[]
       }
     }
     Enums: {
@@ -1047,4 +1074,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

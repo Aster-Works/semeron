@@ -15,6 +15,7 @@ import {
   RoleBadge,
   SectionHeading,
 } from "@/app/components/ui";
+import { resolveRoleLabels } from "@/app/lib/roleLabels";
 
 /** 設定風の Me 画面。所属教会・役割・グループ・言語を静かに並べる。 */
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -37,6 +38,7 @@ export default async function MePage({
   const { supabase, viewer } = await requireChurchContext(locale, churchSlug);
   const church = viewer.church;
   const t = createT(locale as "ja" | "en");
+  const roleLabelMap = resolveRoleLabels(viewer.church, locale as "ja" | "en");
   const membership = viewer.membership;
   if (!membership) return null; // requireChurchContext が membership を保証するが型の保険
 
@@ -67,7 +69,7 @@ export default async function MePage({
 
             <Row label={t("me.role")}>
               {membership.roles.map((role) => (
-                <RoleBadge key={role} role={role} locale={locale as "ja" | "en"} />
+                <RoleBadge key={role} role={role} locale={locale as "ja" | "en"} label={roleLabelMap[role]} />
               ))}
             </Row>
 

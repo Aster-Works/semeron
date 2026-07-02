@@ -72,16 +72,19 @@ export function VisibilityBadge({
   visibility,
   locale,
   className,
+  label,
 }: {
   visibility: Visibility;
   locale: Locale;
   className?: string;
+  /** 教会別の呼び方カスタム（visibilityLabel で合成した文字列）。省略時は標準。 */
+  label?: string;
 }) {
   const t = createT(locale);
   const meta = visibilityMeta[visibility];
   return (
     <Badge tone={meta.tone} icon={meta.icon} className={className}>
-      {t(`visibility.${visibility}`)}
+      {label ?? t(`visibility.${visibility}`)}
     </Badge>
   );
 }
@@ -127,7 +130,16 @@ export function OutcomeBadge({
 }
 
 const adminRoles: Role[] = ["owner", "pastor", "elder", "staff"];
-export function RoleBadge({ role, locale }: { role: Role; locale: Locale }) {
+export function RoleBadge({
+  role,
+  locale,
+  label,
+}: {
+  role: Role;
+  locale: Locale;
+  /** 教会別の呼び方カスタム（resolveRoleLabels の値）。省略時は標準。 */
+  label?: string;
+}) {
   const t = createT(locale);
   const tone: Tone = adminRoles.includes(role)
     ? "cedar"
@@ -136,7 +148,7 @@ export function RoleBadge({ role, locale }: { role: Role; locale: Locale }) {
       : role === "group_leader"
         ? "slate"
         : "neutral";
-  return <Badge tone={tone}>{t(`role.${role}`)}</Badge>;
+  return <Badge tone={tone}>{label ?? t(`role.${role}`)}</Badge>;
 }
 
 /** センシティブ分類のチップ列（rose で柔らかく注意喚起）。 */

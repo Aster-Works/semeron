@@ -12,6 +12,7 @@ import { PrayerCard } from "@/app/components/member/PrayerCard";
 import { ReflectionCard } from "@/app/components/member/ReflectionCard";
 import { ReflectionComposer } from "@/app/components/member/ReflectionComposer";
 import { TodayActions } from "@/app/components/member/TodayActions";
+import { fmt, resolveRoleLabels } from "@/app/lib/roleLabels";
 import {
   ButtonLink,
   Card,
@@ -30,6 +31,7 @@ export default async function TodayPage({
   const { supabase, viewer } = await requireChurchContext(locale, churchSlug);
   const church = viewer.church;
   const t = createT(locale as "ja" | "en");
+  const rl = resolveRoleLabels(church, locale as "ja" | "en");
 
   // 4クエリを並列化（completion のみ devotion に依存するため then で連結）。
   const devotionP = getTodayDevotion(supabase, church);
@@ -54,7 +56,7 @@ export default async function TodayPage({
         }
       />
       {prayers.length === 0 ? (
-        <EmptyState icon={HeartHandshake} title={t("prayer.empty")} />
+        <EmptyState icon={HeartHandshake} title={fmt(t("prayer.empty"), { pastor: rl.pastor })} />
       ) : (
         prayers.map((vm) => <PrayerCard key={vm.item.id} vm={vm} church={church} locale={locale as "ja" | "en"} />)
       )}
@@ -77,7 +79,7 @@ export default async function TodayPage({
               <div className="pt-1">
                 <ButtonLink href={shareHref} variant="secondary" size="sm">
                   <MessageCircleHeart className="h-4 w-4" aria-hidden />
-                  {t("today.talkToPastor")}
+                  {fmt(t("today.talkToPastor"), { pastor: rl.pastor })}
                 </ButtonLink>
               </div>
             </CardBody>
@@ -94,7 +96,7 @@ export default async function TodayPage({
           />
 
           <section className="space-y-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-sage-ink">{t("today.pastorNote")}</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-sage-ink">{fmt(t("today.pastorNote"), { pastor: rl.pastor })}</p>
             <h1 className="text-xl font-semibold text-ink text-balance-safe">
               {localize(devotion.title, locale as "ja" | "en", church.defaultLocale)}
             </h1>
@@ -127,6 +129,7 @@ export default async function TodayPage({
           ) : null}
 
           <TodayActions
+            talkToPastorLabel={fmt(t("today.talkToPastor"), { pastor: rl.pastor })}
             churchId={church.id}
             contentId={devotion.id}
             initialRead={completion?.read ?? false}

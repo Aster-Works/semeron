@@ -13,6 +13,7 @@ import { createT, localize } from "@/app/lib/i18n";
 import { formatDateKey } from "@/app/lib/utils";
 import { isChurchAdmin } from "@/app/lib/demo/visibility";
 import { AccessDenied } from "@/app/components/admin/AdminShell";
+import { resolveVisibilityLabels } from "@/app/lib/roleLabels";
 import {
   Badge,
   ButtonLink,
@@ -265,6 +266,7 @@ async function OpsSection({ locale, churchSlug }: { locale: Loc; churchSlug: str
   const church = viewer.church;
   const t = createT(locale);
   const jaMode = locale === "ja";
+  const visLabels = resolveVisibilityLabels(church, locale);
   const d = await getOpsDashboard(supabase, church.id);
 
   return (
@@ -352,7 +354,7 @@ async function OpsSection({ locale, churchSlug }: { locale: Loc; churchSlug: str
                     key={row.visibility}
                     className="flex items-center justify-between gap-3 px-5 py-3 sm:px-6"
                   >
-                    <VisibilityBadge visibility={row.visibility as Visibility} locale={locale} />
+                    <VisibilityBadge visibility={row.visibility as Visibility} locale={locale} label={visLabels[row.visibility as Visibility]} />
                     <span className="text-sm font-semibold tabular-nums text-ink">{row.count}</span>
                   </li>
                 ))}

@@ -30,6 +30,7 @@ export function mapChurch(r: any): Church {
     inviteCode: r.invite_code,
     pastorAssistEnabled: r.pastor_assist_enabled ?? false,
     allowPrayerAi: r.allow_prayer_ai ?? false,
+    roleLabels: r.role_labels ?? {},
   };
 }
 

@@ -18,12 +18,15 @@ export function TodayActions({
   initialRead,
   initialPrayed,
   shareHref,
+  talkToPastorLabel,
 }: {
   churchId: string;
   contentId: string;
   initialRead: boolean;
   initialPrayed: boolean;
   shareHref: string;
+  /** 「{pastor}に相談する」の教会別呼称ラベル。省略時は標準。 */
+  talkToPastorLabel?: string;
 }) {
   const { t } = useLocale();
   const [read, setRead] = useState(initialRead);
@@ -55,7 +58,7 @@ export function TodayActions({
         </Link>
         <Link href={shareHref} className={buttonClass({ variant: "quiet", size: "sm" })}>
           <MessageCircleHeart className="h-4 w-4" aria-hidden />
-          {t("today.talkToPastor")}
+          {talkToPastorLabel ?? t("today.talkToPastor")}
         </Link>
       </div>
 

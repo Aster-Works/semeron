@@ -2,6 +2,7 @@ import { CalendarClock } from "lucide-react";
 import type { Church, Locale } from "@/app/lib/demo/types";
 import type { PrayerVM } from "@/app/lib/db/queries";
 import { localize, createT } from "@/app/lib/i18n";
+import { resolveRoleLabels, visibilityLabel } from "@/app/lib/roleLabels";
 import { formatMonthDay } from "@/app/lib/utils";
 import {
   Avatar,
@@ -28,6 +29,7 @@ export function PrayerCard({
 }) {
   const t = createT(locale);
   const { item, authorName, isMine } = vm;
+  const visLabel = visibilityLabel(item.visibility, resolveRoleLabels(church, locale), locale);
 
   return (
     <Card as="article">
@@ -43,7 +45,7 @@ export function PrayerCard({
             {item.prayerOutcome && item.prayerOutcome !== "open" ? (
               <OutcomeBadge outcome={item.prayerOutcome} locale={locale} />
             ) : null}
-            <VisibilityBadge visibility={item.visibility} locale={locale} />
+            <VisibilityBadge visibility={item.visibility} locale={locale} label={visLabel} />
           </div>
         </div>
 

@@ -104,6 +104,11 @@ export interface Church {
   pastorAssistEnabled: boolean;
   /** 祈祷課題の本文を AI に送ることを許可するか。要配慮情報のため既定 false。 */
   allowPrayerAi: boolean;
+  /**
+   * 役割の「呼び方」の教会別カスタム（例: elder→執事）。権限は変わらない。
+   * 形: { elder: { ja: "執事", en: "Deacon" }, ... }。未指定は標準ラベル。
+   */
+  roleLabels: Record<string, Localized>;
 }
 
 export interface Membership {

@@ -60,6 +60,7 @@ export const churches: Church[] = [
     inviteCode: "EIFUKU-2026",
     pastorAssistEnabled: true, // デモ: 永福南は Pastor Assist を有効化
     allowPrayerAi: false, // 祈祷本文の AI 送信は既定オフ（opt-in）
+    roleLabels: {},
   },
   {
     id: "ch_grace",
@@ -75,6 +76,7 @@ export const churches: Church[] = [
     inviteCode: "GRACE-2026",
     pastorAssistEnabled: false,
     allowPrayerAi: false,
+  roleLabels: {},
   },
 ];
 

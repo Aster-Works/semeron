@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireChurchContext } from "@/app/lib/db/context";
 import { getMyGroups } from "@/app/lib/db/queries";
 import { createT } from "@/app/lib/i18n";
+import { resolveRoleLabels, resolveVisibilityLabels } from "@/app/lib/roleLabels";
 import { PrayerRequestForm } from "@/app/components/member/PrayerRequestForm";
 
 export default async function NewPrayerPage({
@@ -33,6 +34,8 @@ export default async function NewPrayerPage({
           churchSlug={church.slug}
           churchDefaultLocale={church.defaultLocale}
           groups={groups}
+          visLabels={resolveVisibilityLabels(church, locale as "ja" | "en")}
+          roleLabels={resolveRoleLabels(church, locale as "ja" | "en")}
         />
       </div>
     </>

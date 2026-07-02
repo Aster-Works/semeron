@@ -4,6 +4,7 @@ import { getChurchGroups, getMembers } from "@/app/lib/db/queries";
 import type { Group, Membership, Role } from "@/app/lib/demo/types";
 import { createT, localize } from "@/app/lib/i18n";
 import { isChurchAdmin } from "@/app/lib/demo/visibility";
+import { resolveRoleLabels } from "@/app/lib/roleLabels";
 import { AccessDenied } from "@/app/components/admin/AdminShell";
 import { EditRolesButton } from "@/app/components/admin/EditRolesButton";
 import { InviteButton } from "@/app/components/admin/InviteButton";
@@ -42,6 +43,8 @@ export default async function AdminMembersPage({
   const members = membersRaw.sort(sortMembers);
   const groupsById = new Map<string, Group>(groups.map((g) => [g.id, g]));
 
+  const roleLabelMap = resolveRoleLabels(church, locale);
+
   // 役割編集は owner/pastor のみ（RLS 0010 と同一基準。サーバーアクション側でも再確認）
   const canEditRoles = (viewer.membership?.roles ?? []).some(
     (r) => r === "owner" || r === "pastor",
@@ -79,7 +82,7 @@ export default async function AdminMembersPage({
         {[...m.roles]
           .sort((a, b) => ROLE_ORDER.indexOf(a) - ROLE_ORDER.indexOf(b))
           .map((role) => (
-            <RoleBadge key={role} role={role} locale={locale} />
+            <RoleBadge key={role} role={role} locale={locale} label={roleLabelMap[role]} />
           ))}
       </div>
     );
@@ -150,6 +153,7 @@ export default async function AdminMembersPage({
                                 membershipId={m.id}
                                 memberName={m.displayName}
                                 currentRoles={m.roles}
+                                roleLabels={roleLabelMap}
                               />
                             </td>
                           ) : null}
@@ -194,6 +198,7 @@ export default async function AdminMembersPage({
                           membershipId={m.id}
                           memberName={m.displayName}
                           currentRoles={m.roles}
+                          roleLabels={roleLabelMap}
                         />
                       </div>
                     ) : null}

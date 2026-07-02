@@ -8,6 +8,7 @@ import { AccessDenied } from "@/app/components/admin/AdminShell";
 import { ContentLanguagesEditor } from "@/app/components/admin/ContentLanguagesEditor";
 import { InviteLinkCard } from "@/app/components/admin/InviteLinkCard";
 import { PastorAssistSettingsEditor } from "@/app/components/admin/PastorAssistSettingsEditor";
+import { RoleLabelsEditor } from "@/app/components/admin/RoleLabelsEditor";
 import {
   Badge,
   Callout,
@@ -135,6 +136,16 @@ export default async function AdminSettingsPage({
             />
           </CardBody>
         </Card>
+
+        {/* --- 役割の呼び方（方針A: 権限固定・表示名のみ教会別カスタム） --- */}
+        <RoleLabelsEditor
+          locale={locale}
+          churchId={church.id}
+          churchSlug={church.slug}
+          contentLanguages={church.contentLanguages}
+          initial={church.roleLabels}
+          canEdit={canEditSettings}
+        />
 
         {/* --- ソフトゲート（05 §5：ハードロックしない） --- */}
         <Card>

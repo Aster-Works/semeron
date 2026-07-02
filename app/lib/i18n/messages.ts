@@ -103,9 +103,9 @@ export const messages = {
   "today.word": { ja: "今日のみことば", en: "Today's Word" },
   "today.reflection": { ja: "黙想の問い", en: "Reflection" },
   "today.guidedPrayer": { ja: "祈りの導き", en: "A prayer to pray" },
-  "today.pastorNote": { ja: "牧師の導き", en: "A word from your pastor" },
+  "today.pastorNote": { ja: "{pastor}の導き", en: "A word from your {pastor}" },
   "today.shareRequest": { ja: "祈祷課題を送る", en: "Share a prayer request" },
-  "today.talkToPastor": { ja: "牧師に相談する", en: "Talk to a pastor" },
+  "today.talkToPastor": { ja: "{pastor}に相談する", en: "Talk to a {pastor}" },
   "today.softGate.gentle": {
     ja: "まず今日のみことばに耳を傾けましょう。",
     en: "Begin with today's Scripture and prayer.",
@@ -144,8 +144,8 @@ export const messages = {
   },
   "prayer.new": { ja: "祈祷課題を送る", en: "Share a request" },
   "prayer.empty": {
-    ja: "まだ共有された祈祷課題はありません。必要があれば、牧師にだけ送ることもできます。",
-    en: "No prayer requests have been shared yet. You can also send one to pastors only.",
+    ja: "まだ共有された祈祷課題はありません。必要があれば、{pastor}にだけ送ることもできます。",
+    en: "No prayer requests have been shared yet. You can also send one to your {pastor} only.",
   },
   "prayer.prayedCount": { ja: "人が祈っています", en: "praying" },
   "prayer.pray": { ja: "覚えて祈る", en: "Pray for this" },
@@ -172,14 +172,14 @@ export const messages = {
     en: "This includes information about someone else",
   },
   "prayerForm.pastorConsultLabel": {
-    ja: "牧師に個別に相談したい",
-    en: "I'd like to talk with a pastor personally",
+    ja: "{pastor}に個別に相談したい",
+    en: "I'd like to talk with a {pastor} personally",
   },
   "prayerForm.submit": { ja: "確認のために送る", en: "Submit for review" },
   "prayerForm.noticeTitle": { ja: "共有の前に", en: "Before you share" },
   "prayerForm.notice": {
-    ja: "病気、家庭、経済、信仰状態、未成年、本人以外の情報など、慎重に扱うべき情報が含まれる場合は、公開範囲を確認し、必要であれば「牧師のみ」または「祈祷チームのみ」を選んでください。",
-    en: "Prayer requests may include sensitive information such as health, family, finances, faith struggles, minors, or information about someone else. Please choose the visibility carefully. When in doubt, share with pastors only.",
+    ja: "病気、家庭、経済、信仰状態、未成年、本人以外の情報など、慎重に扱うべき情報が含まれる場合は、公開範囲を確認し、必要であれば「{pastorOnly}」または「{prayerTeamOnly}」を選んでください。",
+    en: "Prayer requests may include sensitive information such as health, family, finances, faith struggles, minors, or information about someone else. Please choose the visibility carefully. When in doubt, choose \"{pastorOnly}\".",
   },
   "prayerForm.broadWarningTitle": { ja: "公開範囲の確認", en: "Confirm visibility" },
   "prayerForm.broadWarning": {
@@ -190,8 +190,8 @@ export const messages = {
   "prayerForm.narrow": { ja: "範囲を狭める", en: "Choose narrower" },
   "prayerForm.afterSubmitTitle": { ja: "送信しました", en: "Submitted" },
   "prayerForm.afterSubmit": {
-    ja: "承認待ちです。牧師・祈祷チームが確認してから、選んだ範囲に表示されます。",
-    en: "Your request is pending review. A pastor or the prayer team will check it before it appears to the visibility you chose.",
+    ja: "承認待ちです。{pastor}・{prayerTeam}が確認してから、選んだ範囲に表示されます。",
+    en: "Your request is pending review. Your {pastor} or the {prayerTeam} will check it before it appears to the visibility you chose.",
   },
 
   // --- reflections ---
@@ -564,6 +564,11 @@ export const messages = {
   "settings.goAdmin": { ja: "管理画面へ", en: "Go to admin" },
   "settings.goMember": { ja: "会員画面へ", en: "Go to member view" },
   "settings.title": { ja: "教会の設定", en: "Church settings" },
+  "settings.roleLabels": { ja: "役割の呼び方", en: "Role names" },
+  "settings.roleLabelsHint": {
+    ja: "教会での呼び方に合わせて表示名を変更できます（例: 役員→執事）。権限は変わりません。空欄は標準の呼び方になります。",
+    en: "Rename how roles are displayed to match your church (e.g., Elder → Deacon). Permissions do not change. Leave blank for the default.",
+  },
   "settings.churchName": { ja: "教会名", en: "Church name" },
   "settings.defaultLocale": { ja: "既定の言語", en: "Default language" },
   "settings.timezone": { ja: "タイムゾーン", en: "Time zone" },

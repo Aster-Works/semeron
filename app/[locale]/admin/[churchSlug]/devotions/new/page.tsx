@@ -5,6 +5,7 @@ import { createT } from "@/app/lib/i18n";
 import { isChurchAdmin } from "@/app/lib/demo/visibility";
 import { AccessDenied } from "@/app/components/admin/AdminShell";
 import { DevotionForm } from "@/app/components/admin/DevotionForm";
+import { resolveVisibilityLabels } from "@/app/lib/roleLabels";
 
 export default async function NewDevotionPage({
   params,
@@ -31,6 +32,7 @@ export default async function NewDevotionPage({
         </Link>
         <h1 className="text-xl font-semibold text-ink text-balance-safe">{t("editor.newTitle")}</h1>
         <DevotionForm
+          visLabels={resolveVisibilityLabels(viewer.church, locale as "ja" | "en")}
           locale={locale as "ja" | "en"}
           churchId={church.id}
           churchSlug={church.slug}

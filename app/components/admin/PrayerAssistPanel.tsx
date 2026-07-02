@@ -41,6 +41,7 @@ export function PrayerAssistPanel({
   allowPrayerAi,
   onApplySummary,
   onApplyVisibility,
+  visLabels,
 }: {
   churchSlug: string;
   contentId: string;
@@ -48,6 +49,8 @@ export function PrayerAssistPanel({
   allowPrayerAi: boolean;
   onApplySummary: (text: string) => void;
   onApplyVisibility: (v: Visibility) => void;
+  /** 教会別の公開範囲の呼び方。 */
+  visLabels?: Partial<Record<Visibility, string>>;
 }) {
   const { t, locale } = useLocale();
   const [stage, setStage] = useState<"idle" | "confirm" | "result">("idle");
@@ -146,7 +149,11 @@ export function PrayerAssistPanel({
 
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs text-muted">{t("assist.review.suggestedVisibility")}</span>
-            <VisibilityBadge visibility={review.suggestedSaferVisibility} locale={locale as Locale} />
+            <VisibilityBadge
+              visibility={review.suggestedSaferVisibility}
+              locale={locale as Locale}
+              label={visLabels?.[review.suggestedSaferVisibility]}
+            />
             <Button
               variant="ghost"
               size="sm"

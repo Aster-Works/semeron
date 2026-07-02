@@ -4,6 +4,7 @@ import { requireChurchContext } from "@/app/lib/db/context";
 import { createT } from "@/app/lib/i18n";
 import { CsvImport } from "@/app/components/admin/CsvImport";
 import { SectionHeading } from "@/app/components/ui";
+import { resolveVisibilityLabels } from "@/app/lib/roleLabels";
 
 export default async function ImportPrayersPage({
   params,
@@ -27,7 +28,7 @@ export default async function ImportPrayersPage({
           {t("moderation.title")}
         </Link>
         <SectionHeading title={t("import.title")} description={t("import.subtitle")} />
-        <CsvImport locale={locale} />
+        <CsvImport locale={locale} visLabels={resolveVisibilityLabels(viewer.church, locale as "ja" | "en")} />
       </div>
     </>
   );

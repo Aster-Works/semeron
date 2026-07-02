@@ -29,6 +29,7 @@ import {
   Textarea,
   Toggle,
 } from "@/app/components/ui";
+import { fmt } from "@/app/lib/roleLabels";
 import { cn } from "@/app/lib/utils";
 
 const VIS_ORDER: { key: Visibility; icon: LucideIcon }[] = [
@@ -48,11 +49,16 @@ export function PrayerRequestForm({
   churchSlug,
   churchDefaultLocale,
   groups,
+  visLabels,
+  roleLabels,
 }: {
   locale: Locale;
   churchId: string;
   churchSlug: string;
   churchDefaultLocale: Locale;
+  /** 教会別の呼び方（公開範囲/役割）。省略時は標準ラベル。 */
+  visLabels?: Partial<Record<Visibility, string>>;
+  roleLabels?: Partial<Record<string, string>>;
   groups: Group[];
 }) {
   const { t } = useLocale();
@@ -115,7 +121,7 @@ export function PrayerRequestForm({
           <div>
             <h2 className="text-base font-semibold text-ink">{t("prayerForm.afterSubmitTitle")}</h2>
             <p className="mx-auto mt-1 max-w-sm text-sm text-muted text-balance-safe">
-              {t("prayerForm.afterSubmit")}
+              {fmt(t("prayerForm.afterSubmit"), { pastor: roleLabels?.pastor ?? t("role.pastor"), prayerTeam: roleLabels?.prayer_team ?? t("role.prayer_team") })}
             </p>
           </div>
           <Link href={feedHref} className={buttonClass({ variant: "secondary", size: "sm" })}>
@@ -130,7 +136,7 @@ export function PrayerRequestForm({
     <div className="space-y-4">
       {/* 投稿前の注意（必ず表示: 04 §7 / 05 §6） */}
       <Callout tone="rose" icon={ShieldAlert} title={t("prayerForm.noticeTitle")}>
-        {t("prayerForm.notice")}
+        {fmt(t("prayerForm.notice"), { pastorOnly: visLabels?.pastor_only ?? t("visibility.pastor_only"), prayerTeamOnly: visLabels?.prayer_team ?? t("visibility.prayer_team") })}
       </Callout>
 
       <Card>
@@ -182,7 +188,7 @@ export function PrayerRequestForm({
                     </span>
                     <span className="min-w-0">
                       <span className="block text-sm font-medium text-ink">
-                        {t(`visibility.${key}`)}
+                        {visLabels?.[key] ?? t(`visibility.${key}`)}
                       </span>
                       {BROAD.includes(key) ? (
                         <span className="block text-[11px] text-rose-ink">
@@ -232,7 +238,7 @@ export function PrayerRequestForm({
               id="pr-consult"
               checked={pastorConsult}
               onChange={setPastorConsult}
-              label={t("prayerForm.pastorConsultLabel")}
+              label={fmt(t("prayerForm.pastorConsultLabel"), { pastor: roleLabels?.pastor ?? t("role.pastor") })}
             />
           </div>
 

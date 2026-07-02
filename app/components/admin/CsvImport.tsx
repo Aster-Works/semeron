@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { CheckCircle2, Download, FileUp, ShieldAlert, Upload } from "lucide-react";
-import type { Locale } from "@/app/lib/demo/types";
+import type { Locale, Visibility } from "@/app/lib/demo/types";
 import { useLocale } from "@/app/lib/i18n/LocaleProvider";
 import type { MessageId } from "@/app/lib/i18n";
 import { parseCsvObjects } from "@/app/lib/csv";
@@ -26,7 +26,14 @@ const ERROR_KEY: Record<string, MessageId> = {
   bad_date: "import.errBadDate",
 };
 
-export function CsvImport({ locale }: { locale: Locale }) {
+export function CsvImport({
+  locale,
+  visLabels,
+}: {
+  locale: Locale;
+  /** 教会別の公開範囲の呼び方。省略時は標準ラベル。 */
+  visLabels?: Partial<Record<Visibility, string>>;
+}) {
   const { t } = useLocale();
   const [text, setText] = useState("");
   const [imported, setImported] = useState<number | null>(null);
@@ -137,7 +144,7 @@ export function CsvImport({ locale }: { locale: Locale }) {
                         </h3>
                       </div>
                       <div className="flex flex-col items-end gap-1">
-                        <VisibilityBadge visibility={item.visibility} locale={locale} />
+                        <VisibilityBadge visibility={item.visibility} locale={locale} label={visLabels?.[item.visibility]} />
                         {item.visibilityWasDefaulted ? (
                           <span className="text-[10px] text-muted">{t("import.defaulted")}</span>
                         ) : null}
