@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/app/lib/utils";
 
@@ -20,6 +21,10 @@ export function Modal({
   footer?: React.ReactNode;
   className?: string;
 }) {
+  // ポータルは client でのみ（SSR に document が無いため mount 後に有効化）
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -33,9 +38,12 @@ export function Modal({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
+  // body 直下へポータル描画。レスポンシブ親(hidden sm:block / sm:hidden)の
+  // display:none や ancestor の transform/overflow の影響を受けず、常に
+  // ビューポート基準で表示される。
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end justify-center whitespace-normal bg-ink/40 p-4 sm:items-center"
       role="dialog"
@@ -64,6 +72,7 @@ export function Modal({
         <div className="mt-3 text-sm text-ink-soft text-balance-safe">{children}</div>
         {footer ? <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">{footer}</div> : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
