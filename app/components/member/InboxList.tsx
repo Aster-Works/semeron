@@ -44,6 +44,7 @@ export function InboxList({
     setReadIds((prev) => new Set(prev).add(id)); // 楽観的
     startTransition(async () => {
       await markNotificationRead({ churchSlug, locale, notificationId: id });
+      window.dispatchEvent(new Event("semeron:unread-refresh"));
       router.refresh();
     });
   };
@@ -52,6 +53,7 @@ export function InboxList({
     setReadIds(new Set(items.map((it) => it.id))); // 楽観的
     startTransition(async () => {
       await markAllNotificationsRead({ churchId, churchSlug, locale });
+      window.dispatchEvent(new Event("semeron:unread-refresh"));
       router.refresh();
     });
   };

@@ -48,7 +48,12 @@ export async function MemberShell({
 
       <main id="main" className="mx-auto max-w-2xl px-4 pb-28 pt-4">{children}</main>
 
-      <MemberTabBar locale={locale} churchSlug={church.slug} unread={unread} />
+      <MemberTabBar
+        locale={locale}
+        churchSlug={church.slug}
+        unread={unread}
+        membershipId={viewer.membership?.id}
+      />
     </div>
   );
 }
