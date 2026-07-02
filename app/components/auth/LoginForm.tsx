@@ -24,6 +24,7 @@ export function LoginForm({ locale, nextPath = `/${locale}` }: { locale: Locale;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [sentTo, setSentTo] = useState<string | null>(null); // 確認メール送信済みの宛先
   const [pending, startTransition] = useTransition();
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
@@ -91,11 +92,46 @@ export function LoginForm({ locale, nextPath = `/${locale}` }: { locale: Locale;
           );
           return;
         }
+        // メール確認必須(本番): セッションはまだ無い。確認メールの案内を表示して待つ。
+        if ((res.data as { needsConfirmation?: boolean } | undefined)?.needsConfirmation) {
+          setSentTo(email.trim());
+          return;
+        }
       }
       router.push(nextPath);
       router.refresh();
     });
   };
+
+  // 確認メール送信済み: フォームの代わりに案内を表示（メール内リンクで登録完了）
+  if (sentTo) {
+    return (
+      <Card>
+        <CardBody className="space-y-4">
+          <h2 className="text-base font-semibold text-ink">
+            {ja ? "確認メールを送りました" : "Check your email"}
+          </h2>
+          <p className="text-sm text-ink-soft text-balance-safe">
+            {ja
+              ? `${sentTo} 宛に確認メールを送信しました。メール内の「メールアドレスを確認する」を開くと登録が完了し、そのままログインされます。`
+              : `We sent a confirmation email to ${sentTo}. Open the link inside to finish signing up — you'll be logged in automatically.`}
+          </p>
+          <p className="text-xs text-muted text-balance-safe">
+            {ja
+              ? "届かない場合は迷惑メールフォルダをご確認ください。リンクの有効期限は24時間です。"
+              : "If it doesn't arrive, check your spam folder. The link expires in 24 hours."}
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { setSentTo(null); setMode("signin"); }}
+          >
+            {ja ? "← ログイン画面へ戻る" : "← Back to log in"}
+          </Button>
+        </CardBody>
+      </Card>
+    );
+  }
 
   return (
     <Card>

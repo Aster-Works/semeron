@@ -139,9 +139,10 @@ export async function signUpWithPassword(email: string, password: string): Promi
   const supabase = await createServerSupabase();
   const { data, error } = await supabase.auth.signUp({ email, password });
   if (error) return { ok: false, error: error.message };
-  // メール確認が必須の環境ではセッションが張られない。その場合は明示的に失敗を返す。
-  if (!data.session) return { ok: false, error: "confirmation required" };
-  return { ok: true };
+  // 本番はメール確認必須(autoconfirm off)のためセッションは張られない。
+  // その場合は「確認メールを送信した」ことを成功として返し、UI が案内を表示する。
+  // (ローカル開発は autoconfirm on のため needsConfirmation=false で即ログイン)
+  return { ok: true, data: { needsConfirmation: !data.session } };
 }
 
 export async function signOut(): Promise<ActionResult> {
