@@ -13,7 +13,7 @@ export default async function JoinPage({
   const { locale, inviteCode } = await params;
   if (!isLocale(locale)) notFound();
   const user = await getUser();
-  if (!user) redirect(`/${locale}/login`);
+  if (!user) redirect(`/${locale}/login?next=${encodeURIComponent(`/${locale}/join/${inviteCode}`)}`);
   const t = createT(locale);
 
   return (

@@ -13,8 +13,9 @@ import {
   Check,
   type LucideIcon,
 } from "lucide-react";
-import type { Locale, Visibility } from "@/app/lib/demo/types";
+import type { Group, Locale, Visibility } from "@/app/lib/demo/types";
 import { useLocale } from "@/app/lib/i18n/LocaleProvider";
+import { localize } from "@/app/lib/i18n";
 import { submitPrayerRequest } from "@/app/lib/db/actions";
 import {
   Button,
@@ -45,17 +46,23 @@ export function PrayerRequestForm({
   locale,
   churchId,
   churchSlug,
+  churchDefaultLocale,
+  groups,
 }: {
   locale: Locale;
   churchId: string;
   churchSlug: string;
+  churchDefaultLocale: Locale;
+  groups: Group[];
 }) {
   const { t } = useLocale();
   const feedHref = `/${locale}/church/${churchSlug}/prayers`;
+  const visibilityOptions = groups.length > 0 ? VIS_ORDER : VIS_ORDER.filter((v) => v.key !== "group");
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [visibility, setVisibility] = useState<Visibility | null>(null);
+  const [groupId, setGroupId] = useState(groups[0]?.id ?? "");
   const [expiry, setExpiry] = useState("");
   const [anonymous, setAnonymous] = useState(false);
   const [thirdParty, setThirdParty] = useState(false);
@@ -79,6 +86,7 @@ export function PrayerRequestForm({
         title: title.trim(),
         body: body.trim(),
         visibility,
+        groupId: visibility === "group" ? groupId : null,
         anonymous,
         includesThirdParty: thirdParty,
         expiresAt: expiry || null,
@@ -149,7 +157,7 @@ export function PrayerRequestForm({
           {/* 公開範囲: 誤タップしにくい大きなカード。必須。 */}
           <Field label={t("prayerForm.visibilityLabel")} required>
             <div className="grid gap-2 sm:grid-cols-2">
-              {VIS_ORDER.map(({ key, icon: Icon }) => {
+              {visibilityOptions.map(({ key, icon: Icon }) => {
                 const selected = visibility === key;
                 return (
                   <button
@@ -188,6 +196,24 @@ export function PrayerRequestForm({
               })}
             </div>
           </Field>
+
+          {visibility === "group" ? (
+            <Field label={locale === "ja" ? "小グループ" : "Small group"} htmlFor="pr-group" required>
+              <select
+                id="pr-group"
+                required
+                value={groupId}
+                onChange={(e) => setGroupId(e.target.value)}
+                className="h-11 w-full rounded-xl border border-line-strong bg-surface px-3 text-sm text-ink outline-none transition-colors focus:border-sage focus:ring-2 focus:ring-sage/20"
+              >
+                {groups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {localize(group.name, locale, churchDefaultLocale)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          ) : null}
 
           <div className="space-y-2">
             <Toggle

@@ -96,6 +96,8 @@ export async function getTodayDevotion(
     .eq("type", "devotion")
     .eq("status", "published")
     .eq("devotion_date", today)
+    .order("published_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
   return data ? mapContent(data) : null;
 }
@@ -295,6 +297,17 @@ export async function countReactions(
     .eq("content_item_id", contentId)
     .eq("type", type);
   return count ?? 0;
+}
+export async function getDevotionCompletionCounts(
+  supabase: SupabaseClient,
+  contentId: string,
+): Promise<{ read: number; prayed: number }> {
+  const { data } = await supabase.rpc("devotion_completion_counts", { target_content: contentId });
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    read: Number(row?.read_count ?? 0),
+    prayed: Number(row?.prayed_count ?? 0),
+  };
 }
 
 export async function getMembers(supabase: SupabaseClient, churchId: string): Promise<Membership[]> {

@@ -7,19 +7,120 @@ import type { Locale, ReactionType, Visibility } from "@/app/lib/demo/types";
 
 export type ActionResult = { ok: true; data?: unknown } | { ok: false; error: string };
 
-async function myMembershipId(supabase: SupabaseClient, churchId: string): Promise<string | null> {
+const CHURCH_ADMIN_ROLES = new Set(["owner", "pastor", "elder", "staff"]);
+const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+async function myMembership(
+  supabase: SupabaseClient,
+  churchId: string,
+): Promise<{ id: string; roles: string[] } | null> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return null;
   const { data } = await supabase
     .from("memberships")
-    .select("id")
+    .select("id, membership_roles(role)")
     .eq("church_id", churchId)
     .eq("user_id", user.id)
     .eq("status", "active")
     .maybeSingle();
-  return data?.id ?? null;
+  if (!data?.id) return null;
+  return {
+    id: data.id,
+    roles: ((data.membership_roles ?? []) as { role: string }[]).map((r) => r.role),
+  };
+}
+
+async function myMembershipId(supabase: SupabaseClient, churchId: string): Promise<string | null> {
+  return (await myMembership(supabase, churchId))?.id ?? null;
+}
+
+function isChurchAdminRole(roles: string[]): boolean {
+  return roles.some((role) => CHURCH_ADMIN_ROLES.has(role));
+}
+
+function normalizeDateKey(value?: string | null): string | null {
+  if (!value) return null;
+  return DATE_KEY_RE.test(value) ? value : null;
+}
+
+function timeZoneOffsetMs(date: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  const asUtc = Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    Number(values.hour),
+    Number(values.minute),
+    Number(values.second),
+  );
+  return asUtc - date.getTime();
+}
+
+function zonedDateTimeToUtcIso(
+  dateKey: string,
+  time: { hour: number; minute: number; second?: number; ms?: number },
+  timeZone: string,
+): string {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const wallClockUtc = Date.UTC(
+    year,
+    month - 1,
+    day,
+    time.hour,
+    time.minute,
+    time.second ?? 0,
+    time.ms ?? 0,
+  );
+  try {
+    const first = wallClockUtc - timeZoneOffsetMs(new Date(wallClockUtc), timeZone);
+    const second = wallClockUtc - timeZoneOffsetMs(new Date(first), timeZone);
+    return new Date(second).toISOString();
+  } catch {
+    return new Date(wallClockUtc).toISOString();
+  }
+}
+
+function parseMorningTime(value?: string | null): { hour: number; minute: number } {
+  const match = value?.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return { hour: 6, minute: 30 };
+  return { hour: Number(match[1]), minute: Number(match[2]) };
+}
+
+async function getChurchTiming(
+  supabase: SupabaseClient,
+  churchId: string,
+): Promise<{ timezone: string; morningTime: string | null }> {
+  const { data } = await supabase
+    .from("churches")
+    .select("timezone, morning_notification_time")
+    .eq("id", churchId)
+    .maybeSingle();
+  return {
+    timezone: data?.timezone ?? "UTC",
+    morningTime: data?.morning_notification_time ?? null,
+  };
+}
+
+function expiryDateToIso(dateKey: string | null, timeZone: string): string | null {
+  if (!dateKey) return null;
+  return zonedDateTimeToUtcIso(dateKey, { hour: 23, minute: 59, second: 59, ms: 999 }, timeZone);
+}
+
+function scheduleDateToIso(dateKey: string | null, timeZone: string, morningTime: string | null): string | null {
+  if (!dateKey) return null;
+  return zonedDateTimeToUtcIso(dateKey, parseMorningTime(morningTime), timeZone);
 }
 
 /* ---------- Auth ---------- */
@@ -96,6 +197,15 @@ export async function setCompletion(
   const supabase = await createServerSupabase();
   const membershipId = await myMembershipId(supabase, churchId);
   if (!membershipId) return { ok: false, error: "not a member" };
+  const { data: content } = await supabase
+    .from("content_items")
+    .select("id")
+    .eq("id", contentId)
+    .eq("church_id", churchId)
+    .eq("type", "devotion")
+    .eq("status", "published")
+    .maybeSingle();
+  if (!content) return { ok: false, error: "not found or not permitted" };
   const col = kind === "read" ? "completed_read_at" : "completed_prayed_at";
   const { error } = await supabase.from("completion_logs").upsert(
     {
@@ -171,13 +281,31 @@ export async function submitPrayerRequest(input: {
   visibility: Visibility;
   anonymous: boolean;
   includesThirdParty: boolean;
+  groupId?: string | null;
   expiresAt?: string | null;
 }): Promise<ActionResult> {
   const supabase = await createServerSupabase();
   const membershipId = await myMembershipId(supabase, input.churchId);
   if (!membershipId) return { ok: false, error: "not a member" };
+
+  let groupId: string | null = null;
+  if (input.visibility === "group") {
+    if (!input.groupId) return { ok: false, error: "group required" };
+    const { data: groupMembership } = await supabase
+      .from("group_memberships")
+      .select("group_id")
+      .eq("group_id", input.groupId)
+      .eq("membership_id", membershipId)
+      .maybeSingle();
+    if (!groupMembership) return { ok: false, error: "not a group member" };
+    groupId = input.groupId;
+  }
+
+  const timing = await getChurchTiming(supabase, input.churchId);
+  const expiresAt = expiryDateToIso(normalizeDateKey(input.expiresAt), timing.timezone);
   const { error } = await supabase.from("content_items").insert({
     church_id: input.churchId,
+    group_id: groupId,
     author_membership_id: membershipId,
     type: "prayer_request",
     status: "pending_review",
@@ -187,7 +315,7 @@ export async function submitPrayerRequest(input: {
     body: { [input.locale]: input.body },
     anonymous: input.anonymous,
     includes_third_party: input.includesThirdParty,
-    expires_at: input.expiresAt || null,
+    expires_at: expiresAt,
     prayer_outcome: "open",
   });
   if (error) return { ok: false, error: error.message };
@@ -238,17 +366,29 @@ export async function saveDevotion(input: {
   prayerGuide?: Record<string, string>;
 }): Promise<ActionResult> {
   const supabase = await createServerSupabase();
-  const membershipId = await myMembershipId(supabase, input.churchId);
-  if (!membershipId) return { ok: false, error: "not a member" };
+  const membership = await myMembership(supabase, input.churchId);
+  if (!membership) return { ok: false, error: "not a member" };
+  if (!isChurchAdminRole(membership.roles)) return { ok: false, error: "not permitted" };
+
+  const timing = await getChurchTiming(supabase, input.churchId);
+  const scheduledDate = normalizeDateKey(input.scheduledAt);
+  const devotionDate = normalizeDateKey(input.devotionDate) ?? scheduledDate;
+  if (input.status === "scheduled" && !scheduledDate) {
+    return { ok: false, error: "schedule date required" };
+  }
 
   const row = {
     church_id: input.churchId,
-    author_membership_id: membershipId,
+    group_id: null,
+    author_membership_id: membership.id,
     type: "devotion" as const,
     status: input.status,
     visibility: input.visibility,
-    devotion_date: input.devotionDate || null,
-    scheduled_at: input.scheduledAt || null,
+    devotion_date: devotionDate,
+    scheduled_at:
+      input.status === "scheduled"
+        ? scheduleDateToIso(scheduledDate, timing.timezone, timing.morningTime)
+        : null,
     published_at: input.status === "published" ? new Date().toISOString() : null,
     scripture_reference: input.scriptureReference || null,
     scripture_translation: input.scriptureTranslation || null,

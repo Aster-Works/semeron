@@ -7,13 +7,17 @@ import { LoginForm } from "@/app/components/auth/LoginForm";
 
 export default async function LoginPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ next?: string }>;
 }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
+  const { next } = await searchParams;
+  const nextPath = safeNext(next, locale);
   const user = await getUser();
-  if (user) redirect(`/${locale}`);
+  if (user) redirect(nextPath);
   const t = createT(locale);
 
   return (
@@ -32,7 +36,7 @@ export default async function LoginPage({
           <p className="mt-1 text-sm text-muted text-balance-safe">{t("app.tagline")}</p>
         </div>
 
-        <LoginForm locale={locale} />
+        <LoginForm locale={locale} nextPath={nextPath} />
 
         <p className="mt-5 text-center text-sm text-muted">
           {locale === "ja" ? "教会がまだありませんか？ " : "No church yet? "}
@@ -43,4 +47,11 @@ export default async function LoginPage({
       </main>
     </div>
   );
+}
+
+function safeNext(raw: string | undefined, locale: "ja" | "en"): string {
+  if (!raw) return `/${locale}`;
+  if (!raw.startsWith("/")) return `/${locale}`;
+  if (raw.startsWith("//") || raw.startsWith("/\\")) return `/${locale}`;
+  return raw;
 }

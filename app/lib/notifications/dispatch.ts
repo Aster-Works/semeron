@@ -36,6 +36,7 @@ export async function publishDueContent(): Promise<number> {
   const { data, error } = await admin
     .from("content_items")
     .update({ status: "published", published_at: new Date().toISOString() })
+    .eq("type", "devotion")
     .eq("status", "scheduled")
     .lte("scheduled_at", new Date().toISOString())
     .select("id");

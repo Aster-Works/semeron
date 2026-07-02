@@ -124,8 +124,9 @@ supabase/
     …_integrity_triggers.sql       教会境界の整合性トリガー（越境書き込み防止）
   seed.sql                          2教会分のデモデータ
   tests/
-    rls_isolation.test.sql          教会分離・承認制・匿名拒否（16 assertions）
+    rls_isolation.test.sql          教会分離・承認制・匿名拒否（17 assertions）
     rls_content_visibility.test.sql 可視性マトリクス（32 assertions）
+    rls_regressions.test.sql        権限境界・通知・完了ログの退行防止（7 assertions）
 ```
 
 実行（Docker/Supabase CLI が必要。ローカルポートは **546xx**＝keryx(543xx)/synaxis(545xx) と共存。Studio は http://127.0.0.1:54623）:
@@ -133,7 +134,7 @@ supabase/
 ```bash
 npm run db:start   # supabase start（ローカルスタック起動）
 npm run db:reset   # migrations + seed 適用
-npm run db:test    # pgTAP テスト（= supabase test db）→ ✅ 49 assertions PASS
+npm run db:test    # pgTAP テスト（= supabase test db）→ ✅ 56 assertions PASS
 npm run db:types   # 生成型 → app/lib/database.types.ts（925行 / 14 Row 型）
 ```
 
@@ -148,7 +149,7 @@ RLS の核心:
 - 完了ログは本人のみ。管理者は `devotion_completion_counts()` で匿名の「数」だけ取得。
 - 教会境界の整合性はトリガーで担保（子テーブルの `church_id` は親と一致、`group_id` は同一教会）。
 
-> Phase 2 の SQL は敵対的レビュー（3次元）で検証し、2件の HIGH（自己公開/自己承認の抜け穴・越境整合性）を含む指摘を修正済み。**ローカル Supabase で `db:reset` + `db:test` を実際に実行し、49 の pgTAP アサーションが全て PASS**（教会分離・承認制・匿名マスク・完了ログ本人限定・可視性マトリクス・admin≠moderator ほか）。生成型も取得済み。
+> Phase 2 の SQL は敵対的レビュー（3次元）で検証し、2件の HIGH（自己公開/自己承認の抜け穴・越境整合性）を含む指摘を修正済み。**ローカル Supabase で `db:reset` + `db:test` を実際に実行し、56 の pgTAP アサーションが全て PASS**（教会分離・承認制・匿名マスク・完了ログ本人限定・可視性マトリクス・admin≠moderator・祈祷チーム権限境界ほか）。生成型も取得済み。
 
 ## Phase 3 — 実 Supabase 接続（実認証・実データ）
 
@@ -164,7 +165,7 @@ supabase/migrations/…_rpcs.sql  create_church / join_church / moderate_prayer
 - 環境変数は `.env.local`（`supabase status` の値。`SUPABASE_SERVICE_ROLE_KEY` はサーバー専用）。
 - ローカル検証: `npm run db:start` の後 `npm run dev`（:3070）。seed のユーザーは全員 **password123** でログイン可（例: `jimi@eifuku.example`＝牧師 / `taro@eifuku.example`＝会員）。
 - 安全: service role はクライアントに出さない。server action は RLS + `requireChurchContext` で権限を再確認。承認/却下は監査ログに残る。会員の自己公開/自己承認は RLS が拒否。
-- **実機E2E検証済**: ログイン→自教会 Today（実データ・匿名は管理者にのみ作者表示）→「祈りました」が永続。lint / typecheck / build / unit 18 / RLS 49 すべて green。
+- **実機E2E検証済**: ログイン→自教会 Today（実データ・匿名は管理者にのみ作者表示）→「祈りました」が永続。lint / typecheck / build / unit 31 / RLS 56 すべて green。
 
 ## Phase 4 — 通知 + PWA（イベント駆動の通知 / Web Push / インストール）
 
@@ -185,16 +186,16 @@ vercel.json                               crons: /api/notifications/dispatch を
 
 - **通知はイベント駆動**（トリガー）。in-app は `notifications`（status 既定 `queued`）に入り、受信箱は status に関わらず表示。
 - **ディスパッチャ**は queued の in-app を各受信者の `push_subscriptions` へ Web Push 送信し、`sent`/`skipped`(購読なし・未設定)/`failed`(全滅)へ更新。失効購読(410/404)は削除。**Push 未設定でも 200 を返しコアを絶対にブロックしない**（03 §7）。
-- **Daily devotion notification job**: cron が `scheduled_at` 到来のコンテンツを `published` に昇格 → 公開トリガーが会員全員へ in-app 通知を生成 → 同じ実行で配信。
+- **Daily devotion notification job**: cron が `scheduled_at` 到来のコンテンツを `published` に昇格 → 公開トリガーが閲覧可能な会員へ in-app 通知を生成 → 同じ実行で配信。
 - **プロバイダは env ゲート**: VAPID 未設定なら Push 無効、`RESEND_API_KEY` 未設定なら Email 無効（いずれも例外を投げず「無効」を返すだけ）。鍵は `.env.local`（`NEXT_PUBLIC_VAPID_PUBLIC_KEY` のみ公開、private/`CRON_SECRET`/`RESEND_API_KEY` はサーバー専用）。
 - **iOS**: ホーム画面追加 + iOS16.4+ が Push の前提。未対応端末・権限拒否は「自分」画面で静かに案内し、受信箱には常に届く（in-app フォールバック）。
 
 ローカル検証（実施済み・2026-07-02）:
 
-- **トリガー**: 承認→`prayer_request_approved` / 却下→`prayer_request_rejected` / 祈られた→`prayer_request_prayed` / デボーション公開→会員全員へ `daily_devotion_published`。SQL で各生成をロールバック確認。RLS 49 テストは維持。
+- **トリガー**: 承認→`prayer_request_approved` / 却下→`prayer_request_rejected` / 祈られた→`prayer_request_prayed` / デボーション公開→閲覧可能な会員へ `daily_devotion_published`。SQL で各生成をロールバック確認。RLS 56 テストは維持。
 - **ディスパッチ**: 未認証=401、認証=queued を処理。購読なし→`skipped(no_subscription)`、擬似購読→送信を試行し `failed(all_endpoints_failed)`（コアは無停止）を確認。`pushConfigured:true`。
 - **実機ブラウザ**: 会員（山田太郎）でログイン→受信箱に「今日のみことばが届きました／山に向かって目を上げる」「あなたの祈祷課題が覚えられています」が実データで表示（生 enum ではなく多言語タイトル）。未読バッジ2。「自分」画面に通知設定・ホーム画面追加が表示（権限拒否時の graceful 表示を確認）。console エラーなし。
-- **quality gate**: lint / typecheck 0 / build（`/api/notifications/dispatch` を含む）/ unit 18 / RLS 49 すべて green。
+- **quality gate**: lint / typecheck 0 / build（`/api/notifications/dispatch` を含む）/ unit 31 / RLS 56 すべて green。
 
 > 本番の実配信（実デバイスへの OS 通知）には Jimi の実 VAPID 鍵＋実端末が必要（cron は Vercel の `crons` が `CRON_SECRET` を Bearer 付与して起動）。ローカルでは送信の「試行と失敗処理」までを検証済み。
 
@@ -230,7 +231,7 @@ app/components/admin/PastorAssistSettingsEditor.tsx  設定トグル（owner/pas
 - **デボーション**: パネルが対話化。箇所未入力→「先に聖書箇所を…」、入力後→（鍵未設定のため）「AIは未設定です」を穏やかに表示（無停止）。
 - **祈祷**: `allow_prayer_ai` ON でパネル表示→「AIで確認する」→**送信前の確認モーダル**→承認→（鍵未設定で）graceful に「未設定」。console エラーなし。未設定時は監査行を作らない（実 AI 利用時のみ記録）。
 - **敵対的セキュリティレビュー**（6 レンズ×反証検証、8 エージェント）で 2 件を検出・修正: (1) HIGH＝**越境同意バイパス**（`runPrayerAssist` の同意判定は slug の教会だが本文は id だけで取得していた）→ 自教会に限定するフィルタ+明示チェックを追加。(2) MEDIUM＝監査挿入エラーの握り潰し→ 失敗をサーバーログに surface。
-- **quality gate**: lint / typecheck 0 / build / **unit 31**（Pastor Assist の redaction・JSON 抽出を追加）/ **RLS 49** すべて green。
+- **quality gate**: lint / typecheck 0 / build / **unit 31**（Pastor Assist の redaction・JSON 抽出を追加）/ **RLS 56** すべて green。
 
 > 実生成には Jimi の実 `ANTHROPIC_API_KEY` が必要。ローカルでは「ゲート・確認・リダクション・監査・graceful 未設定」までを検証済み。
 

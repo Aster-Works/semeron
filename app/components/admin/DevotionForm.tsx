@@ -20,7 +20,7 @@ import {
 import { cn } from "@/app/lib/utils";
 import { PastorAssistPanel } from "./PastorAssistPanel";
 
-const VIS: Visibility[] = ["church", "group", "prayer_team", "elders", "pastor_only"];
+const VIS: Visibility[] = ["church", "prayer_team", "elders", "pastor_only"];
 
 const nonEmpty = (s?: string) => Boolean(s && s.trim());
 const LOC_FIELDS: (keyof Pick<ContentItem, "title" | "body" | "reflectionQuestion" | "prayerGuide" | "scriptureQuote">)[] = [

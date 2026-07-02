@@ -1,6 +1,6 @@
 import { BookOpen, Plus } from "lucide-react";
 import { requireChurchContext } from "@/app/lib/db/context";
-import { countReactions, getAllDevotions } from "@/app/lib/db/queries";
+import { getAllDevotions, getDevotionCompletionCounts } from "@/app/lib/db/queries";
 import type { ContentItem } from "@/app/lib/demo/types";
 import { createT, hasLocale, localize } from "@/app/lib/i18n";
 import { formatDateKey } from "@/app/lib/utils";
@@ -28,13 +28,9 @@ export default async function AdminDevotionsPage({
 
   const devotions = await getAllDevotions(supabase, church.id);
 
-  // read/prayed 数は非同期。行ごとの N+1 を Promise.all でまとめて解決してから描画する。
+  // read/prayed 数は completion_logs の匿名集計RPCから取得する。
   const counts = await Promise.all(
-    devotions.map(async (dev) => ({
-      id: dev.id,
-      read: await countReactions(supabase, dev.id, "read"),
-      prayed: await countReactions(supabase, dev.id, "prayed"),
-    })),
+    devotions.map(async (dev) => ({ id: dev.id, ...(await getDevotionCompletionCounts(supabase, dev.id)) })),
   );
   const readById = new Map(counts.map((c) => [c.id, c.read]));
   const prayedById = new Map(counts.map((c) => [c.id, c.prayed]));

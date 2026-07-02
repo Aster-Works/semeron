@@ -17,7 +17,7 @@ import { cn } from "@/app/lib/utils";
  * Google ボタンは Supabase 側でプロバイダが有効なときだけ表示する
  * （/auth/v1/settings を確認。未設定なら自動的に非表示＝env 追加不要）。
  */
-export function LoginForm({ locale }: { locale: Locale }) {
+export function LoginForm({ locale, nextPath = `/${locale}` }: { locale: Locale; nextPath?: string }) {
   const t = createT(locale);
   const router = useRouter();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -55,7 +55,7 @@ export function LoginForm({ locale }: { locale: Locale }) {
       const supabase = createClient();
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: `${window.location.origin}/auth/callback?next=/${locale}` },
+        options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}` },
       });
       if (oauthError) {
         setError(ja ? "Googleログインを開始できませんでした。" : "Could not start Google sign-in.");
@@ -92,7 +92,7 @@ export function LoginForm({ locale }: { locale: Locale }) {
           return;
         }
       }
-      router.push(`/${locale}`);
+      router.push(nextPath);
       router.refresh();
     });
   };
