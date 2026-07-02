@@ -346,67 +346,68 @@ export interface DashboardData {
   visibilityBreakdown: { visibility: string; count: number }[];
   failedNotifications: AppNotification[];
 }
-export async function getDashboardData(
+/** 今日のデボーション+当日集計。devotion取得後、集計2本は並列。 */
+export async function getTodayDashboard(
   supabase: SupabaseClient,
   church: Church,
   now: Date = new Date(),
-): Promise<DashboardData> {
+): Promise<{ todayDevotion: ContentItem | null; stats: DashboardData["stats"] }> {
   const todayDevotion = await getTodayDevotion(supabase, church, now);
-
-  let stats: DashboardData["stats"] = null;
-  if (todayDevotion) {
-    const { data: counts } = await supabase.rpc("devotion_completion_counts", { target_content: todayDevotion.id });
-    const row = Array.isArray(counts) ? counts[0] : counts;
-    const { count: reflectionCount } = await supabase
+  if (!todayDevotion) return { todayDevotion: null, stats: null };
+  const [countsRes, reflRes] = await Promise.all([
+    supabase.rpc("devotion_completion_counts", { target_content: todayDevotion.id }),
+    supabase
       .from("content_items")
       .select("id", { count: "exact", head: true })
       .eq("church_id", church.id)
       .eq("type", "reflection")
-      .eq("status", "published");
-    stats = {
-      readCount: Number(row?.read_count ?? 0),
-      prayedCount: Number(row?.prayed_count ?? 0),
-      reflectionCount: reflectionCount ?? 0,
-    };
-  }
-
-  const { count: pendingCount } = await supabase
-    .from("content_items")
-    .select("id", { count: "exact", head: true })
-    .eq("church_id", church.id)
-    .eq("type", "prayer_request")
-    .eq("status", "pending_review");
-
-  const { data: scheduledRows } = await supabase
-    .from("content_items")
-    .select("*")
-    .eq("church_id", church.id)
-    .eq("type", "devotion")
-    .eq("status", "scheduled")
-    .order("devotion_date", { ascending: true });
-
-  const { data: pubPrayers } = await supabase
-    .from("content_items")
-    .select("visibility")
-    .eq("church_id", church.id)
-    .eq("type", "prayer_request")
-    .eq("status", "published");
-  const vbMap = new Map<string, number>();
-  (pubPrayers ?? []).forEach((r: any) => vbMap.set(r.visibility, (vbMap.get(r.visibility) ?? 0) + 1));
-
-  const { data: failed } = await supabase
-    .from("notifications")
-    .select("*")
-    .eq("church_id", church.id)
-    .eq("status", "failed");
-
+      .eq("status", "published"),
+  ]);
+  const row = Array.isArray(countsRes.data) ? countsRes.data[0] : countsRes.data;
   return {
     todayDevotion,
-    stats,
-    pendingCount: pendingCount ?? 0,
-    scheduled: (scheduledRows ?? []).map(mapContent),
+    stats: {
+      readCount: Number(row?.read_count ?? 0),
+      prayedCount: Number(row?.prayed_count ?? 0),
+      reflectionCount: reflRes.count ?? 0,
+    },
+  };
+}
+
+/** 運用系（承認待ち/予約/公開範囲別/失敗通知）。4クエリ並列。 */
+export async function getOpsDashboard(
+  supabase: SupabaseClient,
+  churchId: string,
+): Promise<Pick<DashboardData, "pendingCount" | "scheduled" | "visibilityBreakdown" | "failedNotifications">> {
+  const [pendingRes, scheduledRes, pubRes, failedRes] = await Promise.all([
+    supabase
+      .from("content_items")
+      .select("id", { count: "exact", head: true })
+      .eq("church_id", churchId)
+      .eq("type", "prayer_request")
+      .eq("status", "pending_review"),
+    supabase
+      .from("content_items")
+      .select("*")
+      .eq("church_id", churchId)
+      .eq("type", "devotion")
+      .eq("status", "scheduled")
+      .order("devotion_date", { ascending: true }),
+    supabase
+      .from("content_items")
+      .select("visibility")
+      .eq("church_id", churchId)
+      .eq("type", "prayer_request")
+      .eq("status", "published"),
+    supabase.from("notifications").select("*").eq("church_id", churchId).eq("status", "failed"),
+  ]);
+  const vbMap = new Map<string, number>();
+  (pubRes.data ?? []).forEach((r: any) => vbMap.set(r.visibility, (vbMap.get(r.visibility) ?? 0) + 1));
+  return {
+    pendingCount: pendingRes.count ?? 0,
+    scheduled: (scheduledRes.data ?? []).map(mapContent),
     visibilityBreakdown: [...vbMap.entries()].map(([visibility, count]) => ({ visibility, count })),
-    failedNotifications: (failed ?? []).map(mapNotification),
+    failedNotifications: (failedRes.data ?? []).map(mapNotification),
   };
 }
 
