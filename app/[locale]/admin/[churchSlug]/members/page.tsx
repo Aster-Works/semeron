@@ -8,6 +8,7 @@ import { resolveRoleLabels } from "@/app/lib/roleLabels";
 import { AccessDenied } from "@/app/components/admin/AdminShell";
 import { EditRolesButton } from "@/app/components/admin/EditRolesButton";
 import { InviteButton } from "@/app/components/admin/InviteButton";
+import { MemberRemoveButton } from "@/app/components/admin/MemberRemoveButton";
 import { MemberStatusButton } from "@/app/components/admin/MemberStatusButton";
 import {
   Avatar,
@@ -23,7 +24,7 @@ import {
 const ROLE_ORDER: Role[] = [
   "owner", "pastor", "elder", "staff", "prayer_team", "group_leader", "member", "guest",
 ];
-type MemberStatusFilter = "active" | "inactive" | "all";
+type MemberStatusFilter = "active" | "inactive" | "removed" | "all";
 
 export default async function AdminMembersPage({
   params,
@@ -47,10 +48,17 @@ export default async function AdminMembersPage({
     getChurchGroups(supabase, church.id),
   ]);
   const statusFilter: MemberStatusFilter =
-    rawStatus === "inactive" ? "inactive" : rawStatus === "all" ? "all" : "active";
+    rawStatus === "inactive"
+      ? "inactive"
+      : rawStatus === "removed"
+        ? "removed"
+        : rawStatus === "all"
+          ? "all"
+          : "active";
   const statusCounts = {
     active: membersRaw.filter((m) => m.status === "active").length,
     inactive: membersRaw.filter((m) => m.status === "inactive").length,
+    removed: membersRaw.filter((m) => m.status === "removed").length,
     all: membersRaw.length,
   };
   const members = membersRaw
@@ -123,6 +131,7 @@ export default async function AdminMembersPage({
   const filterLinks: { key: MemberStatusFilter; label: string; href: string; count: number }[] = [
     { key: "active", label: t("members.filterActive"), href: filterBaseHref, count: statusCounts.active },
     { key: "inactive", label: t("members.filterInactive"), href: `${filterBaseHref}?status=inactive`, count: statusCounts.inactive },
+    { key: "removed", label: t("members.filterRemoved"), href: `${filterBaseHref}?status=removed`, count: statusCounts.removed },
     { key: "all", label: t("members.filterAll"), href: `${filterBaseHref}?status=all`, count: statusCounts.all },
   ];
 
@@ -183,24 +192,37 @@ export default async function AdminMembersPage({
                           {canEditRoles ? (
                             <td className="whitespace-nowrap px-4 py-3 text-right">
                               <div className="flex justify-end gap-2">
-                                <EditRolesButton
-                                  locale={locale}
-                                  churchId={church.id}
-                                  churchSlug={church.slug}
-                                  membershipId={m.id}
-                                  memberName={m.displayName}
-                                  currentRoles={m.roles}
-                                  roleLabels={roleLabelMap}
-                                />
-                                <MemberStatusButton
-                                  locale={locale}
-                                  churchId={church.id}
-                                  churchSlug={church.slug}
-                                  membershipId={m.id}
-                                  memberName={m.displayName}
-                                  status={m.status}
-                                  isSelf={m.id === viewer.membership?.id}
-                                />
+                                {m.status !== "removed" ? (
+                                  <>
+                                    <EditRolesButton
+                                      locale={locale}
+                                      churchId={church.id}
+                                      churchSlug={church.slug}
+                                      membershipId={m.id}
+                                      memberName={m.displayName}
+                                      currentRoles={m.roles}
+                                      roleLabels={roleLabelMap}
+                                    />
+                                    <MemberStatusButton
+                                      locale={locale}
+                                      churchId={church.id}
+                                      churchSlug={church.slug}
+                                      membershipId={m.id}
+                                      memberName={m.displayName}
+                                      status={m.status}
+                                      isSelf={m.id === viewer.membership?.id}
+                                    />
+                                    <MemberRemoveButton
+                                      locale={locale}
+                                      churchId={church.id}
+                                      churchSlug={church.slug}
+                                      membershipId={m.id}
+                                      memberName={m.displayName}
+                                      status={m.status}
+                                      isSelf={m.id === viewer.membership?.id}
+                                    />
+                                  </>
+                                ) : null}
                               </div>
                             </td>
                           ) : null}
@@ -236,7 +258,7 @@ export default async function AdminMembersPage({
                         {groupBadges(m)}
                       </div>
                     </div>
-                    {canEditRoles ? (
+                    {canEditRoles && m.status !== "removed" ? (
                       <div className="flex flex-wrap gap-2 border-t border-line pt-3">
                         <EditRolesButton
                           locale={locale}
@@ -248,6 +270,15 @@ export default async function AdminMembersPage({
                           roleLabels={roleLabelMap}
                         />
                         <MemberStatusButton
+                          locale={locale}
+                          churchId={church.id}
+                          churchSlug={church.slug}
+                          membershipId={m.id}
+                          memberName={m.displayName}
+                          status={m.status}
+                          isSelf={m.id === viewer.membership?.id}
+                        />
+                        <MemberRemoveButton
                           locale={locale}
                           churchId={church.id}
                           churchSlug={church.slug}
@@ -270,7 +301,12 @@ export default async function AdminMembersPage({
 }
 
 function sortMembers(a: Membership, b: Membership): number {
-  const statusRank = (m: Membership) => (m.status === "active" ? 0 : m.status === "invited" ? 1 : 2);
+  const statusRank = (m: Membership) => {
+    if (m.status === "active") return 0;
+    if (m.status === "invited") return 1;
+    if (m.status === "inactive") return 2;
+    return 3;
+  };
   const s = statusRank(a) - statusRank(b);
   if (s !== 0) return s;
   const roleRank = (m: Membership) =>

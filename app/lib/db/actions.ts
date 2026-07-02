@@ -942,6 +942,42 @@ export async function setMemberStatus(input: {
   return { ok: true };
 }
 
+export async function removeMemberFromChurch(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  membershipId: string;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const { error } = await supabase.rpc("remove_member_from_church", {
+    p_church_id: input.churchId,
+    p_membership_id: input.membershipId,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/members`);
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/groups`);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function leaveChurch(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const { error } = await supabase.rpc("leave_church", {
+    p_church_id: input.churchId,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/${input.locale}`);
+  revalidatePath(`/${input.locale}/church/${input.churchSlug}/me`);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 /* ═════════════ 役割の呼び方カスタマイズ（owner/pastor のみ・方針A）═════════════ */
 
 const LABELABLE_ROLES = [

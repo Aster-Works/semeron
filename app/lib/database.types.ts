@@ -914,6 +914,26 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      leave_church: {
+        Args: { p_church_id: string }
+        Returns: {
+          church_id: string
+          created_at: string
+          display_name: string
+          email: string | null
+          id: string
+          joined_at: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "memberships"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       moderate_prayer: {
         Args: {
           p_content: string
@@ -924,6 +944,26 @@ export type Database = {
           p_visibility?: string
         }
         Returns: undefined
+      }
+      remove_member_from_church: {
+        Args: { p_church_id: string; p_membership_id: string }
+        Returns: {
+          church_id: string
+          created_at: string
+          display_name: string
+          email: string | null
+          id: string
+          joined_at: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "memberships"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       update_my_display_name: {
         Args: { p_church: string; p_display_name: string }

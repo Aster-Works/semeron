@@ -221,6 +221,17 @@ export const messages = {
   "me.language": { ja: "言語", en: "Language" },
   "me.role": { ja: "教会での役割", en: "Your role" },
   "me.church": { ja: "所属教会", en: "Your church" },
+  "me.leaveChurch": { ja: "教会を抜ける", en: "Leave church" },
+  "me.leaveTitle": { ja: "この教会を抜ける", en: "Leave this church" },
+  "me.leaveHint": {
+    ja: "この教会スペースへのアクセスがなくなります。アカウントや過去の記録は削除されません。",
+    en: "You will lose access to this church space. Your account and history are not deleted.",
+  },
+  "me.leaveBody": {
+    ja: "この操作を行うと、この教会スペースに入れなくなります。アカウントや過去の祈祷課題・応答履歴は削除されません。",
+    en: "After this, you will no longer be able to enter this church space. Your account, prayer requests, and response history are not deleted.",
+  },
+  "me.leaveConfirm": { ja: "抜ける", en: "Leave" },
   "me.demoNote": {
     ja: "これはデモです。ログインや実データはまだありません。",
     en: "This is a demo. No real login or data yet.",
@@ -509,6 +520,7 @@ export const messages = {
   "members.invite": { ja: "招待", en: "Invite" },
   "members.filterActive": { ja: "有効", en: "Active" },
   "members.filterInactive": { ja: "休止", en: "Inactive" },
+  "members.filterRemoved": { ja: "削除済み", en: "Removed" },
   "members.filterAll": { ja: "すべて", en: "All" },
   "members.emptyFiltered": {
     ja: "この条件に当てはまるメンバーはいません。",
@@ -536,6 +548,17 @@ export const messages = {
   "members.suspendSelf": {
     ja: "自分自身は休止できません。",
     en: "You cannot suspend yourself.",
+  },
+  "members.removeFromChurch": { ja: "教会から外す", en: "Remove from church" },
+  "members.removeTitle": { ja: "このメンバーを教会から外しますか？", en: "Remove this member from the church?" },
+  "members.removeBody": {
+    ja: "このメンバーは教会スペースに入れなくなります。アカウントや過去の記録は削除されません。",
+    en: "This member will lose access to the church space. Their account and history are not deleted.",
+  },
+  "members.removeConfirm": { ja: "外す", en: "Remove" },
+  "members.removeSelf": {
+    ja: "自分自身は管理画面から外せません。",
+    en: "You cannot remove yourself from the admin page.",
   },
 
   // --- グループ管理（管理 > グループ） ---

@@ -5,6 +5,7 @@ import { createT, localize } from "@/app/lib/i18n";
 import { DisplayNameEditor } from "@/app/components/member/DisplayNameEditor";
 import { NotificationSettings } from "@/app/components/member/NotificationSettings";
 import { InstallPrompt } from "@/app/components/member/InstallPrompt";
+import { LeaveChurchButton } from "@/app/components/member/LeaveChurchButton";
 import { LocaleSwitcher } from "@/app/components/LocaleSwitcher";
 import {
   Avatar,
@@ -43,6 +44,7 @@ export default async function MePage({
   if (!membership) return null; // requireChurchContext が membership を保証するが型の保険
 
   const groups = await getMyGroups(supabase, viewer);
+  const churchName = localize(church.name, locale as "ja" | "en", church.defaultLocale);
 
   return (
     <>
@@ -63,7 +65,7 @@ export default async function MePage({
           <div className="space-y-3">
             <Row label={t("me.church")}>
               <span className="text-sm font-medium text-ink text-balance-safe">
-                {localize(church.name, locale as "ja" | "en", church.defaultLocale)}
+                {churchName}
               </span>
             </Row>
 
@@ -96,6 +98,21 @@ export default async function MePage({
               <div className="border-t border-line pt-5">
                 <InstallPrompt locale={locale as "ja" | "en"} />
               </div>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardBody className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-ink">{t("me.leaveTitle")}</p>
+                <p className="mt-1 text-sm text-muted text-balance-safe">{t("me.leaveHint")}</p>
+              </div>
+              <LeaveChurchButton
+                locale={locale as "ja" | "en"}
+                churchId={church.id}
+                churchSlug={church.slug}
+                churchName={churchName}
+              />
             </CardBody>
           </Card>
 
