@@ -528,9 +528,6 @@ export const messages = {
   // --- settings ---
   "settings.menu": { ja: "設定", en: "Settings" },
   "settings.theme": { ja: "テーマ", en: "Theme" },
-  "settings.theme.light": { ja: "ライト", en: "Light" },
-  "settings.theme.dark": { ja: "ダーク", en: "Dark" },
-  "settings.theme.system": { ja: "システム", en: "System" },
   "settings.goAdmin": { ja: "管理画面へ", en: "Go to admin" },
   "settings.goMember": { ja: "会員画面へ", en: "Go to member view" },
   "settings.title": { ja: "教会の設定", en: "Church settings" },

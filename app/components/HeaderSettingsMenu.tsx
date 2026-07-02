@@ -8,7 +8,7 @@ import type { Locale } from "@/app/lib/demo/types";
 import { useLocale } from "@/app/lib/i18n/LocaleProvider";
 import { signOut } from "@/app/lib/db/actions";
 import { LocaleSwitcher } from "@/app/components/LocaleSwitcher";
-import { ThemeSelect } from "@/app/components/ThemeSelect";
+import { ThemeToggle } from "@/app/components/ThemeToggle";
 import { cn } from "@/app/lib/utils";
 
 /**
@@ -98,7 +98,7 @@ export function HeaderSettingsMenu({
             </div>
             <div className="flex items-center justify-between gap-3 px-1 py-1.5">
               <span className="text-sm text-ink-soft">{t("settings.theme")}</span>
-              <ThemeSelect />
+              <ThemeToggle />
             </div>
           </div>
 
