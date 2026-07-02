@@ -135,9 +135,27 @@ export async function signInWithPassword(email: string, password: string): Promi
  * パスワードでの新規登録（マジックリンクは廃止済み）。
  * autoconfirm 前提で即セッションが張られる。教会への所属は招待コードが実際のゲート。
  */
-export async function signUpWithPassword(email: string, password: string): Promise<ActionResult> {
+export async function signUpWithPassword(
+  email: string,
+  password: string,
+  nextPath?: string,
+): Promise<ActionResult> {
   const supabase = await createServerSupabase();
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  // 招待リンク経由の登録では、確認メールのリンク先に招待コンテキストを載せる。
+  // (テンプレートが rt={{ .RedirectTo }} を /auth/callback へ渡し、callback が
+  //  同一オリジン検証のうえ next として復元する)
+  // nextPath は相対パスのみ許可（オープンリダイレクト防止）。
+  const safe =
+    nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//") && !nextPath.startsWith("/\\")
+      ? nextPath
+      : null;
+  const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+  const emailRedirectTo = safe && base ? `${base}${safe}` : undefined;
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: emailRedirectTo ? { emailRedirectTo } : undefined,
+  });
   if (error) return { ok: false, error: error.message };
   // 本番はメール確認必須(autoconfirm off)のためセッションは張られない。
   // その場合は「確認メールを送信した」ことを成功として返し、UI が案内を表示する。

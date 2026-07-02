@@ -1,4 +1,4 @@
-import { KeyRound, Users, UserPlus } from "lucide-react";
+import { KeyRound, Users } from "lucide-react";
 import { requireChurchContext } from "@/app/lib/db/context";
 import { getChurchGroups, getMembers } from "@/app/lib/db/queries";
 import type { Group, Membership, Role } from "@/app/lib/demo/types";
@@ -6,10 +6,10 @@ import { createT, localize } from "@/app/lib/i18n";
 import { isChurchAdmin } from "@/app/lib/demo/visibility";
 import { AccessDenied } from "@/app/components/admin/AdminShell";
 import { EditRolesButton } from "@/app/components/admin/EditRolesButton";
+import { InviteButton } from "@/app/components/admin/InviteButton";
 import {
   Avatar,
   Badge,
-  Button,
   Card,
   CardBody,
   EmptyState,
@@ -92,10 +92,11 @@ export default async function AdminMembersPage({
         <span className="text-muted">{t("members.inviteCode")}</span>
         <span className="font-mono font-semibold tracking-wide text-ink">{church.inviteCode}</span>
       </span>
-      <Button variant="secondary" size="sm" disabled>
-        <UserPlus className="h-4 w-4" aria-hidden />
-        {t("members.invite")}
-      </Button>
+      <InviteButton
+        locale={locale}
+        inviteCode={church.inviteCode}
+        churchName={localize(church.name, locale, church.defaultLocale)}
+      />
     </div>
   );
 

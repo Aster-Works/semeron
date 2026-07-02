@@ -22,7 +22,20 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
-  const next = safeNext(searchParams.get("next"));
+
+  // rt = 確認メールの {{ .RedirectTo }}（絶対URL）。同一オリジンのときだけ
+  // パス+クエリを next として復元する（招待リンク経由の登録で文脈を保持）。
+  let rawNext = searchParams.get("next");
+  const rt = searchParams.get("rt");
+  if (!rawNext && rt) {
+    try {
+      const u = new URL(rt);
+      if (u.origin === origin) rawNext = `${u.pathname}${u.search}`;
+    } catch {
+      // 不正な rt は無視して既定へ
+    }
+  }
+  const next = safeNext(rawNext);
 
   const supabase = await createServerSupabase();
 

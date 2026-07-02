@@ -79,7 +79,7 @@ export function LoginForm({ locale, nextPath = `/${locale}` }: { locale: Locale;
           return;
         }
       } else {
-        const res = await signUpWithPassword(email.trim(), password);
+        const res = await signUpWithPassword(email.trim(), password, nextPath);
         if (!res.ok) {
           setError(
             res.error.includes("already")
