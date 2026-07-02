@@ -236,6 +236,18 @@ export const messages = {
   "admin.prayedCount": { ja: "祈り", en: "Prayed" },
   "admin.reflectionCount": { ja: "応答", en: "Reflections" },
   "admin.visibilityBreakdown": { ja: "公開範囲別の祈祷課題", en: "Prayer requests by visibility" },
+
+  // --- 週次サマリー（Roadmap Phase 3・過去7日の匿名集計） ---
+  "admin.weekly.title": { ja: "今週のあゆみ（匿名）", en: "This week (anonymous)" },
+  "admin.weekly.subtitle": { ja: "過去7日間の集計です。", en: "Aggregates from the last 7 days." },
+  "admin.weekly.devotions": { ja: "配信したみことば", en: "Devotions published" },
+  "admin.weekly.read": { ja: "読了", en: "Read" },
+  "admin.weekly.prayed": { ja: "祈り", en: "Prayed" },
+  "admin.weekly.reflections": { ja: "応答", en: "Reflections" },
+  "admin.weekly.newPrayers": { ja: "新しい祈祷課題", en: "New prayer requests" },
+  "admin.weekly.approved": { ja: "承認した課題", en: "Approved" },
+  "admin.weekly.pending": { ja: "承認待ち", en: "Pending review" },
+  "admin.weekly.newMembers": { ja: "新しい会員", en: "New members" },
   "admin.notificationFailures": { ja: "通知の失敗", en: "Notification failures" },
   "admin.noIndividualNote": {
     ja: "個人別の完了状況や「信仰スコア」は表示しません。集計は匿名です。",

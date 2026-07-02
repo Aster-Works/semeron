@@ -6,7 +6,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { requireChurchContext } from "@/app/lib/db/context";
-import { getDashboardData } from "@/app/lib/db/queries";
+import { getDashboardData, getWeeklySummary } from "@/app/lib/db/queries";
 import type { Visibility } from "@/app/lib/demo/types";
 import { createT, localize } from "@/app/lib/i18n";
 import { formatDateKey } from "@/app/lib/utils";
@@ -35,7 +35,10 @@ export default async function AdminDashboardPage({
   const t = createT(locale as "ja" | "en");
   const jaMode = locale === "ja";
 
-  const d = await getDashboardData(supabase, church);
+  const [d, weekly] = await Promise.all([
+    getDashboardData(supabase, church),
+    getWeeklySummary(supabase, church.id),
+  ]);
 
   return (
     <AdminShell
@@ -135,6 +138,54 @@ export default async function AdminDashboardPage({
             </Card>
           )}
         </section>
+
+        {/* (2.5) 今週のあゆみ（過去7日・匿名集計。Roadmap Phase 3 週次サマリー） */}
+        {weekly ? (
+          <section className="space-y-3">
+            <SectionHeading
+              title={t("admin.weekly.title")}
+              description={t("admin.weekly.subtitle")}
+            />
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <Stat
+                label={t("admin.weekly.devotions")}
+                value={weekly.devotionsPublished}
+                icon={BookOpenText}
+              />
+              <Stat label={t("admin.weekly.read")} value={weekly.readCount} icon={BookOpenText} />
+              <Stat
+                label={t("admin.weekly.prayed")}
+                value={weekly.prayedCount}
+                icon={HeartHandshake}
+              />
+              <Stat
+                label={t("admin.weekly.reflections")}
+                value={weekly.reflectionCount}
+                icon={ShieldCheck}
+              />
+              <Stat
+                label={t("admin.weekly.newPrayers")}
+                value={weekly.prayersSubmitted}
+                icon={HeartHandshake}
+              />
+              <Stat
+                label={t("admin.weekly.approved")}
+                value={weekly.prayersApproved}
+                icon={ShieldCheck}
+              />
+              <Stat
+                label={t("admin.weekly.pending")}
+                value={weekly.prayersPending}
+                icon={CalendarClock}
+              />
+              <Stat
+                label={t("admin.weekly.newMembers")}
+                value={weekly.newMembers}
+                icon={ShieldCheck}
+              />
+            </div>
+          </section>
+        ) : null}
 
         <div className="grid gap-8 lg:grid-cols-2">
           {/* (3) 承認待ちの祈祷課題 */}

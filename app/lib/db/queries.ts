@@ -409,3 +409,36 @@ export async function getDashboardData(
     failedNotifications: (failed ?? []).map(mapNotification),
   };
 }
+
+/* ---------- 管理者向け週次サマリー（Roadmap Phase 3・匿名集計のみ）---------- */
+export interface WeeklySummary {
+  devotionsPublished: number;
+  readCount: number;
+  prayedCount: number;
+  reflectionCount: number;
+  prayersSubmitted: number;
+  prayersApproved: number;
+  prayersPending: number;
+  newMembers: number;
+}
+
+/** 過去7日の教会のあゆみ。weekly_summary RPC(definer, 管理者チェック内蔵)を1往復で。 */
+export async function getWeeklySummary(
+  supabase: SupabaseClient,
+  churchId: string,
+): Promise<WeeklySummary | null> {
+  const { data, error } = await supabase.rpc("weekly_summary", { target_church: churchId });
+  if (error) return null;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
+  return {
+    devotionsPublished: Number(row.devotions_published ?? 0),
+    readCount: Number(row.read_count ?? 0),
+    prayedCount: Number(row.prayed_count ?? 0),
+    reflectionCount: Number(row.reflection_count ?? 0),
+    prayersSubmitted: Number(row.prayers_submitted ?? 0),
+    prayersApproved: Number(row.prayers_approved ?? 0),
+    prayersPending: Number(row.prayers_pending ?? 0),
+    newMembers: Number(row.new_members ?? 0),
+  };
+}
