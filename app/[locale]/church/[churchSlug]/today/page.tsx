@@ -8,7 +8,6 @@ import {
 } from "@/app/lib/db/queries";
 import { createT, localize } from "@/app/lib/i18n";
 import { formatFullDate } from "@/app/lib/utils";
-import { MemberShell } from "@/app/components/member/MemberShell";
 import { PrayerCard } from "@/app/components/member/PrayerCard";
 import { ReflectionCard } from "@/app/components/member/ReflectionCard";
 import { ReflectionComposer } from "@/app/components/member/ReflectionComposer";
@@ -32,10 +31,15 @@ export default async function TodayPage({
   const church = viewer.church;
   const t = createT(locale as "ja" | "en");
 
-  const devotion = await getTodayDevotion(supabase, church);
-  const completion = devotion ? await getViewerCompletion(supabase, devotion.id) : null;
-  const prayers = (await getPrayerFeed(supabase, viewer, locale as "ja" | "en")).slice(0, 3);
-  const reflections = await getReflections(supabase, viewer, locale as "ja" | "en", 3);
+  // 4クエリを並列化（completion のみ devotion に依存するため then で連結）。
+  const devotionP = getTodayDevotion(supabase, church);
+  const [devotion, completion, prayersAll, reflections] = await Promise.all([
+    devotionP,
+    devotionP.then((d) => (d ? getViewerCompletion(supabase, d.id) : null)),
+    getPrayerFeed(supabase, viewer, locale as "ja" | "en"),
+    getReflections(supabase, viewer, locale as "ja" | "en", 3),
+  ]);
+  const prayers = prayersAll.slice(0, 3);
   const todayLabel = formatFullDate(new Date().toISOString(), locale as "ja" | "en", church.timezone);
   const shareHref = `/${locale}/church/${church.slug}/prayers/new`;
 
@@ -58,7 +62,7 @@ export default async function TodayPage({
   );
 
   return (
-    <MemberShell locale={locale as "ja" | "en"} church={church} viewer={viewer} active="today">
+    <>
       <p className="mb-3 flex items-center gap-1.5 text-sm text-muted">
         <Sunrise className="h-4 w-4 text-gold-ink" aria-hidden />
         {todayLabel}
@@ -151,6 +155,6 @@ export default async function TodayPage({
           ) : null}
         </div>
       )}
-    </MemberShell>
+    </>
   );
 }

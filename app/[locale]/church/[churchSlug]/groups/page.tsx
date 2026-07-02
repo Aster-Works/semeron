@@ -3,7 +3,6 @@ import { ChevronRight, Users } from "lucide-react";
 import { requireChurchContext } from "@/app/lib/db/context";
 import { getGroupMembers, getMyGroups } from "@/app/lib/db/queries";
 import { createT, localize } from "@/app/lib/i18n";
-import { MemberShell } from "@/app/components/member/MemberShell";
 import { Card, EmptyState, SectionHeading } from "@/app/components/ui";
 
 export default async function GroupsPage({
@@ -25,7 +24,7 @@ export default async function GroupsPage({
   );
 
   return (
-    <MemberShell locale={locale as "ja" | "en"} church={church} viewer={viewer} active="groups">
+    <>
       <div className="space-y-4">
         <SectionHeading title={t("groups.mine")} />
 
@@ -78,6 +77,6 @@ export default async function GroupsPage({
           </div>
         )}
       </div>
-    </MemberShell>
+    </>
   );
 }

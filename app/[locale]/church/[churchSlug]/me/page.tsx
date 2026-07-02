@@ -2,7 +2,6 @@ import { Info, Users } from "lucide-react";
 import { requireChurchContext } from "@/app/lib/db/context";
 import { getMyGroups } from "@/app/lib/db/queries";
 import { createT, localize } from "@/app/lib/i18n";
-import { MemberShell } from "@/app/components/member/MemberShell";
 import { DisplayNameEditor } from "@/app/components/member/DisplayNameEditor";
 import { NotificationSettings } from "@/app/components/member/NotificationSettings";
 import { InstallPrompt } from "@/app/components/member/InstallPrompt";
@@ -44,7 +43,7 @@ export default async function MePage({
   const groups = await getMyGroups(supabase, viewer);
 
   return (
-    <MemberShell locale={locale as "ja" | "en"} church={church} viewer={viewer} active="me">
+    <>
       <div className="space-y-5">
         <SectionHeading title={t("me.title")} />
 
@@ -105,6 +104,6 @@ export default async function MePage({
           </Callout>
         </div>
       </div>
-    </MemberShell>
+    </>
   );
 }

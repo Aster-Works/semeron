@@ -4,7 +4,6 @@ import Link from "next/link";
 import { requireChurchContext } from "@/app/lib/db/context";
 import { getGroup, getGroupMembers, getGroupPrayers } from "@/app/lib/db/queries";
 import { createT, localize } from "@/app/lib/i18n";
-import { MemberShell } from "@/app/components/member/MemberShell";
 import { PrayerCard } from "@/app/components/member/PrayerCard";
 import { Avatar, Badge, Card, CardBody, EmptyState, SectionHeading } from "@/app/components/ui";
 
@@ -22,14 +21,16 @@ export default async function GroupDetailPage({
   const group = await getGroup(supabase, groupId);
   if (!group) notFound();
 
-  const members = await getGroupMembers(supabase, groupId);
-  const prayers = await getGroupPrayers(supabase, viewer, groupId, locale as "ja" | "en");
+  const [members, prayers] = await Promise.all([
+    getGroupMembers(supabase, groupId),
+    getGroupPrayers(supabase, viewer, groupId, locale as "ja" | "en"),
+  ]);
   const description = group.description
     ? localize(group.description, locale as "ja" | "en", church.defaultLocale)
     : "";
 
   return (
-    <MemberShell locale={locale as "ja" | "en"} church={church} viewer={viewer} active="groups">
+    <>
       <div className="space-y-6">
         <Link
           href={`/${locale}/church/${church.slug}/groups`}
@@ -90,6 +91,6 @@ export default async function GroupDetailPage({
           )}
         </section>
       </div>
-    </MemberShell>
+    </>
   );
 }

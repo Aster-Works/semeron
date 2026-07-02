@@ -3,7 +3,8 @@ import { requireChurchContext } from "@/app/lib/db/context";
 import { getChurchGroups, getMembers } from "@/app/lib/db/queries";
 import type { Group, Membership, Role } from "@/app/lib/demo/types";
 import { createT, localize } from "@/app/lib/i18n";
-import { AdminShell } from "@/app/components/admin/AdminShell";
+import { isChurchAdmin } from "@/app/lib/demo/visibility";
+import { AccessDenied } from "@/app/components/admin/AdminShell";
 import { EditRolesButton } from "@/app/components/admin/EditRolesButton";
 import {
   Avatar,
@@ -28,11 +29,17 @@ export default async function AdminMembersPage({
   const { locale: rawLocale, churchSlug } = await params;
   const locale = rawLocale as "ja" | "en";
   const { supabase, viewer } = await requireChurchContext(locale, churchSlug);
+  if (!isChurchAdmin(viewer)) {
+    return <AccessDenied locale={locale as "ja" | "en"} church={viewer.church} />;
+  }
   const church = viewer.church;
   const t = createT(locale);
 
-  const members = (await getMembers(supabase, church.id)).sort(sortMembers);
-  const groups = await getChurchGroups(supabase, church.id);
+  const [membersRaw, groups] = await Promise.all([
+    getMembers(supabase, church.id),
+    getChurchGroups(supabase, church.id),
+  ]);
+  const members = membersRaw.sort(sortMembers);
   const groupsById = new Map<string, Group>(groups.map((g) => [g.id, g]));
 
   // 役割編集は owner/pastor のみ（RLS 0010 と同一基準。サーバーアクション側でも再確認）
@@ -93,7 +100,7 @@ export default async function AdminMembersPage({
   );
 
   return (
-    <AdminShell locale={locale} church={church} viewer={viewer} active="members">
+    <>
       <div className="space-y-5">
         <SectionHeading title={t("members.title")} right={inviteCard} />
 
@@ -196,7 +203,7 @@ export default async function AdminMembersPage({
           </>
         )}
       </div>
-    </AdminShell>
+    </>
   );
 }
 

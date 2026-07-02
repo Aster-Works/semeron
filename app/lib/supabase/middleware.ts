@@ -27,8 +27,14 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // getClaims/getUser を呼ぶことでセッションが検証・更新される。
-  await supabase.auth.getUser();
+  // getClaims は JWT をローカル署名検証する（JWKS はインスタンス内キャッシュ）。
+  // 毎リクエストの Auth サーバー往復を排除してナビゲーションを高速化。
+  // 検証できない/期限切れのときだけ getUser でネットワーク検証+トークン
+  // リフレッシュ（Cookie 更新）を行う。
+  const { data, error } = await supabase.auth.getClaims();
+  if (error || !data?.claims) {
+    await supabase.auth.getUser();
+  }
 
   return response;
 }

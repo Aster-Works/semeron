@@ -3,7 +3,6 @@ import { requireChurchContext } from "@/app/lib/db/context";
 import { getInbox } from "@/app/lib/db/queries";
 import { createT, localize } from "@/app/lib/i18n";
 import { formatMonthDay } from "@/app/lib/utils";
-import { MemberShell } from "@/app/components/member/MemberShell";
 import { InboxList, type InboxItemVM } from "@/app/components/member/InboxList";
 import { EmptyState, SectionHeading } from "@/app/components/ui";
 
@@ -29,7 +28,7 @@ export default async function InboxPage({
   }));
 
   return (
-    <MemberShell locale={locale as "ja" | "en"} church={church} viewer={viewer} active="inbox">
+    <>
       <div className="space-y-4">
         <SectionHeading title={t("inbox.title")} description={t("inbox.quietNote")} />
 
@@ -44,6 +43,6 @@ export default async function InboxPage({
           />
         )}
       </div>
-    </MemberShell>
+    </>
   );
 }

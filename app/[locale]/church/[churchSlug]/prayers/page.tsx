@@ -2,7 +2,6 @@ import { HeartHandshake, Plus } from "lucide-react";
 import { requireChurchContext } from "@/app/lib/db/context";
 import { getMyPrayerRequests, getPrayerFeed } from "@/app/lib/db/queries";
 import { createT } from "@/app/lib/i18n";
-import { MemberShell } from "@/app/components/member/MemberShell";
 import { PrayerCard } from "@/app/components/member/PrayerCard";
 import { ButtonLink, EmptyState, SectionHeading } from "@/app/components/ui";
 
@@ -17,14 +16,17 @@ export default async function PrayersPage({
   const t = createT(locale as "ja" | "en");
 
   const newHref = `/${locale}/church/${church.slug}/prayers/new`;
-  const feed = await getPrayerFeed(supabase, viewer, locale as "ja" | "en");
+  const [feed, myRequests] = await Promise.all([
+    getPrayerFeed(supabase, viewer, locale as "ja" | "en"),
+    getMyPrayerRequests(supabase, viewer, locale as "ja" | "en"),
+  ]);
   // 自分の承認待ちの投稿は published フィードに含まれないため、上部に別出しする
-  const myPending = (await getMyPrayerRequests(supabase, viewer, locale as "ja" | "en")).filter(
+  const myPending = myRequests.filter(
     (vm) => vm.item.status !== "published",
   );
 
   return (
-    <MemberShell locale={locale as "ja" | "en"} church={church} viewer={viewer} active="prayer">
+    <>
       <div className="space-y-4">
         <SectionHeading
           title={t("prayer.feedTitle")}
@@ -63,6 +65,6 @@ export default async function PrayersPage({
           </div>
         )}
       </div>
-    </MemberShell>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Bell,
   BookOpen,
@@ -38,20 +39,24 @@ const ITEMS: { key: AdminSection; path: string; icon: LucideIcon; label: Message
 export function AdminNav({
   locale,
   churchSlug,
-  active,
   personaId,
   orientation,
 }: {
   locale: Locale;
   churchSlug: string;
-  active: AdminSection;
   personaId?: string;
   orientation: "vertical" | "horizontal";
 }) {
   const { t } = useLocale();
+  const pathname = usePathname();
   const qs = personaId ? `?as=${personaId}` : "";
   const hrefFor = (path: string) =>
     `/${locale}/admin/${churchSlug}${path ? `/${path}` : ""}${qs}`;
+  // /{locale}/admin/{slug}/{segment}/... の segment からアクティブ項目を導出
+  // （シェルは layout に常駐するため props ではなく URL から判定）。
+  const segment = pathname.split("/")[4] ?? "";
+  const active: AdminSection =
+    ITEMS.find((item) => item.path === segment)?.key ?? "dashboard";
 
   return (
     <ul

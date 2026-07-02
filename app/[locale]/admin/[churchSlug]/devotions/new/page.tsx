@@ -2,7 +2,8 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { requireChurchContext } from "@/app/lib/db/context";
 import { createT } from "@/app/lib/i18n";
-import { AdminShell } from "@/app/components/admin/AdminShell";
+import { isChurchAdmin } from "@/app/lib/demo/visibility";
+import { AccessDenied } from "@/app/components/admin/AdminShell";
 import { DevotionForm } from "@/app/components/admin/DevotionForm";
 
 export default async function NewDevotionPage({
@@ -12,16 +13,14 @@ export default async function NewDevotionPage({
 }) {
   const { locale, churchSlug } = await params;
   const { viewer } = await requireChurchContext(locale, churchSlug);
+  if (!isChurchAdmin(viewer)) {
+    return <AccessDenied locale={locale as "ja" | "en"} church={viewer.church} />;
+  }
   const church = viewer.church;
   const t = createT(locale as "ja" | "en");
 
   return (
-    <AdminShell
-      locale={locale as "ja" | "en"}
-      church={church}
-      viewer={viewer}
-      active="devotions"
-    >
+    <>
       <div className="space-y-5">
         <Link
           href={`/${locale}/admin/${church.slug}/devotions`}
@@ -39,6 +38,6 @@ export default async function NewDevotionPage({
           assistEnabled={church.pastorAssistEnabled}
         />
       </div>
-    </AdminShell>
+    </>
   );
 }

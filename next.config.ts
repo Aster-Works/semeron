@@ -21,6 +21,12 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // 開発時のオーバーレイ（ルート左下のバッジ）を消す。会員下部ナビと重ならないように。
   devIndicators: false,
+  experimental: {
+    // クライアント側ルーターキャッシュ: 30秒以内に再訪したタブはサーバー往復なしで
+    // 即時表示（タブ切替の体感速度）。更新系は server action の revalidatePath /
+    // router.refresh がキャッシュを無効化するため整合は保たれる。
+    staleTimes: { dynamic: 30, static: 300 },
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

@@ -4,7 +4,8 @@ import { getAllDevotions, getDevotionCompletionCounts } from "@/app/lib/db/queri
 import type { ContentItem } from "@/app/lib/demo/types";
 import { createT, hasLocale, localize } from "@/app/lib/i18n";
 import { formatDateKey } from "@/app/lib/utils";
-import { AdminShell } from "@/app/components/admin/AdminShell";
+import { isChurchAdmin } from "@/app/lib/demo/visibility";
+import { AccessDenied } from "@/app/components/admin/AdminShell";
 import { DeleteDevotionButton } from "@/app/components/admin/DeleteDevotionButton";
 import {
   Badge,
@@ -23,6 +24,9 @@ export default async function AdminDevotionsPage({
 }) {
   const { locale, churchSlug } = await params;
   const { supabase, viewer } = await requireChurchContext(locale, churchSlug);
+  if (!isChurchAdmin(viewer)) {
+    return <AccessDenied locale={locale as "ja" | "en"} church={viewer.church} />;
+  }
   const church = viewer.church;
   const t = createT(locale as "ja" | "en");
 
@@ -54,7 +58,7 @@ export default async function AdminDevotionsPage({
   }
 
   return (
-    <AdminShell locale={locale as "ja" | "en"} church={church} viewer={viewer} active="devotions">
+    <>
       <div className="space-y-5">
         <SectionHeading
           title={t("devotions.title")}
@@ -205,6 +209,6 @@ export default async function AdminDevotionsPage({
           </>
         )}
       </div>
-    </AdminShell>
+    </>
   );
 }

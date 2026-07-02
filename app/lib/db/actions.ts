@@ -217,6 +217,8 @@ export async function setCompletion(
     { onConflict: "content_item_id,membership_id" },
   );
   if (error) return { ok: false, error: error.message };
+  // 30秒ルーターキャッシュ(staleTimes)を無効化し、再訪時に最新状態を取得させる
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 
@@ -238,12 +240,15 @@ export async function toggleReaction(
   if (existing) {
     const { error } = await supabase.from("reactions").delete().eq("id", existing.id);
     if (error) return { ok: false, error: error.message };
+    // 30秒ルーターキャッシュ(staleTimes)を無効化（トグルの再訪反転を防ぐ）
+    revalidatePath("/", "layout");
     return { ok: true, data: { active: false } };
   }
   const { error } = await supabase
     .from("reactions")
     .insert({ church_id: churchId, content_item_id: contentId, membership_id: membershipId, type });
   if (error) return { ok: false, error: error.message };
+  revalidatePath("/", "layout");
   return { ok: true, data: { active: true } };
 }
 
@@ -437,6 +442,8 @@ export async function savePushSubscription(
     user_agent: sub.userAgent ?? null,
   });
   if (error) return { ok: false, error: error.message };
+  // 30秒ルーターキャッシュ(staleTimes)を無効化し、再訪時に最新状態を取得させる
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 
@@ -444,6 +451,8 @@ export async function deletePushSubscription(endpoint: string): Promise<ActionRe
   const supabase = await createServerSupabase();
   const { error } = await supabase.from("push_subscriptions").delete().eq("endpoint", endpoint);
   if (error) return { ok: false, error: error.message };
+  // 30秒ルーターキャッシュ(staleTimes)を無効化し、再訪時に最新状態を取得させる
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -45,8 +46,11 @@ export async function getMyChurches(): Promise<{ user: User | null; churches: Ch
 /**
  * churchSlug に対する閲覧者コンテキストを解決。
  * RLS により、非会員・別教会・未ログインでは church 行が返らず null になる。
+ * React cache() で同一リクエスト内（layout + page）では1回だけ実行される。
  */
-export async function resolveChurchContext(churchSlug: string): Promise<ChurchContext | null> {
+export const resolveChurchContext = cache(async (
+  churchSlug: string,
+): Promise<ChurchContext | null> => {
   const supabase = await createServerSupabase();
   const {
     data: { user },
@@ -71,7 +75,7 @@ export async function resolveChurchContext(churchSlug: string): Promise<ChurchCo
   const membership = mapMembership(memRow, roles, groupIds);
 
   return { supabase, user, viewer: { church, membership }, personaId: membership.id };
-}
+});
 
 /** 会員ページ用。未ログイン/非会員は入口へリダイレクト。 */
 export async function requireChurchContext(

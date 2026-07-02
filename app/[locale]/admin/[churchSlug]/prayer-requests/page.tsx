@@ -2,7 +2,6 @@ import { FileUp, HeartHandshake, ListChecks } from "lucide-react";
 import { requireChurchContext } from "@/app/lib/db/context";
 import { getModerationQueue } from "@/app/lib/db/queries";
 import { createT } from "@/app/lib/i18n";
-import { AdminShell } from "@/app/components/admin/AdminShell";
 import { ModerationCard } from "@/app/components/admin/ModerationCard";
 import { ButtonLink, EmptyState, SectionHeading } from "@/app/components/ui";
 
@@ -19,13 +18,7 @@ export default async function PrayerModerationPage({
   const queue = await getModerationQueue(supabase, viewer);
 
   return (
-    <AdminShell
-      locale={locale as "ja" | "en"}
-      church={church}
-      viewer={viewer}
-      active="prayers"
-      require="moderate"
-    >
+    <>
       <div className="space-y-5">
         <SectionHeading
           title={t("moderation.title")}
@@ -77,6 +70,6 @@ export default async function PrayerModerationPage({
           </div>
         )}
       </div>
-    </AdminShell>
+    </>
   );
 }

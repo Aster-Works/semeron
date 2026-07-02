@@ -4,7 +4,8 @@ import { ChevronLeft } from "lucide-react";
 import { requireChurchContext } from "@/app/lib/db/context";
 import { getDevotion } from "@/app/lib/db/queries";
 import { createT } from "@/app/lib/i18n";
-import { AdminShell } from "@/app/components/admin/AdminShell";
+import { isChurchAdmin } from "@/app/lib/demo/visibility";
+import { AccessDenied } from "@/app/components/admin/AdminShell";
 import { DevotionForm } from "@/app/components/admin/DevotionForm";
 
 export default async function AdminDevotionEditPage({
@@ -14,6 +15,9 @@ export default async function AdminDevotionEditPage({
 }) {
   const { locale, churchSlug } = await params;
   const { supabase, viewer } = await requireChurchContext(locale, churchSlug);
+  if (!isChurchAdmin(viewer)) {
+    return <AccessDenied locale={locale as "ja" | "en"} church={viewer.church} />;
+  }
   const church = viewer.church;
   const { id } = await params;
 
@@ -23,12 +27,7 @@ export default async function AdminDevotionEditPage({
   const t = createT(locale as "ja" | "en");
 
   return (
-    <AdminShell
-      locale={locale as "ja" | "en"}
-      church={church}
-      viewer={viewer}
-      active="devotions"
-    >
+    <>
       <div className="space-y-5">
         <div className="space-y-2">
           <Link
@@ -52,6 +51,6 @@ export default async function AdminDevotionEditPage({
           assistEnabled={church.pastorAssistEnabled}
         />
       </div>
-    </AdminShell>
+    </>
   );
 }

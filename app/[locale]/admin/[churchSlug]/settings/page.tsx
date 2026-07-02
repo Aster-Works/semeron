@@ -3,7 +3,8 @@ import { requireChurchContext } from "@/app/lib/db/context";
 import type { SoftGateMode } from "@/app/lib/demo/types";
 import { createT, localize } from "@/app/lib/i18n";
 import { languageName } from "@/app/lib/i18n/languages";
-import { AdminShell } from "@/app/components/admin/AdminShell";
+import { isChurchAdmin } from "@/app/lib/demo/visibility";
+import { AccessDenied } from "@/app/components/admin/AdminShell";
 import { ContentLanguagesEditor } from "@/app/components/admin/ContentLanguagesEditor";
 import { InviteLinkCard } from "@/app/components/admin/InviteLinkCard";
 import { PastorAssistSettingsEditor } from "@/app/components/admin/PastorAssistSettingsEditor";
@@ -28,6 +29,9 @@ export default async function AdminSettingsPage({
   const { locale: rawLocale, churchSlug } = await params;
   const locale = rawLocale as "ja" | "en";
   const { viewer } = await requireChurchContext(locale, churchSlug);
+  if (!isChurchAdmin(viewer)) {
+    return <AccessDenied locale={locale as "ja" | "en"} church={viewer.church} />;
+  }
   const church = viewer.church;
   const t = createT(locale);
   const jaMode = locale === "ja";
@@ -46,11 +50,7 @@ export default async function AdminSettingsPage({
         : "English";
 
   return (
-    <AdminShell
-      locale={locale}
-      church={church}
-      viewer={viewer}
-      active="settings"    >
+    <>
       <div className="space-y-6">
         <SectionHeading
           title={t("settings.title")}
@@ -168,6 +168,6 @@ export default async function AdminSettingsPage({
             : "Pastor Assist settings can be changed by owner / pastor. Other items become editable in a later phase."}
         </p>
       </div>
-    </AdminShell>
+    </>
   );
 }

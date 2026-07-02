@@ -10,7 +10,8 @@ import { getDashboardData, getWeeklySummary } from "@/app/lib/db/queries";
 import type { Visibility } from "@/app/lib/demo/types";
 import { createT, localize } from "@/app/lib/i18n";
 import { formatDateKey } from "@/app/lib/utils";
-import { AdminShell } from "@/app/components/admin/AdminShell";
+import { isChurchAdmin } from "@/app/lib/demo/visibility";
+import { AccessDenied } from "@/app/components/admin/AdminShell";
 import {
   Badge,
   ButtonLink,
@@ -31,6 +32,9 @@ export default async function AdminDashboardPage({
 }) {
   const { locale, churchSlug } = await params;
   const { supabase, viewer } = await requireChurchContext(locale, churchSlug);
+  if (!isChurchAdmin(viewer)) {
+    return <AccessDenied locale={locale as "ja" | "en"} church={viewer.church} />;
+  }
   const church = viewer.church;
   const t = createT(locale as "ja" | "en");
   const jaMode = locale === "ja";
@@ -41,12 +45,7 @@ export default async function AdminDashboardPage({
   ]);
 
   return (
-    <AdminShell
-      locale={locale as "ja" | "en"}
-      church={church}
-      viewer={viewer}
-      active="dashboard"
-    >
+    <>
       <div className="space-y-8">
         <SectionHeading
           eyebrow={t("common.admin")}
@@ -330,6 +329,6 @@ export default async function AdminDashboardPage({
           </section>
         </div>
       </div>
-    </AdminShell>
+    </>
   );
 }

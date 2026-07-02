@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Bell, HeartHandshake, Sunrise, User, Users, type LucideIcon } from "lucide-react";
 import type { Locale } from "@/app/lib/demo/types";
 import { useLocale } from "@/app/lib/i18n/LocaleProvider";
@@ -21,18 +22,22 @@ const TABS: { key: MemberTab; path: string; icon: LucideIcon; label: MessageId }
 export function MemberTabBar({
   locale,
   churchSlug,
-  active,
   personaId,
   unread = 0,
 }: {
   locale: Locale;
   churchSlug: string;
-  active: MemberTab;
   personaId?: string;
   unread?: number;
 }) {
   const { t } = useLocale();
+  const pathname = usePathname();
   const qs = personaId ? `?as=${personaId}` : "";
+  // /{locale}/church/{slug}/{segment}/... の segment からアクティブタブを導出。
+  // シェルは layout に常駐するため、props ではなく現在の URL から判定する。
+  const segment = pathname.split("/")[4] ?? "today";
+  const active: MemberTab =
+    TABS.find((tab) => tab.path === segment)?.key ?? "today";
 
   return (
     <nav
@@ -49,19 +54,21 @@ export function MemberTabBar({
                 href={`/${locale}/church/${churchSlug}/${tab.path}${qs}`}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex min-h-[56px] flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[11px] font-medium transition-colors",
+                  "flex min-h-[56px] items-center justify-center px-1 py-1.5 text-[11px] font-medium transition-colors",
                   isActive ? "text-sage-ink" : "text-muted hover:text-ink",
                 )}
               >
-                <span className="relative">
-                  <Icon className="h-5 w-5" aria-hidden />
-                  {tab.key === "inbox" && unread > 0 ? (
-                    <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose px-1 text-[10px] font-semibold text-white">
-                      {unread}
-                    </span>
-                  ) : null}
+                <span className="flex translate-y-[5px] flex-col items-center gap-0.5">
+                  <span className="relative">
+                    <Icon className="h-5 w-5" aria-hidden />
+                    {tab.key === "inbox" && unread > 0 ? (
+                      <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose px-1 text-[10px] font-semibold text-white">
+                        {unread}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span>{t(tab.label)}</span>
                 </span>
-                <span>{t(tab.label)}</span>
               </Link>
             </li>
           );

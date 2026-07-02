@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/app/lib/utils";
+
+// mount 検出（client では常に true、SSR では false）。
+const subscribeNoop = () => () => {};
+const getTrue = () => true;
+const getFalse = () => false;
 
 /** 確認モーダル（公開範囲の確認など）。Esc/背景クリックで閉じる。 */
 export function Modal({
@@ -22,8 +27,7 @@ export function Modal({
   className?: string;
 }) {
   // ポータルは client でのみ（SSR に document が無いため mount 後に有効化）
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useSyncExternalStore(subscribeNoop, getTrue, getFalse);
 
   useEffect(() => {
     if (!open) return;

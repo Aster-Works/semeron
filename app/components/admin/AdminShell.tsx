@@ -1,31 +1,27 @@
 import Link from "next/link";
 import { Lock } from "lucide-react";
-import type { Church, Locale, Viewer } from "@/app/lib/demo/types";
-import { canModerate, isChurchAdmin } from "@/app/lib/demo/visibility";
+import type { Church, Locale } from "@/app/lib/demo/types";
 import { createT, localize } from "@/app/lib/i18n";
 import { HeaderSettingsMenu } from "@/app/components/HeaderSettingsMenu";
 import { ButtonLink } from "@/app/components/ui";
-import { AdminNav, type AdminSection } from "./AdminNav";
+import { AdminNav } from "./AdminNav";
 
-/** 管理画面の外殻（デスクトップはサイドバー、モバイルは横ナビ）。実ユーザー版。 */
+/**
+ * 管理画面の外殻（デスクトップはサイドバー、モバイルは横ナビ）。
+ * layout に常駐し、ナビのアクティブ判定は AdminNav が URL から行う。
+ * 入場ゲート（moderate 以上）は admin layout 側。admin 限定ページは
+ * ページ側で isChurchAdmin を確認し AccessDenied を返す。
+ */
 export function AdminShell({
   locale,
   church,
-  viewer,
-  active,
-  require = "admin",
   children,
 }: {
   locale: Locale;
   church: Church;
-  viewer: Viewer;
-  active: AdminSection;
-  require?: "admin" | "moderate";
   children: React.ReactNode;
 }) {
   const t = createT(locale);
-  const allowed =
-    require === "moderate" ? canModerate(viewer) || isChurchAdmin(viewer) : isChurchAdmin(viewer);
 
   const sidebar = (
     <div className="space-y-4">
@@ -41,7 +37,7 @@ export function AdminShell({
         </p>
         <p className="text-xs uppercase tracking-wide text-muted">{church.plan}</p>
       </div>
-      <AdminNav locale={locale} churchSlug={church.slug} active={active} orientation="vertical" />
+      <AdminNav locale={locale} churchSlug={church.slug} orientation="vertical" />
       <div className="border-t border-line pt-3">
         <Link
           href={`/${locale}/church/${church.slug}/today`}
@@ -70,18 +66,18 @@ export function AdminShell({
         </aside>
 
         <div className="mb-4 lg:hidden">
-          <AdminNav locale={locale} churchSlug={church.slug} active={active} orientation="horizontal" />
+          <AdminNav locale={locale} churchSlug={church.slug} orientation="horizontal" />
         </div>
 
         <main id="main" className="min-w-0 flex-1">
-          {allowed ? children : <AccessDenied locale={locale} church={church} />}
+          {children}
         </main>
       </div>
     </div>
   );
 }
 
-function AccessDenied({ locale, church }: { locale: Locale; church: Church }) {
+export function AccessDenied({ locale, church }: { locale: Locale; church: Church }) {
   const jaMode = locale === "ja";
   return (
     <div className="mx-auto max-w-md rounded-2xl border border-line bg-surface p-8 text-center">

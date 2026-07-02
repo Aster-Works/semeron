@@ -3,7 +3,6 @@ import Link from "next/link";
 import { requireChurchContext } from "@/app/lib/db/context";
 import { getMyGroups } from "@/app/lib/db/queries";
 import { createT } from "@/app/lib/i18n";
-import { MemberShell } from "@/app/components/member/MemberShell";
 import { PrayerRequestForm } from "@/app/components/member/PrayerRequestForm";
 
 export default async function NewPrayerPage({
@@ -18,7 +17,7 @@ export default async function NewPrayerPage({
   const groups = await getMyGroups(supabase, viewer);
 
   return (
-    <MemberShell locale={locale as "ja" | "en"} church={church} viewer={viewer} active="prayer">
+    <>
       <div className="space-y-4">
         <Link
           href={`/${locale}/church/${church.slug}/prayers`}
@@ -36,6 +35,6 @@ export default async function NewPrayerPage({
           groups={groups}
         />
       </div>
-    </MemberShell>
+    </>
   );
 }

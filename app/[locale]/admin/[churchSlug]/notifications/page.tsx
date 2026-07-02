@@ -6,7 +6,8 @@ import { createT, localize } from "@/app/lib/i18n";
 import type { MessageId } from "@/app/lib/i18n";
 import { formatMonthDay } from "@/app/lib/utils";
 import type { Tone } from "@/app/lib/utils";
-import { AdminShell } from "@/app/components/admin/AdminShell";
+import { isChurchAdmin } from "@/app/lib/demo/visibility";
+import { AccessDenied } from "@/app/components/admin/AdminShell";
 import {
   Badge,
   Callout,
@@ -31,17 +32,15 @@ export default async function AdminNotificationsPage({
   const { locale: rawLocale, churchSlug } = await params;
   const locale = rawLocale as "ja" | "en";
   const { supabase, viewer } = await requireChurchContext(locale, churchSlug);
+  if (!isChurchAdmin(viewer)) {
+    return <AccessDenied locale={locale as "ja" | "en"} church={viewer.church} />;
+  }
   const church = viewer.church;
   const t = createT(locale);
   const notifications = await getChurchNotifications(supabase, church.id);
 
   return (
-    <AdminShell
-      locale={locale}
-      church={church}
-      viewer={viewer}
-      active="notifications"
-    >
+    <>
       <div className="space-y-5">
         <SectionHeading title={t("notifications.title")} />
 
@@ -152,6 +151,6 @@ export default async function AdminNotificationsPage({
           </>
         )}
       </div>
-    </AdminShell>
+    </>
   );
 }

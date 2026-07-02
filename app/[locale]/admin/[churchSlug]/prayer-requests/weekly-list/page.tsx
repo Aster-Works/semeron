@@ -2,7 +2,6 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { requireChurchContext } from "@/app/lib/db/context";
 import { createT } from "@/app/lib/i18n";
-import { AdminShell } from "@/app/components/admin/AdminShell";
 import { WeeklyPrayerListPanel } from "@/app/components/admin/WeeklyPrayerListPanel";
 import { SectionHeading } from "@/app/components/ui";
 
@@ -18,13 +17,7 @@ export default async function WeeklyPrayerListPage({
   const t = createT(locale as "ja" | "en");
 
   return (
-    <AdminShell
-      locale={locale as "ja" | "en"}
-      church={church}
-      viewer={viewer}
-      active="prayers"
-      require="moderate"
-    >
+    <>
       <div className="space-y-5">
         <Link
           href={`/${locale}/admin/${church.slug}/prayer-requests`}
@@ -44,6 +37,6 @@ export default async function WeeklyPrayerListPage({
           allowPrayerAi={church.allowPrayerAi}
         />
       </div>
-    </AdminShell>
+    </>
   );
 }

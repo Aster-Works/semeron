@@ -4,7 +4,7 @@ import { localize } from "@/app/lib/i18n";
 import { createServerSupabase } from "@/app/lib/supabase/server";
 import { getUnreadInboxCount } from "@/app/lib/db/queries";
 import { HeaderSettingsMenu } from "@/app/components/HeaderSettingsMenu";
-import { MemberTabBar, type MemberTab } from "./MemberTabBar";
+import { MemberTabBar } from "./MemberTabBar";
 
 /**
  * 会員体験の外殻（スマホファースト・中央 max-w-2xl 一列）。
@@ -14,13 +14,11 @@ export async function MemberShell({
   locale,
   church,
   viewer,
-  active,
   children,
 }: {
   locale: Locale;
   church: Church;
   viewer: Viewer;
-  active: MemberTab;
   children: React.ReactNode;
 }) {
   const canAdmin = isChurchAdmin(viewer);
@@ -50,7 +48,7 @@ export async function MemberShell({
 
       <main id="main" className="mx-auto max-w-2xl px-4 pb-28 pt-4">{children}</main>
 
-      <MemberTabBar locale={locale} churchSlug={church.slug} active={active} unread={unread} />
+      <MemberTabBar locale={locale} churchSlug={church.slug} unread={unread} />
     </div>
   );
 }
