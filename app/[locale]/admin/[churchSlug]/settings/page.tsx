@@ -5,6 +5,7 @@ import { createT, localize } from "@/app/lib/i18n";
 import { languageName } from "@/app/lib/i18n/languages";
 import { AdminShell } from "@/app/components/admin/AdminShell";
 import { ContentLanguagesEditor } from "@/app/components/admin/ContentLanguagesEditor";
+import { InviteLinkCard } from "@/app/components/admin/InviteLinkCard";
 import { PastorAssistSettingsEditor } from "@/app/components/admin/PastorAssistSettingsEditor";
 import {
   Badge,
@@ -90,12 +91,7 @@ export default async function AdminSettingsPage({
             </div>
 
             <Field label={t("settings.inviteCode")}>
-              <Input
-                value={church.inviteCode}
-                readOnly
-                disabled
-                className="font-mono tracking-widest"
-              />
+              <InviteLinkCard locale={locale} inviteCode={church.inviteCode} />
             </Field>
           </CardBody>
         </Card>

@@ -371,3 +371,43 @@ export async function deleteDevotion(input: {
   revalidatePath(`/${input.locale}/admin/${input.churchSlug}/devotions`);
   return { ok: true };
 }
+
+/* ---------- パスワードリセット（Phase2 Beta磨き）---------- */
+/**
+ * リセットメール送信。アカウントの有無を漏らさないため常に ok を返す。
+ * 送信は Supabase の内蔵メール（レート制限あり）。本格運用時は SMTP(Resend) 推奨。
+ */
+export async function requestPasswordReset(email: string, locale: Locale): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3070";
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${appUrl}/auth/callback?next=/${locale}/reset-password`,
+  });
+  return { ok: true };
+}
+
+/** リカバリーリンク経由のセッションで新しいパスワードを設定する。 */
+export async function updatePassword(newPassword: string): Promise<ActionResult> {
+  if (newPassword.length < 8) return { ok: false, error: "password too short" };
+  const supabase = await createServerSupabase();
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+/* ---------- 表示名の変更（本人のみ・RPC）---------- */
+export async function updateMyDisplayName(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  displayName: string;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const { error } = await supabase.rpc("update_my_display_name", {
+    p_church: input.churchId,
+    p_display_name: input.displayName,
+  });
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/${input.locale}/church/${input.churchSlug}/me`);
+  return { ok: true };
+}

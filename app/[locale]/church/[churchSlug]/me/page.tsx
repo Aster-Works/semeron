@@ -3,6 +3,7 @@ import { requireChurchContext } from "@/app/lib/db/context";
 import { getMyGroups } from "@/app/lib/db/queries";
 import { createT, localize } from "@/app/lib/i18n";
 import { MemberShell } from "@/app/components/member/MemberShell";
+import { DisplayNameEditor } from "@/app/components/member/DisplayNameEditor";
 import { NotificationSettings } from "@/app/components/member/NotificationSettings";
 import { InstallPrompt } from "@/app/components/member/InstallPrompt";
 import { LocaleSwitcher } from "@/app/components/LocaleSwitcher";
@@ -50,9 +51,12 @@ export default async function MePage({
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <Avatar name={membership.displayName} />
-            <p className="text-lg font-semibold text-ink text-balance-safe">
-              {membership.displayName}
-            </p>
+            <DisplayNameEditor
+              locale={locale as "ja" | "en"}
+              churchId={church.id}
+              churchSlug={church.slug}
+              initialName={membership.displayName}
+            />
           </div>
 
           <div className="space-y-3">

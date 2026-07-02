@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { KeyRound, UserRoundPlus } from "lucide-react";
 import type { Locale } from "@/app/lib/demo/types";
@@ -148,6 +149,17 @@ export function LoginForm({ locale }: { locale: Locale }) {
                 ? ja ? "ログイン" : "Sign in"
                 : ja ? "アカウントを作成" : "Create account"}
           </Button>
+
+          {mode === "signin" ? (
+            <p className="text-right text-xs">
+              <Link
+                href={`/${locale}/forgot-password`}
+                className="text-muted hover:text-ink hover:underline"
+              >
+                {ja ? "パスワードをお忘れですか？" : "Forgot your password?"}
+              </Link>
+            </p>
+          ) : null}
         </form>
 
         {googleEnabled ? (
