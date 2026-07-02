@@ -8,7 +8,7 @@ import type { Locale } from "@/app/lib/demo/types";
 import { useLocale } from "@/app/lib/i18n/LocaleProvider";
 import { signOut } from "@/app/lib/db/actions";
 import { LocaleSwitcher } from "@/app/components/LocaleSwitcher";
-import { ThemeToggle } from "@/app/components/ThemeToggle";
+import { ThemeSelect } from "@/app/components/ThemeSelect";
 import { cn } from "@/app/lib/utils";
 
 /**
@@ -97,8 +97,8 @@ export function HeaderSettingsMenu({
               <LocaleSwitcher />
             </div>
             <div className="flex items-center justify-between gap-3 px-1 py-1.5">
-              <span className="text-sm text-ink-soft">{t("settings.darkMode")}</span>
-              <ThemeToggle label={t("settings.darkMode")} />
+              <span className="text-sm text-ink-soft">{t("settings.theme")}</span>
+              <ThemeSelect />
             </div>
           </div>
 
@@ -133,7 +133,7 @@ export function HeaderSettingsMenu({
               className="flex w-full items-center gap-2.5 rounded-xl px-2 py-2.5 text-sm font-medium text-ink-soft hover:bg-mist"
             >
               <LogOut className="h-4 w-4 text-muted" aria-hidden />
-              {locale === "ja" ? "ログアウト" : "Sign out"}
+              {locale === "ja" ? "ログアウト" : "Log out"}
             </button>
           </div>
         </div>

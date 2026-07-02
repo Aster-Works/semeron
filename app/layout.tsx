@@ -40,7 +40,7 @@ export const viewport: Viewport = {
  * ライト→ダークのちらつき（FOUC）を防ぐ。設定キーは 'semeron-theme'（'dark'|'light'）。
  * 未設定時は OS の prefers-color-scheme に従う。
  */
-const THEME_INIT = `(function(){try{var t=localStorage.getItem('semeron-theme');var d=t?t==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;var c=document.documentElement.classList;d?c.add('dark'):c.remove('dark');var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',d?'#12181d':'#FAF8F2');}catch(e){}})();`;
+const THEME_INIT = `(function(){try{var t=localStorage.getItem('semeron-theme');var sys=window.matchMedia('(prefers-color-scheme: dark)').matches;var d=t==='dark'||((t===null||t==='system')&&sys);var c=document.documentElement.classList;d?c.add('dark'):c.remove('dark');var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',d?'#12181d':'#FAF8F2');}catch(e){}})();`;
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

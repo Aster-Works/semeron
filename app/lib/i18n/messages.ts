@@ -59,7 +59,7 @@ export const messages = {
   // --- roles ---
   "role.owner": { ja: "オーナー", en: "Owner" },
   "role.pastor": { ja: "牧師", en: "Pastor" },
-  "role.elder": { ja: "長老", en: "Elder" },
+  "role.elder": { ja: "役員", en: "Elder" },
   "role.staff": { ja: "スタッフ", en: "Staff" },
   "role.group_leader": { ja: "グループリーダー", en: "Group Leader" },
   "role.prayer_team": { ja: "祈祷チーム", en: "Prayer Team" },
@@ -68,7 +68,7 @@ export const messages = {
 
   // --- visibility ---
   "visibility.pastor_only": { ja: "牧師のみ", en: "Pastors only" },
-  "visibility.elders": { ja: "牧師・長老のみ", en: "Pastors and elders" },
+  "visibility.elders": { ja: "牧師・役員のみ", en: "Pastors and elders" },
   "visibility.prayer_team": { ja: "祈祷チームのみ", en: "Prayer team" },
   "visibility.group": { ja: "小グループのみ", en: "My group" },
   "visibility.church": { ja: "教会全体", en: "Whole church" },
@@ -527,7 +527,10 @@ export const messages = {
 
   // --- settings ---
   "settings.menu": { ja: "設定", en: "Settings" },
-  "settings.darkMode": { ja: "ダークモード", en: "Dark mode" },
+  "settings.theme": { ja: "テーマ", en: "Theme" },
+  "settings.theme.light": { ja: "ライト", en: "Light" },
+  "settings.theme.dark": { ja: "ダーク", en: "Dark" },
+  "settings.theme.system": { ja: "システム", en: "System" },
   "settings.goAdmin": { ja: "管理画面へ", en: "Go to admin" },
   "settings.goMember": { ja: "会員画面へ", en: "Go to member view" },
   "settings.title": { ja: "教会の設定", en: "Church settings" },
@@ -583,10 +586,10 @@ export const messages = {
   },
 
   // --- login / join ---
-  "login.title": { ja: "Semeron にログイン", en: "Sign in to Semeron" },
+  "login.title": { ja: "Semeron にログイン", en: "Log in to Semeron" },
   "login.subtitle": {
     ja: "メールアドレスとパスワードでログインします。",
-    en: "Sign in with your email and password.",
+    en: "Log in with your email and password.",
   },
   "login.email": { ja: "メールアドレス", en: "Email address" },
   "login.demoNote": {

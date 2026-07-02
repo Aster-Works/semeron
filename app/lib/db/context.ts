@@ -53,25 +53,21 @@ export async function resolveChurchContext(churchSlug: string): Promise<ChurchCo
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: churchRow } = await supabase
-    .from("churches")
-    .select("*")
-    .eq("slug", churchSlug)
-    .maybeSingle();
-  if (!churchRow) return null;
-
+  // 教会とメンバーシップ（+ロール/グループ）を1クエリで取得（往復を1つ削減）。
+  // churches!inner + church.slug フィルタで、自分の active メンバーシップ行のみ引く。
+  // RLS(memberships_select / churches_select)が別教会・非会員を弾く。
   const { data: memRow } = await supabase
     .from("memberships")
-    .select("*, membership_roles(role), group_memberships(group_id)")
-    .eq("church_id", churchRow.id)
+    .select("*, membership_roles(role), group_memberships(group_id), church:churches!inner(*)")
+    .eq("church.slug", churchSlug)
     .eq("user_id", user.id)
     .eq("status", "active")
     .maybeSingle();
-  if (!memRow) return null;
+  if (!memRow || !memRow.church) return null;
 
   const roles = (memRow.membership_roles ?? []).map((r: any) => r.role);
   const groupIds = (memRow.group_memberships ?? []).map((g: any) => g.group_id);
-  const church = mapChurch(churchRow);
+  const church = mapChurch(memRow.church);
   const membership = mapMembership(memRow, roles, groupIds);
 
   return { supabase, user, viewer: { church, membership }, personaId: membership.id };
