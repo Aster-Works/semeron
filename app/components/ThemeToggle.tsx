@@ -14,7 +14,15 @@ export function ThemeToggle({ label }: { label: string }) {
   const [isDark, setIsDark] = useState<boolean | null>(null);
 
   useEffect(() => {
-    setIsDark(document.documentElement.classList.contains("dark"));
+    // 現在のテーマは DOM（初期化スクリプトが確定済み）から読む。
+    // 同期 setState を避けてマイクロタスクで反映する。
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) setIsDark(document.documentElement.classList.contains("dark"));
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const toggle = () => {

@@ -43,6 +43,19 @@ export interface PrayerSensitiveReview {
   requiresHumanAttention: boolean;
 }
 
+/** 週次祈祷リスト（08 §9）。祈祷会・小グループ用に承認済み課題を整理した下書き。 */
+export interface WeeklyPrayerListSection {
+  heading: string;
+  items: string[];
+}
+export interface WeeklyPrayerList {
+  sections: WeeklyPrayerListSection[];
+  consentWarnings: string[];
+  moderatorNotes: string[];
+  /** 生成の材料になった承認済み課題の件数（監査・表示用）。 */
+  sourceCount: number;
+}
+
 /**
  * デボーション補助アクションが UI に返す下書き。
  * 各フィールドは Localized（言語→文字列）でフォームの該当言語キーへ差し込む。

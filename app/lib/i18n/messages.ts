@@ -376,6 +376,47 @@ export const messages = {
   "assist.risk.high": { ja: "高", en: "High" },
   "assist.risk.urgent": { ja: "緊急", en: "Urgent" },
 
+  // --- Pastor Assist: 週次祈祷リスト（08 §9） ---
+  "prayerList.link": { ja: "祈祷リスト", en: "Prayer list" },
+  "prayerList.title": { ja: "週次祈祷リスト", en: "Weekly prayer list" },
+  "prayerList.subtitle": {
+    ja: "承認済みの祈祷課題を、祈祷会や小グループ向けに整理した下書きを作ります（AI補助・提案のみ）。",
+    en: "Draft an organized prayer list from approved requests for your prayer meeting or small group (AI assist, draft only).",
+  },
+  "prayerList.disabled": {
+    ja: "この機能は、設定で Pastor Assist と「祈祷課題のAI送信」を有効にすると使えます。",
+    en: "Enable Pastor Assist and 'send prayer text to AI' in settings to use this.",
+  },
+  "prayerList.audience": { ja: "対象", en: "Audience" },
+  "prayerList.audience.prayerMeeting": { ja: "祈祷会", en: "Prayer meeting" },
+  "prayerList.audience.smallGroup": { ja: "小グループ", en: "Small group" },
+  "prayerList.audience.pastors": { ja: "牧師・リーダーのみ", en: "Pastors / leaders only" },
+  "prayerList.includeNames": { ja: "名前を含める", en: "Include names" },
+  "prayerList.includeNamesHint": {
+    ja: "既定はオフ（名前を伏せます）。牧師・リーダー限定の資料でのみ検討してください。",
+    en: "Off by default (names hidden). Consider on only for pastors/leaders-only materials.",
+  },
+  "prayerList.note": {
+    ja: "承認済み・期限内の課題のみが対象です。牧師のみの課題は「牧師・リーダー」を選んだときだけ含まれます。",
+    en: "Only approved, non-expired requests are used. Pastor-only requests are included only for the pastors/leaders audience.",
+  },
+  "prayerList.generate": { ja: "祈祷リストを作る", en: "Generate list" },
+  "prayerList.confirmWarn": {
+    ja: "承認済みの祈祷課題の本文をAIに送って整理します。名前は既定で伏せられます。続けますか？",
+    en: "This sends the approved prayer request text to AI to organize. Names are redacted by default. Continue?",
+  },
+  "prayerList.confirm": { ja: "送信して作成", en: "Send & generate" },
+  "prayerList.empty": {
+    ja: "対象になる承認済みの祈祷課題がありません。",
+    en: "There are no approved prayer requests to include.",
+  },
+  "prayerList.copy": { ja: "コピー", en: "Copy" },
+  "prayerList.copied": { ja: "コピーしました", en: "Copied" },
+  "prayerList.advisoryNote": {
+    ja: "これはAIの下書きです。公開・共有の前に必ず内容と公開範囲をご確認ください。",
+    en: "This is an AI draft. Please review the content and visibility before sharing.",
+  },
+
   // --- moderation ---
   "moderation.title": { ja: "祈祷課題の確認", en: "Prayer moderation" },
   "moderation.empty": { ja: "承認待ちの祈祷課題はありません。", en: "No prayer requests are waiting for review." },

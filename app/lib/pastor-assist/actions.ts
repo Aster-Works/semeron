@@ -12,6 +12,7 @@ import {
   reflectionQuestionsPrompt,
   translationPrompt,
   prayerSensitiveReviewPrompt,
+  weeklyPrayerListPrompt,
 } from "./prompts";
 import { extractJson, asString, asStringArray } from "./parse";
 import { redactNames } from "./redact";
@@ -21,6 +22,8 @@ import type {
   PrayerSensitiveReview,
   AssistRiskLevel,
   ReflectionQuestionOption,
+  WeeklyPrayerList,
+  WeeklyPrayerListSection,
 } from "./types";
 
 /**
@@ -322,6 +325,126 @@ export async function runPrayerAssist(
     });
 
     return { ok: true, data: review };
+  } catch (err) {
+    if (err instanceof AssistNotConfiguredError) return fail("not_configured", "AI is not configured");
+    return fail("error", err instanceof Error ? err.message : "assist failed");
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 週次祈祷リスト（08 §9）: 承認済み課題を祈祷会・小グループ用に整理（モデレータ限定）
+ * ───────────────────────────────────────────────────────────────────────── */
+export type PrayerListAudience = "prayer_meeting" | "small_group" | "pastors";
+
+export interface WeeklyPrayerListInput {
+  churchSlug: string;
+  locale: Locale;
+  audience: PrayerListAudience;
+  /** 名前を残すか（既定 false=リダクション）。pastors 監査用途以外は false 推奨。 */
+  includeNames: boolean;
+  /** 承認済み課題を AI に送ることの明示確認。false は拒否。 */
+  confirmed: boolean;
+}
+
+export async function assistWeeklyPrayerList(
+  input: WeeklyPrayerListInput,
+): Promise<AssistActionResult<WeeklyPrayerList>> {
+  const ctx = await resolveChurchContext(input.churchSlug);
+  if (!ctx) return fail("forbidden", "not a member");
+  const { supabase, viewer } = ctx;
+
+  if (!canModerate(viewer)) return fail("forbidden", "moderator role required");
+  if (!viewer.church.pastorAssistEnabled) return fail("not_allowed", "pastor assist is not enabled");
+  if (!viewer.church.allowPrayerAi) return fail("not_allowed", "sending prayer text to AI is not allowed for this church");
+  if (input.confirmed !== true) return fail("forbidden", "confirmation required");
+  if (!isAssistConfigured()) return fail("not_configured", "AI is not configured");
+
+  try {
+    // 承認済み（published）の祈祷課題のみ。pending/rejected は絶対に含めない。
+    // 期限切れも除外。RLS が教会分離を担保するが、明示的に church_id も絞る。
+    const nowIso = new Date().toISOString();
+    const { data: rows } = await supabase
+      .from("content_items")
+      .select("id, church_id, title, body, visibility, anonymous, expires_at")
+      .eq("church_id", viewer.church.id)
+      .eq("type", "prayer_request")
+      .eq("status", "published")
+      .order("published_at", { ascending: false })
+      .limit(60);
+
+    // 対象者に応じて公開範囲を絞る。pastor_only は audience=pastors のときだけ含める。
+    // church_id は二重防御で明示チェック（runPrayerAssist と同じパラノイア）。
+    const audienceIsPastors = input.audience === "pastors";
+    const eligible = (rows ?? []).filter(
+      (r: { church_id: string; visibility: string; expires_at: string | null }) => {
+        if (r.church_id !== viewer.church.id) return false;
+        if (r.expires_at && r.expires_at < nowIso) return false;
+        if (r.visibility === "pastor_only" && !audienceIsPastors) return false;
+        return true;
+      },
+    );
+
+    if (eligible.length === 0) {
+      return { ok: true, data: { sections: [], consentWarnings: [], moderatorNotes: [], sourceCount: 0 } };
+    }
+
+    // 名前辞書（既定でリダクション。includeNames=true のときは残す）
+    const { data: members } = await supabase
+      .from("memberships")
+      .select("display_name")
+      .eq("church_id", viewer.church.id);
+    const names = (members ?? []).map((m: { display_name: string | null }) => m.display_name ?? "").filter(Boolean);
+
+    const lang = viewer.church.contentLanguages[0] ?? viewer.church.defaultLocale;
+    let redactedTotal = 0;
+    const lines = eligible.map((r: { title: unknown; body: unknown; visibility: string; anonymous: boolean }) => {
+      const title = pickText(r.title, lang);
+      const body = pickText(r.body, lang);
+      const combined = [title, body].filter(Boolean).join(" — ");
+      if (input.includeNames) return `- [${r.visibility}] ${combined}`;
+      const red = redactNames(combined, names);
+      redactedTotal += red.redactedCount;
+      return `- [${r.visibility}] ${red.text}`;
+    });
+
+    const prompt = weeklyPrayerListPrompt({
+      contentLang: lang,
+      approvedRequests: lines.join("\n"),
+      includeNames: input.includeNames,
+      audience: input.audience,
+    });
+    const res = await runAssist({ system: GLOBAL_SYSTEM_PROMPT, user: prompt, maxTokens: 1600 });
+    const parsed = extractJson<Record<string, unknown>>(res.text);
+    if (!parsed) return fail("parse_error", "could not parse AI output");
+
+    const sections: WeeklyPrayerListSection[] = Array.isArray(parsed.sections)
+      ? parsed.sections
+          .map((s) => {
+            const o = (s ?? {}) as Record<string, unknown>;
+            return { heading: asString(o.heading).trim(), items: asStringArray(o.items) };
+          })
+          .filter((s) => s.heading || s.items.length > 0)
+      : [];
+
+    const data: WeeklyPrayerList = {
+      sections,
+      consentWarnings: asStringArray(parsed.consent_warnings),
+      moderatorNotes: asStringArray(parsed.moderator_notes),
+      sourceCount: eligible.length,
+    };
+
+    await logAssist(supabase, viewer, "pastor_assist.weekly_prayer_list", null, {
+      feature: "weekly_prayer_list",
+      model: res.model,
+      tokens_in: res.usage.inputTokens,
+      tokens_out: res.usage.outputTokens,
+      audience: input.audience,
+      include_names: input.includeNames,
+      source_count: eligible.length,
+      names_redacted: redactedTotal,
+    });
+
+    return { ok: true, data };
   } catch (err) {
     if (err instanceof AssistNotConfiguredError) return fail("not_configured", "AI is not configured");
     return fail("error", err instanceof Error ? err.message : "assist failed");

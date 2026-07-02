@@ -1,4 +1,4 @@
-import { FileUp, HeartHandshake } from "lucide-react";
+import { FileUp, HeartHandshake, ListChecks } from "lucide-react";
 import { requireChurchContext } from "@/app/lib/db/context";
 import { getModerationQueue } from "@/app/lib/db/queries";
 import { createT } from "@/app/lib/i18n";
@@ -35,14 +35,26 @@ export default async function PrayerModerationPage({
               : "Prayer requests awaiting review. Revisit the visibility, honor each author's intent, and carry them into prayer."
           }
           right={
-            <ButtonLink
-              href={`/${locale}/admin/${church.slug}/prayer-requests/import`}
-              variant="secondary"
-              size="sm"
-            >
-              <FileUp className="h-4 w-4" aria-hidden />
-              {t("import.link")}
-            </ButtonLink>
+            <div className="flex flex-wrap items-center gap-2">
+              {church.pastorAssistEnabled ? (
+                <ButtonLink
+                  href={`/${locale}/admin/${church.slug}/prayer-requests/weekly-list`}
+                  variant="secondary"
+                  size="sm"
+                >
+                  <ListChecks className="h-4 w-4" aria-hidden />
+                  {t("prayerList.link")}
+                </ButtonLink>
+              ) : null}
+              <ButtonLink
+                href={`/${locale}/admin/${church.slug}/prayer-requests/import`}
+                variant="secondary"
+                size="sm"
+              >
+                <FileUp className="h-4 w-4" aria-hidden />
+                {t("import.link")}
+              </ButtonLink>
+            </div>
           }
         />
 

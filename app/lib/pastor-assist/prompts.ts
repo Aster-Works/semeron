@@ -204,3 +204,38 @@ Return JSON:
   "requires_human_attention": true
 }`;
 }
+
+/** 08 §9 Weekly Prayer List Prompt。承認済み課題を祈祷会用に整理する。 */
+export function weeklyPrayerListPrompt(input: {
+  contentLang: string;
+  approvedRequests: string;
+  includeNames: boolean;
+  audience: string;
+}): string {
+  return `Create a weekly prayer list draft from approved prayer requests.
+
+Inputs:
+- Locale: ${langLabel(input.contentLang)}
+- Approved prayer requests: ${orNone(input.approvedRequests)}
+- Include names: ${input.includeNames ? "true" : "false"}
+- Audience: ${input.audience}
+
+Requirements:
+- Write all headings and items in ${langLabel(input.contentLang)}.
+- Group similar requests by theme.
+- Keep sensitive details minimal.
+- Use gentle, prayerful wording.
+- Do not include pending or rejected requests (only the approved ones provided above).
+- Do not include private pastor_only requests unless the audience is pastors.
+- Mark items that may need renewed consent before wider sharing.
+- If "Include names" is false, do not add names even if some remain in the text.
+
+Return JSON:
+{
+  "sections": [
+    {"heading": "", "items": [""]}
+  ],
+  "consent_warnings": [""],
+  "moderator_notes": [""]
+}`;
+}
