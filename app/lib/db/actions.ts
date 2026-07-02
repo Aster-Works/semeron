@@ -2,6 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  DELETED_ACCOUNT_DISPLAY_NAME,
+  getAccountMembershipRoles,
+  requiresAnotherActiveOwner,
+  type AccountDeletionMembershipRow,
+} from "@/app/lib/db/accountDeletion";
 import { createAdminClient } from "@/app/lib/supabase/admin";
 import { createServerSupabase } from "@/app/lib/supabase/server";
 import type { Locale, ReactionType, Visibility } from "@/app/lib/demo/types";
@@ -979,13 +985,6 @@ export async function leaveChurch(input: {
   return { ok: true };
 }
 
-type AccountMembershipRow = {
-  id: string;
-  church_id: string;
-  status: string;
-  membership_roles?: { role: string }[] | null;
-};
-
 export async function deleteMyAccount(input: {
   locale: Locale;
 }): Promise<ActionResult> {
@@ -1002,10 +1001,9 @@ export async function deleteMyAccount(input: {
     .eq("user_id", user.id);
   if (membershipsError) return { ok: false, error: membershipsError.message };
 
-  const membershipRows = (memberships ?? []) as AccountMembershipRow[];
+  const membershipRows = (memberships ?? []) as AccountDeletionMembershipRow[];
   for (const membership of membershipRows) {
-    const roles = (membership.membership_roles ?? []).map((r) => r.role);
-    if (membership.status === "active" && roles.includes("owner")) {
+    if (requiresAnotherActiveOwner(membership)) {
       const { count, error } = await admin
         .from("membership_roles")
         .select("membership_id, memberships!inner(church_id, status)", { count: "exact", head: true })
@@ -1044,7 +1042,7 @@ export async function deleteMyAccount(input: {
       .from("memberships")
       .update({
         status: "removed",
-        display_name: "Deleted account",
+        display_name: DELETED_ACCOUNT_DISPLAY_NAME,
         email: null,
         user_id: null,
       })
@@ -1062,7 +1060,7 @@ export async function deleteMyAccount(input: {
         metadata: {
           before: membership.status,
           after: "removed",
-          roles: (membership.membership_roles ?? []).map((r) => r.role),
+          roles: getAccountMembershipRoles(membership),
         },
       })),
     );
