@@ -65,6 +65,7 @@ export function MemberRemoveButton({
         onClick={() => { setError(null); setOpen(true); }}
         disabled={isSelf}
         title={isSelf ? t("members.removeSelf") : undefined}
+        data-testid={`member-remove-${membershipId}`}
       >
         <UserMinus className="h-4 w-4" aria-hidden />
         {t("members.removeFromChurch")}
@@ -79,7 +80,12 @@ export function MemberRemoveButton({
             <Button variant="ghost" onClick={() => setOpen(false)} disabled={pending}>
               {t("common.cancel")}
             </Button>
-            <Button variant="danger" onClick={run} disabled={pending}>
+            <Button
+              variant="danger"
+              onClick={run}
+              disabled={pending}
+              data-testid="member-remove-confirm"
+            >
               <UserMinus className="h-4 w-4" aria-hidden />
               {pending ? "..." : t("members.removeConfirm")}
             </Button>

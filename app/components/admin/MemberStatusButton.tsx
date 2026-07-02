@@ -74,6 +74,7 @@ export function MemberStatusButton({
         onClick={() => { setError(null); setOpen(true); }}
         disabled={suspending && isSelf}
         title={suspending && isSelf ? t("members.suspendSelf") : undefined}
+        data-testid={`member-status-${membershipId}`}
       >
         <Icon className="h-4 w-4" aria-hidden />
         {suspending ? t("members.suspend") : t("members.restore")}
@@ -88,7 +89,12 @@ export function MemberStatusButton({
             <Button variant="ghost" onClick={() => setOpen(false)} disabled={pending}>
               {t("common.cancel")}
             </Button>
-            <Button variant={suspending ? "danger" : "primary"} onClick={run} disabled={pending}>
+            <Button
+              variant={suspending ? "danger" : "primary"}
+              onClick={run}
+              disabled={pending}
+              data-testid="member-status-confirm"
+            >
               <Icon className="h-4 w-4" aria-hidden />
               {pending ? "..." : confirm}
             </Button>

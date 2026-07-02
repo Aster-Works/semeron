@@ -28,6 +28,7 @@ export function LoginForm({ locale, nextPath = `/${locale}` }: { locale: Locale;
   const [pending, startTransition] = useTransition();
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [ready, setReady] = useState(false);
   const ja = locale === "ja";
 
   useEffect(() => {
@@ -42,6 +43,8 @@ export function LoginForm({ locale, nextPath = `/${locale}` }: { locale: Locale;
         if (!cancelled && json.external?.google) setGoogleEnabled(true);
       } catch {
         // 到達不可などは静かに無視（パスワード認証は常に使える）
+      } finally {
+        if (!cancelled) setReady(true);
       }
     })();
     return () => {
@@ -157,6 +160,8 @@ export function LoginForm({ locale, nextPath = `/${locale}` }: { locale: Locale;
         <form
           onSubmit={(e) => { e.preventDefault(); submit(); }}
           className="space-y-4"
+          data-testid="auth-form"
+          data-ready={ready ? "true" : "false"}
         >
           <Field label={t("login.email")} htmlFor="email">
             <Input id="email" type="email" autoComplete="email" required value={email}
@@ -175,7 +180,7 @@ export function LoginForm({ locale, nextPath = `/${locale}` }: { locale: Locale;
 
           {error ? <Callout tone="rose">{error}</Callout> : null}
 
-          <Button type="submit" fullWidth disabled={pending}>
+          <Button type="submit" fullWidth disabled={pending} data-testid="auth-submit">
             {mode === "signin"
               ? <KeyRound className="h-4 w-4" aria-hidden />
               : <UserRoundPlus className="h-4 w-4" aria-hidden />}

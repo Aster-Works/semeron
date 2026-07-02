@@ -45,7 +45,12 @@ export function LeaveChurchButton({
 
   return (
     <>
-      <Button variant="danger" size="sm" onClick={() => { setError(null); setOpen(true); }}>
+      <Button
+        variant="danger"
+        size="sm"
+        onClick={() => { setError(null); setOpen(true); }}
+        data-testid="leave-church-button"
+      >
         <DoorOpen className="h-4 w-4" aria-hidden />
         {t("me.leaveChurch")}
       </Button>
@@ -59,7 +64,12 @@ export function LeaveChurchButton({
             <Button variant="ghost" onClick={() => setOpen(false)} disabled={pending}>
               {t("common.cancel")}
             </Button>
-            <Button variant="danger" onClick={run} disabled={pending}>
+            <Button
+              variant="danger"
+              onClick={run}
+              disabled={pending}
+              data-testid="leave-church-confirm"
+            >
               <DoorOpen className="h-4 w-4" aria-hidden />
               {pending ? "..." : t("me.leaveConfirm")}
             </Button>

@@ -47,7 +47,7 @@ export function DeleteAccountButton({ locale }: { locale: Locale }) {
 
   return (
     <>
-      <Button variant="danger" size="sm" onClick={() => setOpen(true)}>
+      <Button variant="danger" size="sm" onClick={() => setOpen(true)} data-testid="delete-account-button">
         <Trash2 className="h-4 w-4" aria-hidden />
         {t("me.deleteAccount")}
       </Button>
@@ -61,7 +61,12 @@ export function DeleteAccountButton({ locale }: { locale: Locale }) {
             <Button variant="ghost" onClick={close} disabled={pending}>
               {t("common.cancel")}
             </Button>
-            <Button variant="danger" onClick={run} disabled={pending || !confirmed}>
+            <Button
+              variant="danger"
+              onClick={run}
+              disabled={pending || !confirmed}
+              data-testid="delete-account-confirm"
+            >
               <Trash2 className="h-4 w-4" aria-hidden />
               {pending ? "..." : t("me.deleteConfirm")}
             </Button>
@@ -82,6 +87,7 @@ export function DeleteAccountButton({ locale }: { locale: Locale }) {
               autoComplete="off"
               inputMode="text"
               placeholder={CONFIRM_TEXT}
+              data-testid="delete-account-confirm-input"
             />
           </Field>
           {error ? <p className="text-rose-ink text-balance-safe">{error}</p> : null}

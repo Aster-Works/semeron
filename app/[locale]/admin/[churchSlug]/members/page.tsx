@@ -176,7 +176,7 @@ export default async function AdminMembersPage({
                     </thead>
                     <tbody className="divide-y divide-line">
                       {members.map((m) => (
-                        <tr key={m.id} className="align-top">
+                        <tr key={m.id} className="align-top" data-testid={`member-row-${m.id}`}>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-3">
                               <Avatar name={m.displayName} size="sm" />
