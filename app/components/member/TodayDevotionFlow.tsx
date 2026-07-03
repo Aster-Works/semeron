@@ -25,6 +25,7 @@ import { TodayPrayerCarousel } from "./TodayPrayerCarousel";
 type FlowStage = 0 | 1 | 2 | 3 | 4 | 5;
 type RevealTrigger = "mount" | "in-view";
 type ScrollCueTone = "initial" | "before-prayer" | "after-prayer" | "after-response";
+type ScrollTarget = "devotion-guidance" | "prayer" | "prayer-links" | "reflection" | "recent";
 
 function cueLabel(locale: Locale, tone: ScrollCueTone) {
   if (locale !== "ja") {
@@ -38,14 +39,20 @@ function cueLabel(locale: Locale, tone: ScrollCueTone) {
   return "続きへ";
 }
 
-function ScrollCue({ label }: { label: string }) {
+function ScrollCue({ label, onActivate }: { label: string; onActivate: () => void }) {
   return (
-    <div className="today-scroll-cue" data-testid="today-scroll-cue" aria-hidden="true">
+    <button
+      type="button"
+      className="today-scroll-cue"
+      data-testid="today-scroll-cue"
+      aria-label={label}
+      onClick={onActivate}
+    >
       <div className="today-scroll-cue-inner">
         <span>{label}</span>
         <ChevronDown className="h-4 w-4" aria-hidden />
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -91,10 +98,38 @@ export function TodayDevotionFlow({
   const lastGestureAt = useRef(0);
   const touchStartY = useRef<number | null>(null);
   const dailyOpenDecision = useRef<{ key: string; shouldAnimate: boolean } | null>(null);
+  const scrollTimer = useRef<number | null>(null);
+  const devotionGuidanceRef = useRef<HTMLElement | null>(null);
+  const prayerStageRef = useRef<HTMLElement | null>(null);
+  const prayerLinksRef = useRef<HTMLElement | null>(null);
+  const reflectionSectionRef = useRef<HTMLElement | null>(null);
+  const recentRef = useRef<HTMLElement | null>(null);
 
   const revealAtLeast = useCallback((nextStage: FlowStage) => {
     setStage((current) => (current >= nextStage ? current : nextStage));
   }, []);
+
+  const scrollToTarget = useCallback((target: ScrollTarget) => {
+    const targetByName: Record<ScrollTarget, HTMLElement | null> = {
+      "devotion-guidance": devotionGuidanceRef.current,
+      prayer: prayerStageRef.current,
+      "prayer-links": prayerLinksRef.current,
+      reflection: reflectionSectionRef.current,
+      recent: recentRef.current,
+    };
+    const element = targetByName[target];
+    if (!element) return;
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    element.scrollIntoView({
+      behavior: reduceMotion ? "auto" : "smooth",
+      block: "center",
+    });
+  }, []);
+
+  const requestScrollToTarget = useCallback((target: ScrollTarget) => {
+    if (scrollTimer.current) window.clearTimeout(scrollTimer.current);
+    scrollTimer.current = window.setTimeout(() => scrollToTarget(target), 120);
+  }, [scrollToTarget]);
 
   const advanceByGesture = useCallback(() => {
     if (!ready || !animateFlow) return;
@@ -127,7 +162,7 @@ export function TodayDevotionFlow({
     if (!dailyOpenDecision.current.shouldAnimate) {
       const frame = window.requestAnimationFrame(() => {
         setAnimateFlow(false);
-        setStage(4);
+        setStage(5);
         setReady(true);
       });
       return () => window.cancelAnimationFrame(frame);
@@ -142,15 +177,6 @@ export function TodayDevotionFlow({
       window.clearTimeout(timer);
     };
   }, [animationReplayKey, dailyOpenDecisionKey, dailyOpenKey]);
-
-  useEffect(() => {
-    if (!animateFlow) return undefined;
-    if (stage >= 2 && prayersDone) {
-      const timer = window.setTimeout(() => revealAtLeast(3), 1400);
-      return () => window.clearTimeout(timer);
-    }
-    return undefined;
-  }, [animateFlow, prayersDone, revealAtLeast, stage]);
 
   useEffect(() => {
     const onWheel = (event: WheelEvent) => {
@@ -181,6 +207,10 @@ export function TodayDevotionFlow({
     };
   }, [advanceByGesture]);
 
+  useEffect(() => () => {
+    if (scrollTimer.current) window.clearTimeout(scrollTimer.current);
+  }, []);
+
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     const target = event.target;
     if (target instanceof Element && target.closest("a, button, input, textarea, select, label")) return;
@@ -190,12 +220,10 @@ export function TodayDevotionFlow({
   const onDevotionStatusChange = (status: { read: boolean; prayed: boolean; done: boolean }) => {
     if (!status.done || devotionDone) return;
     setDevotionDone(true);
-    revealAtLeast(2);
   };
 
   const onTodayPrayersCompleted = () => {
     setPrayersDone(true);
-    revealAtLeast(3);
   };
 
   const onReflectionPosted = () => {
@@ -217,6 +245,43 @@ export function TodayDevotionFlow({
             : stage === 4 && reflections.length > 0
               ? "after-response"
               : null;
+  const onScrollCueActivate = useCallback(() => {
+    if (!ready || !animateFlow) return;
+
+    if (stage < 1) {
+      revealAtLeast(1);
+      requestScrollToTarget("devotion-guidance");
+      return;
+    }
+
+    if (stage < 2) {
+      revealAtLeast(2);
+      requestScrollToTarget("prayer");
+      return;
+    }
+
+    if (stage === 2 && !prayersDone) {
+      requestScrollToTarget("prayer");
+      return;
+    }
+
+    if (stage < 3) {
+      revealAtLeast(3);
+      requestScrollToTarget("prayer-links");
+      return;
+    }
+
+    if (stage < 4) {
+      revealAtLeast(4);
+      requestScrollToTarget("reflection");
+      return;
+    }
+
+    if (stage < 5 && reflections.length > 0) {
+      revealAtLeast(5);
+      requestScrollToTarget("recent");
+    }
+  }, [animateFlow, prayersDone, ready, reflections.length, requestScrollToTarget, revealAtLeast, stage]);
   const reveal = (children: ReactNode, delayMs: number, trigger: RevealTrigger = "in-view") =>
     animateFlow ? (
       <GracefulReveal delayMs={delayMs} trigger={trigger}>
@@ -279,22 +344,19 @@ export function TodayDevotionFlow({
       )}
 
       {stage >= 1 ? (
-        <div className="space-y-5">
-          {reflectionQuestion
-            ? reveal(
-                <Card>
+        reveal(
+          <section ref={devotionGuidanceRef} className="space-y-5" data-testid="today-devotion-guidance-stage">
+            {reflectionQuestion ? (
+              <Card>
                   <CardBody>
                     <p className="text-xs font-medium uppercase tracking-wide text-sage-ink">{t("today.reflection")}</p>
                     <p className="mt-1.5 text-base text-ink text-balance-safe">{reflectionQuestion}</p>
                   </CardBody>
-                </Card>,
-                80,
-              )
-            : null}
+              </Card>
+            ) : null}
 
-          {prayerGuide
-            ? reveal(
-                <div className="rounded-2xl border border-gold/25 bg-gold-soft/40 p-5">
+            {prayerGuide ? (
+              <div className="rounded-2xl border border-gold/25 bg-gold-soft/40 p-5">
                   <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gold-ink">
                     <HeartHandshake className="h-3.5 w-3.5" aria-hidden />
                     {t("today.guidedPrayer")}
@@ -302,12 +364,9 @@ export function TodayDevotionFlow({
                   <p className="font-scripture mt-1.5 text-base leading-relaxed text-ink text-balance-safe">
                     {prayerGuide}
                   </p>
-                </div>,
-                440,
-              )
-            : null}
+              </div>
+            ) : null}
 
-          {reveal(
             <TodayActions
               talkToPastorLabel={talkToPastorLabel}
               churchId={church.id}
@@ -318,24 +377,21 @@ export function TodayDevotionFlow({
               staggered={Boolean(animateFlow)}
               showLinks={false}
               onStatusChange={onDevotionStatusChange}
-            />,
-            800,
-          )}
+            />
 
-          {reveal(
             <div className="flex items-center gap-3 pt-2">
               <span className="h-px flex-1 bg-line" />
               <span className="text-xs text-muted">{t("today.softGate.gentle")}</span>
               <span className="h-px flex-1 bg-line" />
-            </div>,
-            1400,
-          )}
-        </div>
+            </div>
+          </section>,
+          80,
+        )
       ) : null}
 
       {stage >= 2
         ? reveal(
-            <section className="space-y-3" data-testid="today-prayer-stage">
+            <section ref={prayerStageRef} className="space-y-3" data-testid="today-prayer-stage">
               {prayers.length === 0 ? (
                 <EmptyState icon={HeartHandshake} title={fmt(t("prayer.empty"), { pastor: roleLabels.pastor })} />
               ) : (
@@ -357,7 +413,7 @@ export function TodayDevotionFlow({
 
       {stage >= 3
         ? reveal(
-            <section className="grid gap-2 sm:grid-cols-2" data-testid="today-prayer-links">
+            <section ref={prayerLinksRef} className="grid gap-2 sm:grid-cols-2" data-testid="today-prayer-links">
               <ButtonLink
                 href={shareHref}
                 variant="secondary"
@@ -385,7 +441,7 @@ export function TodayDevotionFlow({
 
       {stage >= 4
         ? reveal(
-            <section className="space-y-3" data-testid="today-reflection-section">
+            <section ref={reflectionSectionRef} className="space-y-3" data-testid="today-reflection-section">
               <SectionHeading title={t("today.yourReflection")} />
               <ReflectionComposer churchId={church.id} churchSlug={church.slug} onPosted={onReflectionPosted} />
             </section>,
@@ -395,7 +451,7 @@ export function TodayDevotionFlow({
 
       {stage >= 5 && reflections.length > 0
         ? reveal(
-            <section className="space-y-3" data-testid="today-recent-reflections">
+            <section ref={recentRef} className="space-y-3" data-testid="today-recent-reflections">
               <SectionHeading title={t("today.recentReflections")} />
               {reflections.map((vm) => (
                 <ReflectionCard key={vm.item.id} vm={vm} church={church} locale={locale} />
@@ -406,7 +462,11 @@ export function TodayDevotionFlow({
         : null}
 
       {fixedScrollCueTone ? (
-        <ScrollCue label={cueLabel(locale, fixedScrollCueTone)} />
+        <ScrollCue
+          key={fixedScrollCueTone}
+          label={cueLabel(locale, fixedScrollCueTone)}
+          onActivate={onScrollCueActivate}
+        />
       ) : null}
     </div>
   );

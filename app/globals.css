@@ -303,11 +303,17 @@
 
   .today-scroll-cue {
     animation: today-scroll-cue-enter 2400ms cubic-bezier(0.16, 1, 0.3, 1) 1900ms both;
+    background: transparent;
+    border: 0;
     bottom: calc(env(safe-area-inset-bottom) + 5.5rem);
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
     left: 50%;
     opacity: 0;
-    pointer-events: none;
+    padding: 0;
     position: fixed;
+    touch-action: manipulation;
     transform: translate3d(-50%, 12px, 0);
     z-index: 30;
   }
@@ -331,6 +337,11 @@
   .today-scroll-cue svg {
     animation: today-scroll-cue-drift 2600ms cubic-bezier(0.42, 0, 0.2, 1) 2600ms infinite;
     color: var(--color-sage-ink);
+  }
+
+  .today-scroll-cue:focus-visible .today-scroll-cue-inner {
+    outline: 2px solid color-mix(in srgb, var(--color-sage-ink) 54%, transparent);
+    outline-offset: 3px;
   }
 }
 

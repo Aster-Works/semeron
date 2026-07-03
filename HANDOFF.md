@@ -349,8 +349,28 @@
   - Vercel deployment URL: `https://semeron-s4pux9l52-asterworks.vercel.app`。
   - `curl -I -L 'https://semeron-app.vercel.app/ja/church/eifuku-minami/today?replayTodayAnimation=1&scrollCueCenterCheck=1'` で production が応答することを確認。未ログインのため `/ja` → `/ja/login` にリダイレクトされ、最終 `HTTP/2 200` / `server: Vercel`。
   - 注意: `vercel deploy --prod --yes` の直接CLI実行は、現行Vercel認証から旧 `asterworks` チーム/プロジェクトへアクセスできないため引き続き不可。今回はGitHub連携デプロイで本番反映を確認済み。
+- デボーション区切り単位 + クリックスクロール対応（2026-07-04 / 実装中）:
+  - Jimiの追加FB: 「まずは今日のみことばに耳を傾けましょう。」の罫線までをひとかたまりとして表示し、そこで中央下部のスクロール誘導キューを出したい。
+  - `TodayDevotionFlow` の stage 1 を `today-devotion-guidance-stage` として1つの `GracefulReveal` に統合。黙想カード、祈りカード、TodayActions、完了文、罫線を同じ区切りとして扱う。
+  - `読みました` / `祈りました` 完了時に自動で `今日の祈り` を出す動きを停止。罫線まで見せたあと、スクロール/キュー操作で `今日の祈り` へ進む。
+  - 5件の祈り完了時も、自動で `祈祷課題を送る` / `牧師に相談する` を出さず、次のスクロール/キュー操作で表示する。
+  - `today-scroll-cue` をクリック/タップ可能なbuttonに変更。押すと次のセクションをstage表示し、`scrollIntoView({ behavior: "smooth", block: "center" })` でアニメーションが始まる位置へ自動スクロールする。
+  - 低速/軽減モーション設定では自動スクロールを `auto` にする。
+  - 通常の同日再訪（非アニメーション）は stage 5 まで表示し、従来どおり全体を静的表示する。
+  - `tests/unit/today-devotion-flow.test.tsx` は新しい段階順とキュークリックのscrollIntoViewを検証するよう更新。
+  - `git diff --check` PASS。
+  - `npm run test -- tests/unit/today-devotion-flow.test.tsx tests/unit/today-prayer-carousel.test.tsx tests/unit/graceful-reveal.test.tsx` PASS（3 files / 7 tests）。
+  - `npm run typecheck` は一度 `scrollTimer` 型で失敗（`number` vs `Timeout`）→ `number | null` に修正して PASS。
+  - `npm run lint` PASS。
+  - `npm test` PASS（10 files / 50 tests）。
+  - `npm run build` PASS。
+  - ローカルブラウザ確認: `http://localhost:3070/ja/church/eifuku-minami/today?replayTodayAnimation=1&scrollCueClickCheck=1` を開き、初期キューが `BUTTON` / `pointer-events: auto` / text `続きへ` であることを確認。
+  - 初回キューclick後: `today-devotion-guidance-stage` が表示され、罫線文言「まずは今日のみことばに耳を傾けましょう。」が存在。`今日の祈り` はまだ未表示。
+  - 次のキューclick後: `today-prayer-stage` が表示され、`scrollY=210.5` の自動スクロールを確認。`today-prayer-links` はまだ未表示。
 
 ## 次に行うこと
+- Jimiのローカル確認後、必要なら微調整する。
+- 問題なければcommit/push/deployする。
 - JimiのiPhone実機PWAで `?replayTodayAnimation=1` 付きURL、または `?pwaAnimationFix=<任意の値>` 付きURLを開いて、同日内に何度でもアニメーションと発火タイミング、スクロール誘導キューを確認する。
 - 将来の拡張候補: 管理者が明示的に「今日の祈りへピン留め」できる列/UIを追加する。
 

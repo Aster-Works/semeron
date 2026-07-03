@@ -47,6 +47,7 @@ const devotion: ContentItem = {
 };
 
 const dailyOpenKey = "semeron:today-flow-opened:church_1:2026-07-04";
+let scrollIntoViewMock: ReturnType<typeof vi.fn>;
 
 function installLocalStorage() {
   const store = new Map<string, string>();
@@ -163,6 +164,21 @@ describe("TodayDevotionFlow daily animation replay", () => {
       window.setTimeout(() => callback(window.performance.now()), 0),
     );
     window.cancelAnimationFrame = vi.fn((id: number) => window.clearTimeout(id));
+    window.matchMedia = vi.fn().mockReturnValue({
+      matches: false,
+      media: "(prefers-reduced-motion: reduce)",
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    });
+    scrollIntoViewMock = vi.fn();
+    Object.defineProperty(Element.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoViewMock,
+    });
   });
 
   afterEach(() => {
@@ -212,15 +228,19 @@ describe("TodayDevotionFlow daily animation replay", () => {
     expect(screen.queryByTestId("today-recent-reflections")).not.toBeInTheDocument();
 
     await scrollDown();
+    expect(screen.getByTestId("today-devotion-guidance-stage")).toBeInTheDocument();
     expect(screen.getByTestId("today-scroll-cue")).toHaveTextContent("今日の祈りへ");
 
     await waitForGestureWindow();
     await scrollDown();
-    await act(async () => {
-      vi.advanceTimersByTime(1500);
-    });
 
     expect(screen.getByTestId("today-scroll-cue")).toHaveTextContent("続きへ");
+    expect(screen.getByTestId("today-prayer-stage")).toBeInTheDocument();
+    expect(screen.queryByTestId("today-prayer-links")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("today-reflection-section")).not.toBeInTheDocument();
+
+    await waitForGestureWindow();
+    await scrollDown();
     expect(screen.getByTestId("today-prayer-links")).toBeInTheDocument();
     expect(screen.queryByTestId("today-reflection-section")).not.toBeInTheDocument();
 
@@ -234,5 +254,29 @@ describe("TodayDevotionFlow daily animation replay", () => {
     await scrollDown();
     expect(screen.getByTestId("today-recent-reflections")).toBeInTheDocument();
     expect(screen.queryByTestId("today-scroll-cue")).not.toBeInTheDocument();
+  });
+
+  it("clicks the scroll cue to advance and scroll toward the next animated block", async () => {
+    window.localStorage.setItem(dailyOpenKey, "true");
+
+    renderFlow({
+      animationReplayKey: "cue-click",
+      prayers: [prayerVm("prayer_1", false)],
+    });
+    await finishInitialTimers();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("today-scroll-cue"));
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(140);
+    });
+
+    expect(screen.getByTestId("today-devotion-guidance-stage")).toBeInTheDocument();
+    expect(screen.getByTestId("today-scroll-cue")).toHaveTextContent("今日の祈りへ");
+    expect(scrollIntoViewMock).toHaveBeenCalledWith({
+      behavior: "smooth",
+      block: "center",
+    });
   });
 });
