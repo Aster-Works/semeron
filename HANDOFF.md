@@ -228,9 +228,17 @@
   - ブラウザ上の配信CSSに `filter: blur` / `motion-enter-blur` / `scale(` / `translate3d(` / `backface-visibility` が含まれないことを確認。
   - `.motion-pattern-1`〜`.motion-pattern-5` の5パターンはブラウザ上でも5件存在し、duration / easing / 小さな `translateY` の違いとして維持されていることを確認。
   - アプリ内ブラウザも新規タブで `http://localhost:3070/ja/church/eifuku-minami/today?pwaAnimationFix=...` を開き、ページ応答を確認。
+- PWAアニメーションちらつき対応リリース結果（2026-07-04 06:50 JST）:
+  - アプリ変更コミット: `bc7b2d2 Optimize Today animations for mobile PWA`。
+  - `git push origin main` PASS。`origin/main` は `4c368a6..bc7b2d2` へ更新。
+  - GitHub連携Vercel Production deployment成功。commit `bc7b2d261c25ab8d983c7aad3a05218c43008506` の `context=Vercel` / `state=success` / `description=Deployment has completed` を確認。
+  - GitHub deployment: `5305159140` / Production。
+  - Vercel deployment URL: `https://semeron-jptkw9vk7-asterworks.vercel.app`。
+  - `curl -I -L https://semeron-app.vercel.app/ja/church/eifuku-minami/today` で production が応答することを確認。未ログインのため `/ja` → `/ja/login` にリダイレクトされ、最終 `HTTP/2 200` / `server: Vercel`。
+  - 注意: `vercel deploy --prod --yes` の直接CLI実行は、現行Vercel認証から旧 `asterworks` チーム/プロジェクトへアクセスできないため引き続き不可。今回はGitHub連携デプロイで本番反映を確認済み。
 
 ## 次に行うこと
-- 必要なら通常のリリース手順: `git status` → commit → push → Vercel production deploy。
+- PWAの実機確認でまだちらつきが残る場合は、animation duration/easingではなく描画対象の分割、固定高さ、iOS standalone時のさらに軽い motion preset を検討する。
 - 将来の拡張候補: 管理者が明示的に「今日の祈りへピン留め」できる列/UIを追加する。
 
 ---
