@@ -7,6 +7,7 @@ import type { Locale } from "@/app/lib/demo/types";
 import { useLocale } from "@/app/lib/i18n/LocaleProvider";
 import { deleteMyAccount } from "@/app/lib/db/actions";
 import { Button, Field, Input, Modal } from "@/app/components/ui";
+import { purgePwaCaches } from "@/app/lib/pwa/cache";
 
 const CONFIRM_TEXT = "DELETE";
 
@@ -40,6 +41,7 @@ export function DeleteAccountButton({ locale }: { locale: Locale }) {
         setError(errorText(res.error, ja));
         return;
       }
+      await purgePwaCaches();
       router.replace(`/${locale}/login`);
       router.refresh();
     });

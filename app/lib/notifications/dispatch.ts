@@ -1,6 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/app/lib/supabase/admin";
 import { isPushConfigured, sendWebPush } from "./providers";
+import { safeNotificationPath } from "./paths";
 
 /**
  * 通知ディスパッチャ（07 Phase 4「Notification queue table integration」）。
@@ -50,6 +51,18 @@ export async function dispatchQueuedNotifications(): Promise<DispatchSummary> {
 
   // 1) 予約公開の到来分を publish（トリガーが in-app 通知を生成）
   const published = await publishDueContent();
+  const staleProcessingBefore = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+
+  await admin
+    .from("notifications")
+    .update({
+      status: "queued",
+      processing_started_at: null,
+      failure_reason: "processing_recovered",
+    })
+    .eq("channel", "in_app")
+    .eq("status", "processing")
+    .lt("processing_started_at", staleProcessingBefore);
 
   // 2) queued の in-app 通知を購読デバイスへ配信
   const { data: queued, error } = await admin
@@ -73,8 +86,20 @@ export async function dispatchQueuedNotifications(): Promise<DispatchSummary> {
   };
 
   for (const n of queued ?? []) {
-    summary.processed++;
+    const { data: claim } = await admin
+      .from("notifications")
+      .update({
+        status: "processing",
+        processing_started_at: new Date().toISOString(),
+        failure_reason: null,
+      })
+      .eq("id", n.id)
+      .eq("status", "queued")
+      .select("id")
+      .maybeSingle();
+    if (!claim) continue;
 
+    summary.processed++;
     const { data: recipient } = await admin
       .from("memberships")
       .select("id, status")
@@ -150,6 +175,7 @@ async function mark(
       status,
       sent_at: status === "sent" ? new Date().toISOString() : null,
       failure_reason: reason,
+      processing_started_at: null,
     })
     .eq("id", id);
 }
@@ -163,7 +189,5 @@ function pickLocalized(v: unknown): string | undefined {
 
 function notificationUrl(n: { data?: unknown }): string {
   const data = (n.data ?? {}) as Record<string, unknown>;
-  const contentId = data.content_item_id;
-  // クリック時の遷移先はクライアント側 SW が決める。相対パスの手掛かりだけ渡す。
-  return typeof contentId === "string" ? `/?n=${contentId}` : "/";
+  return safeNotificationPath(data.target_path);
 }

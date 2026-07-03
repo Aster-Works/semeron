@@ -7,6 +7,7 @@ import type { Locale } from "@/app/lib/demo/types";
 import { useLocale } from "@/app/lib/i18n/LocaleProvider";
 import { leaveChurch } from "@/app/lib/db/actions";
 import { Button, Modal } from "@/app/components/ui";
+import { purgePwaCaches } from "@/app/lib/pwa/cache";
 
 /**
  * 自分の教会所属から抜ける。アカウント削除ではなく memberships.status='removed'。
@@ -37,8 +38,11 @@ export function LeaveChurchButton({
         setError(errorText(res.error, ja));
         return;
       }
+      const data = res.data as { nextPath?: string } | undefined;
+      const nextPath = typeof data?.nextPath === "string" ? data.nextPath : `/${locale}/onboarding`;
       setOpen(false);
-      router.replace(`/${locale}`);
+      await purgePwaCaches();
+      router.replace(nextPath);
       router.refresh();
     });
   };

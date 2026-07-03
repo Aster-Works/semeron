@@ -11,12 +11,14 @@ import {
 import { createAdminClient } from "@/app/lib/supabase/admin";
 import { createServerSupabase } from "@/app/lib/supabase/server";
 import type { Locale, ReactionType, Visibility } from "@/app/lib/demo/types";
+import { CONTENT_LANGUAGES } from "@/app/lib/i18n/languages";
 
 export type ActionResult = { ok: true; data?: unknown } | { ok: false; error: string };
 
 const CHURCH_ADMIN_ROLES = new Set(["owner", "pastor", "elder", "staff"]);
 const MEMBER_MANAGER_ROLES = new Set(["owner", "pastor"]);
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const CONTENT_LANGUAGE_CODES = new Set(CONTENT_LANGUAGES.map((l) => l.code));
 
 async function myMembership(
   supabase: SupabaseClient,
@@ -414,10 +416,7 @@ export async function saveDevotion(input: {
   }
 
   const row = {
-    church_id: input.churchId,
     group_id: null,
-    author_membership_id: membership.id,
-    type: "devotion" as const,
     status: input.status,
     visibility: input.visibility,
     devotion_date: devotionDate,
@@ -435,10 +434,36 @@ export async function saveDevotion(input: {
     prayer_guide: input.prayerGuide ?? {},
   };
 
-  const res = input.id
-    ? await supabase.from("content_items").update(row).eq("id", input.id)
-    : await supabase.from("content_items").insert(row);
-  if (res.error) return { ok: false, error: res.error.message };
+  if (input.id) {
+    const { data: existing, error: existingError } = await supabase
+      .from("content_items")
+      .select("id")
+      .eq("id", input.id)
+      .eq("church_id", input.churchId)
+      .eq("type", "devotion")
+      .maybeSingle();
+    if (existingError) return { ok: false, error: existingError.message };
+    if (!existing) return { ok: false, error: "not found or not permitted" };
+
+    const { data, error } = await supabase
+      .from("content_items")
+      .update(row)
+      .eq("id", input.id)
+      .eq("church_id", input.churchId)
+      .eq("type", "devotion")
+      .select("id");
+    if (error) return { ok: false, error: error.message };
+    if (!data || data.length === 0) return { ok: false, error: "not found or not permitted" };
+  } else {
+    const { error } = await supabase.from("content_items").insert({
+      ...row,
+      church_id: input.churchId,
+      author_membership_id: membership.id,
+      type: "devotion",
+    });
+    if (error) return { ok: false, error: error.message };
+  }
+
   revalidatePath(`/${input.locale}/admin/${input.churchSlug}/devotions`);
   return { ok: true };
 }
@@ -510,6 +535,32 @@ export async function updateChurchSettings(input: {
   if (!data || data.length === 0) return { ok: false, error: "not permitted" };
   revalidatePath(`/${input.locale}/admin/${input.churchSlug}/settings`);
   return { ok: true };
+}
+
+/* ---------- 配信言語（owner/pastor 限定=RLS）---------- */
+export async function updateContentLanguages(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  contentLanguages: string[];
+}): Promise<ActionResult> {
+  const langs = [...new Set(input.contentLanguages.map((l) => l.trim().toLowerCase()))]
+    .filter((l) => CONTENT_LANGUAGE_CODES.has(l));
+  if (langs.length === 0) return { ok: false, error: "language required" };
+  if (langs.length > CONTENT_LANGUAGES.length) return { ok: false, error: "too many languages" };
+
+  const supabase = await createServerSupabase();
+  const { data, error } = await supabase
+    .from("churches")
+    .update({ content_languages: langs })
+    .eq("id", input.churchId)
+    .select("id");
+  if (error) return { ok: false, error: error.message };
+  if (!data || data.length === 0) return { ok: false, error: "not permitted" };
+
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/settings`);
+  revalidatePath("/", "layout");
+  return { ok: true, data: { contentLanguages: langs } };
 }
 
 /* ---------- デボーション削除（配信済み・アーカイブの整理用）---------- */
@@ -647,6 +698,22 @@ async function assertGroupInChurch(
   return { ok: true };
 }
 
+async function assertMembershipInChurch(
+  supabase: SupabaseClient,
+  membershipId: string,
+  churchId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data } = await supabase
+    .from("memberships")
+    .select("id")
+    .eq("id", membershipId)
+    .eq("church_id", churchId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!data) return { ok: false, error: "member not found" };
+  return { ok: true };
+}
+
 export async function createGroup(input: {
   churchId: string;
   churchSlug: string;
@@ -695,6 +762,8 @@ export async function addGroupMember(input: {
   const supabase = await createServerSupabase();
   const guard = await assertGroupInChurch(supabase, input.groupId, input.churchId);
   if (!guard.ok) return guard;
+  const memberGuard = await assertMembershipInChurch(supabase, input.membershipId, input.churchId);
+  if (!memberGuard.ok) return memberGuard;
   const { error } = await supabase
     .from("group_memberships")
     .upsert(
@@ -745,6 +814,8 @@ export async function setGroupLeader(input: {
   if (!guard.ok) return guard;
 
   if (input.membershipId) {
+    const memberGuard = await assertMembershipInChurch(supabase, input.membershipId, input.churchId);
+    if (!memberGuard.ok) return memberGuard;
     const { error: upErr } = await supabase
       .from("group_memberships")
       .upsert(
@@ -974,15 +1045,33 @@ export async function leaveChurch(input: {
   locale: Locale;
 }): Promise<ActionResult> {
   const supabase = await createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "not signed in" };
+
   const { error } = await supabase.rpc("leave_church", {
     p_church_id: input.churchId,
   });
   if (error) return { ok: false, error: error.message };
 
+  const { data: nextMembership } = await supabase
+    .from("memberships")
+    .select("church:churches!inner(slug)")
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .limit(1)
+    .maybeSingle();
+  const church = nextMembership?.church as { slug?: string } | { slug?: string }[] | null | undefined;
+  const nextSlug = Array.isArray(church) ? church[0]?.slug : church?.slug;
+  const nextPath = nextSlug
+    ? `/${input.locale}/church/${nextSlug}/today`
+    : `/${input.locale}/onboarding`;
+
   revalidatePath(`/${input.locale}`);
   revalidatePath(`/${input.locale}/church/${input.churchSlug}/me`);
   revalidatePath("/", "layout");
-  return { ok: true };
+  return { ok: true, data: { nextPath } };
 }
 
 export async function deleteMyAccount(input: {

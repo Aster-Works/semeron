@@ -10,6 +10,7 @@ import { signOut } from "@/app/lib/db/actions";
 import { LocaleSwitcher } from "@/app/components/LocaleSwitcher";
 import { ThemeToggle } from "@/app/components/ThemeToggle";
 import { cn } from "@/app/lib/utils";
+import { purgePwaCaches } from "@/app/lib/pwa/cache";
 
 /**
  * ヘッダー右上の歯車 →「設定」メニュー。
@@ -40,6 +41,7 @@ export function HeaderSettingsMenu({
   const doSignOut = () =>
     startTransition(async () => {
       await signOut();
+      await purgePwaCaches();
       router.push(`/${locale}/login`);
       router.refresh();
     });
@@ -141,4 +143,3 @@ export function HeaderSettingsMenu({
     </div>
   );
 }
-

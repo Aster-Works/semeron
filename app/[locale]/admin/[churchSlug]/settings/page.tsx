@@ -110,7 +110,13 @@ export default async function AdminSettingsPage({
                 {church.contentLanguages.map((c) => languageName(c)).join(" · ")}
               </p>
             </div>
-            <ContentLanguagesEditor initial={church.contentLanguages} />
+            <ContentLanguagesEditor
+              initial={church.contentLanguages}
+              churchId={church.id}
+              churchSlug={church.slug}
+              locale={locale}
+              canEdit={canEditSettings}
+            />
           </CardBody>
         </Card>
 

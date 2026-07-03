@@ -1,16 +1,42 @@
 /* Semeron — service worker (Phase 4)
  *
- * 目的（03 §8）: 完全オフライン対応は目指さない。
- *  - app shell を軽くキャッシュ
- *  - 一度開いた「今日」ページをネット不通時に読める程度
- *  - Web Push（push / notificationclick）に対応
+ * Privacy-first PWA policy:
+ *  - HTML navigations and authenticated pages are never cached.
+ *  - Only safe static assets are cached.
+ *  - Sign-out / church leave / account deletion can explicitly purge caches.
  */
-const CACHE = "semeron-v1";
-const APP_SHELL = ["/", "/ja", "/en", "/manifest.webmanifest"];
+const STATIC_CACHE = "semeron-static-v2";
+const PRECACHE_URLS = ["/manifest.webmanifest", "/icons/icon.svg", "/icons/icon-maskable.svg"];
+const STATIC_PREFIXES = ["/_next/static/", "/icons/"];
+
+function isStaticAsset(url) {
+  return (
+    url.origin === self.location.origin &&
+    (url.pathname === "/manifest.webmanifest" ||
+      STATIC_PREFIXES.some((prefix) => url.pathname.startsWith(prefix)))
+  );
+}
+
+function purgeCaches() {
+  return caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))));
+}
+
+function safeTargetPath(value) {
+  if (typeof value !== "string" || value.length === 0) return "/";
+  try {
+    const target = new URL(value, self.location.origin);
+    if (target.origin !== self.location.origin) return "/";
+    const path = `${target.pathname}${target.search}${target.hash}`;
+    if (!path.startsWith("/") || path.startsWith("//") || path.startsWith("/\\")) return "/";
+    return path;
+  } catch {
+    return "/";
+  }
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(APP_SHELL).catch(() => undefined)),
+    caches.open(STATIC_CACHE).then((cache) => cache.addAll(PRECACHE_URLS).catch(() => undefined)),
   );
   self.skipWaiting();
 });
@@ -19,43 +45,36 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))),
+      .then((keys) =>
+        Promise.all(keys.filter((key) => key !== STATIC_CACHE).map((key) => caches.delete(key))),
+      ),
   );
   self.clients.claim();
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SEMERON_PURGE_CACHES") {
+    event.waitUntil(purgeCaches());
+  }
 });
 
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return;
+  if (!isStaticAsset(url)) return;
 
-  // ナビゲーションは network-first（最新のみことばを優先し、不通時のみキャッシュ）
-  if (req.mode === "navigate") {
-    event.respondWith(
-      fetch(req)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((cache) => cache.put(req, copy));
-          return res;
-        })
-        .catch(() => caches.match(req).then((r) => r || caches.match("/"))),
-    );
-    return;
-  }
-
-  // 静的アセットは stale-while-revalidate
+  // 静的アセットのみ stale-while-revalidate。HTML/API/認証済みページは保存しない。
   event.respondWith(
-    caches.match(req).then((cached) => {
+    caches.open(STATIC_CACHE).then((cache) => cache.match(req).then((cached) => {
       const network = fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((cache) => cache.put(req, copy));
+          if (res.ok) cache.put(req, res.clone()).catch(() => undefined);
           return res;
         })
         .catch(() => cached);
       return cached || network;
-    }),
+    })),
   );
 });
 
@@ -76,7 +95,7 @@ self.addEventListener("push", (event) => {
     tag: payload.tag || "semeron",
     icon: "/icons/icon.svg",
     badge: "/icons/icon.svg",
-    data: { url: payload.url || "/" },
+    data: { url: safeTargetPath(payload.url) },
     // 静かなリマインダー: 通知同士を積み上げず、そっと1つにまとめる
     renotify: false,
   };
@@ -85,7 +104,7 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const target = (event.notification.data && event.notification.data.url) || "/";
+  const target = safeTargetPath(event.notification.data && event.notification.data.url);
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
       // 既に開いているタブがあればそれをフォーカス

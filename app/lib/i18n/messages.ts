@@ -655,8 +655,8 @@ export const messages = {
   },
   "settings.primaryLang": { ja: "主言語", en: "Primary" },
   "settings.langDemoNote": {
-    ja: "デモでは保存されません（設定は Phase 2 で反映されます）。",
-    en: "Not saved in the demo (settings are applied in Phase 2).",
+    ja: "owner / pastor は配信言語を保存できます。先頭の言語が主言語です。",
+    en: "Owners / pastors can save content languages. The first language is primary.",
   },
   "settings.biblePolicy": { ja: "聖書本文の扱い", en: "Bible text policy" },
   "settings.biblePolicyBody": {

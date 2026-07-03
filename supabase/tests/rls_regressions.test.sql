@@ -4,7 +4,7 @@
 -- ║ restricted devotion notifications, duplicate published devotion.      ║
 -- ╚══════════════════════════════════════════════════════════════════════╝
 begin;
-select plan(7);
+select plan(12);
 
 create function pg_temp.login(uid uuid) returns void language plpgsql as $$
 begin
@@ -48,6 +48,28 @@ begin
     from public.notifications
    where data->>'content_item_id' = new_id::text;
   return n;
+end; $$;
+
+create function pg_temp.insert_devotion_notification_target() returns text language plpgsql as $$
+declare
+  new_id uuid;
+  target text;
+begin
+  insert into public.content_items
+    (church_id, author_membership_id, type, status, visibility, title, body, devotion_date)
+  values
+    ('11111111-1111-1111-1111-111111111111',
+     'c1000000-0000-0000-0000-0000000000e1',
+     'devotion','published','church',
+     '{"ja":"通知遷移先"}'::jsonb,'{"ja":"本文"}'::jsonb,'2026-08-01')
+  returning id into new_id;
+
+  select data->>'target_path' into target
+    from public.notifications
+   where data->>'content_item_id' = new_id::text
+   limit 1;
+
+  return target;
 end; $$;
 
 -- prayer_team は祈祷課題の承認者であって、デボーション管理者ではない。
@@ -105,12 +127,62 @@ select throws_ok(
              '{"ja":"青年会へ"}'::jsonb,'{"ja":"祈ってください"}'::jsonb,'group') $$,
   '42501', null, '非所属者は group prayer を投稿できない');
 
+-- group_memberships / leader_membership_id は同一教会メンバーだけ許可する。
+select pg_temp.login('a0000000-0000-0000-0000-0000000000e1'); -- jimi: Eifuku owner
+select throws_ok(
+  $$ insert into public.group_memberships (group_id, membership_id, role)
+     values ('d1000000-0000-0000-0000-000000000001',
+             'c2000000-0000-0000-0000-0000000000d3',
+             'member') $$,
+  '23514', null, '別教会メンバーをグループに追加できない');
+
+select throws_ok(
+  $$ update public.groups
+        set leader_membership_id = 'c2000000-0000-0000-0000-0000000000d3'
+      where id = 'd1000000-0000-0000-0000-000000000001' $$,
+  '23514', null, '別教会メンバーをグループリーダーにできない');
+
+-- content_items は作者が同一教会でなければならず、church_id の移動も禁止する。
+select pg_temp.as_postgres();
+select throws_ok(
+  $$ insert into public.content_items
+       (church_id, author_membership_id, type, status, visibility, title, body)
+     values ('11111111-1111-1111-1111-111111111111',
+             'c2000000-0000-0000-0000-0000000000d3',
+             'reflection','published','church',
+             '{"ja":"越境作者"}'::jsonb,'{"ja":"本文"}'::jsonb) $$,
+  '23514', null, '別教会メンバーを content author にできない');
+
+insert into public.memberships (id, church_id, user_id, display_name, email, status, joined_at)
+values ('c9000000-0000-0000-0000-000000000001',
+        '22222222-2222-2222-2222-222222222222',
+        'a0000000-0000-0000-0000-0000000000e1',
+        'Jimi cross church',
+        'jimi@eifuku.example',
+        'active',
+        now());
+insert into public.membership_roles (membership_id, role)
+values ('c9000000-0000-0000-0000-000000000001', 'owner');
+
+select pg_temp.login('a0000000-0000-0000-0000-0000000000e1');
+select throws_ok(
+  $$ update public.content_items
+        set church_id = '22222222-2222-2222-2222-222222222222',
+            author_membership_id = 'c9000000-0000-0000-0000-000000000001'
+      where id = 'e1000000-0000-0000-0000-000000000003' $$,
+  '23514', null, '複数教会管理者でも content を別教会へ移動できない');
+
 -- 限定公開 devotion の通知は閲覧可能な会員だけに作られる。
 select pg_temp.as_postgres();
 select is(
   pg_temp.insert_pastor_only_devotion_notification_count(),
   1,
   'pastor_only devotion の通知は pastor/owner のみに作られる');
+
+select is(
+  pg_temp.insert_devotion_notification_target(),
+  '/ja/church/eifuku-minami/today',
+  'devotion 通知には実際の遷移先 target_path が入る');
 
 select throws_ok(
   $$ insert into public.content_items
