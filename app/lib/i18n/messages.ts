@@ -101,13 +101,13 @@ export const messages = {
 
   // --- Today ---
   "today.word": { ja: "今日のみことば", en: "Today's Word" },
-  "today.reflection": { ja: "黙想の問い", en: "Reflection" },
-  "today.guidedPrayer": { ja: "祈りの導き", en: "A prayer to pray" },
-  "today.pastorNote": { ja: "{pastor}の導き", en: "A word from your {pastor}" },
+  "today.reflection": { ja: "黙想", en: "Reflection" },
+  "today.guidedPrayer": { ja: "祈り", en: "Prayer" },
+  "today.pastorNote": { ja: "デボーション", en: "Devotion" },
   "today.shareRequest": { ja: "祈祷課題を送る", en: "Share a prayer request" },
   "today.talkToPastor": { ja: "{pastor}に相談する", en: "Talk to a {pastor}" },
   "today.softGate.gentle": {
-    ja: "まず今日のみことばに耳を傾けましょう。",
+    ja: "まずは今日のみことばに耳を傾けましょう。",
     en: "Begin with today's Scripture and prayer.",
   },
   "today.completedQuiet": {
@@ -126,6 +126,22 @@ export const messages = {
     en: "Short reflections are shared with your church. Answering the pastor's question is welcome.",
   },
   "today.churchPrayers": { ja: "教会の祈祷課題", en: "Prayer requests" },
+  "todayPrayer.eyebrow": { ja: "今日、共に覚えること", en: "Praying together today" },
+  "todayPrayer.title": { ja: "今日の祈り", en: "Today's prayer" },
+  "todayPrayer.completeTitle": {
+    ja: "今日、共に覚えて祈りました。",
+    en: "You prayed with the church today.",
+  },
+  "todayPrayer.completeBody": {
+    ja: "さらに祈りたいときは、祈りタブで続けられます。",
+    en: "You can continue praying in the Prayer tab.",
+  },
+  "todayPrayer.repeat": { ja: "もう一度祈る", en: "Pray these again" },
+  "todayPrayer.more": { ja: "さらに祈る", en: "Pray more" },
+  "todayPrayer.error": {
+    ja: "祈った記録を保存できませんでした。少し時間をおいてもう一度お試しください。",
+    en: "We couldn't save this prayer yet. Please try again in a moment.",
+  },
   "today.notPublishedTitle": {
     ja: "今日のデボーションはまだ配信されていません。",
     en: "Today's devotion hasn't been shared yet.",

@@ -14,6 +14,7 @@ import type {
   Viewer,
 } from "@/app/lib/demo/types";
 import { toDateKey } from "@/app/lib/demo/selectors";
+import { selectTodayPrayers } from "@/app/lib/prayers/today";
 import { mapContent, mapGroup, mapMembership, mapNotification } from "./map";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -132,6 +133,16 @@ export async function getPrayerFeed(
     .eq("status", "published")
     .order("published_at", { ascending: false });
   return attachPrayerVMs(supabase, data ?? [], viewer, locale);
+}
+
+export async function getTodayPrayerSet(
+  supabase: SupabaseClient,
+  viewer: Viewer,
+  locale: Locale,
+  now: Date = new Date(),
+): Promise<PrayerVM[]> {
+  const prayers = await getPrayerFeed(supabase, viewer, locale);
+  return selectTodayPrayers(prayers, viewer, now);
 }
 
 /** 自分の投稿（承認待ち含む）。今日ページ/フィードで「あなたの投稿」を出すため。 */

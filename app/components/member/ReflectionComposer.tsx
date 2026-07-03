@@ -12,9 +12,11 @@ import { Button, Callout, Card, CardBody, Textarea } from "@/app/components/ui";
 export function ReflectionComposer({
   churchId,
   churchSlug,
+  onPosted,
 }: {
   churchId: string;
   churchSlug: string;
+  onPosted?: () => void;
 }) {
   const { t, locale } = useLocale();
   const [value, setValue] = useState("");
@@ -26,8 +28,12 @@ export function ReflectionComposer({
     setError(null);
     startTransition(async () => {
       const res = await postReflection(churchId, churchSlug, locale, value.trim());
-      if (res.ok) setPosted(true);
-      else setError(res.error);
+      if (res.ok) {
+        setPosted(true);
+        onPosted?.();
+      } else {
+        setError(res.error);
+      }
     });
   };
 
