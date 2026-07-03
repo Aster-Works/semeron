@@ -25,11 +25,11 @@ type MotionPattern = {
 };
 
 const PRAYER_MOTION_PATTERNS: MotionPattern[] = [
-  { id: 1, enterMs: 2860, exitMs: 1080 },
-  { id: 2, enterMs: 3140, exitMs: 1160 },
-  { id: 3, enterMs: 2680, exitMs: 1040 },
-  { id: 4, enterMs: 3360, exitMs: 1200 },
-  { id: 5, enterMs: 2980, exitMs: 1120 },
+  { id: 1, enterMs: 2180, exitMs: 760 },
+  { id: 2, enterMs: 2460, exitMs: 820 },
+  { id: 3, enterMs: 2020, exitMs: 700 },
+  { id: 4, enterMs: 2760, exitMs: 880 },
+  { id: 5, enterMs: 2320, exitMs: 780 },
 ];
 
 function randomPrayerPattern(except?: MotionPattern["id"]): MotionPattern {

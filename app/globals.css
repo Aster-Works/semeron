@@ -193,80 +193,58 @@
   }
 
   .motion-pattern-1 {
-    --motion-enter-x: 0px;
-    --motion-enter-y: 36px;
-    --motion-exit-x: 0px;
-    --motion-exit-y: -14px;
+    --motion-enter-y: 18px;
+    --motion-exit-y: -8px;
     --motion-enter-ease: cubic-bezier(0.16, 1, 0.3, 1);
     --motion-exit-ease: cubic-bezier(0.45, 0, 0.2, 1);
-    --motion-enter-scale: 1;
-    --motion-enter-blur: 0px;
     --motion-enter-opacity: 0;
-    --reveal-duration: 3280ms;
+    --reveal-duration: 2640ms;
   }
 
   .motion-pattern-2 {
-    --motion-enter-x: -10px;
-    --motion-enter-y: 30px;
-    --motion-exit-x: 5px;
-    --motion-exit-y: -12px;
+    --motion-enter-y: 14px;
+    --motion-exit-y: -6px;
     --motion-enter-ease: cubic-bezier(0.19, 1, 0.22, 1);
     --motion-exit-ease: cubic-bezier(0.5, 0, 0.23, 1);
-    --motion-enter-scale: 1;
-    --motion-enter-blur: 0.4px;
     --motion-enter-opacity: 0;
-    --reveal-duration: 3720ms;
+    --reveal-duration: 2920ms;
   }
 
   .motion-pattern-3 {
-    --motion-enter-x: 0px;
     --motion-enter-y: 0px;
-    --motion-exit-x: -5px;
-    --motion-exit-y: -10px;
+    --motion-exit-y: 0px;
     --motion-enter-ease: cubic-bezier(0.2, 0.9, 0.2, 1);
     --motion-exit-ease: cubic-bezier(0.42, 0, 0.18, 1);
-    --motion-enter-scale: 1;
-    --motion-enter-blur: 0px;
     --motion-enter-opacity: 0;
-    --reveal-duration: 3040ms;
+    --reveal-duration: 2360ms;
   }
 
   .motion-pattern-4 {
-    --motion-enter-x: 0px;
-    --motion-enter-y: 46px;
-    --motion-exit-x: 0px;
-    --motion-exit-y: -18px;
+    --motion-enter-y: 22px;
+    --motion-exit-y: -10px;
     --motion-enter-ease: cubic-bezier(0.12, 0.95, 0.18, 1);
     --motion-exit-ease: cubic-bezier(0.48, 0, 0.2, 1);
-    --motion-enter-scale: 0.985;
-    --motion-enter-blur: 1.8px;
     --motion-enter-opacity: 0;
-    --reveal-duration: 4160ms;
+    --reveal-duration: 3160ms;
   }
 
   .motion-pattern-5 {
-    --motion-enter-x: 4px;
-    --motion-enter-y: 28px;
-    --motion-exit-x: -3px;
-    --motion-exit-y: -8px;
+    --motion-enter-y: 12px;
+    --motion-exit-y: -4px;
     --motion-enter-ease: cubic-bezier(0.18, 1, 0.28, 1);
     --motion-exit-ease: cubic-bezier(0.46, 0, 0.22, 1);
-    --motion-enter-scale: 0.992;
-    --motion-enter-blur: 0.8px;
     --motion-enter-opacity: 0;
-    --reveal-duration: 3520ms;
+    --reveal-duration: 2800ms;
   }
 
   .today-prayer-card-prep {
     opacity: 0;
-    transform: translate3d(0, 32px, 0);
+    transform: translateY(18px);
   }
 
   .today-prayer-card-enter {
     animation: today-prayer-card-enter var(--prayer-enter-duration, 2980ms) var(--motion-enter-ease, cubic-bezier(0.16, 1, 0.3, 1)) both;
-    backface-visibility: hidden;
-    transform: translate3d(0, 0, 0);
-    will-change: opacity, transform;
+    transform: translateY(0);
   }
 
   .today-prayer-card-exit {
@@ -276,89 +254,79 @@
 
   .today-prayer-complete-enter {
     animation: today-prayer-complete-enter var(--prayer-enter-duration, 2980ms) var(--motion-enter-ease, cubic-bezier(0.16, 1, 0.3, 1)) both;
-    backface-visibility: hidden;
-    will-change: opacity, transform;
   }
 
   .graceful-reveal-prep {
     opacity: 0;
-    transform: translate3d(0, 28px, 0);
+    transform: translateY(16px);
   }
 
   .graceful-reveal-enter {
     animation: graceful-reveal-enter var(--reveal-duration, 3520ms) var(--motion-enter-ease, cubic-bezier(0.16, 1, 0.3, 1)) var(--reveal-delay, 0ms) both;
-    backface-visibility: hidden;
-    will-change: opacity, transform, filter;
   }
 
   .today-flow-action-item {
     opacity: 0;
-    transform: translate3d(0, 18px, 0);
+    transform: translateY(12px);
   }
 
   .graceful-reveal-enter .today-flow-action-item {
     animation: today-flow-action-item 1880ms cubic-bezier(0.16, 1, 0.3, 1) var(--today-flow-action-delay, 0ms) both;
-    will-change: opacity, transform;
   }
 }
 
 @keyframes today-prayer-card-enter {
   from {
     opacity: 0;
-    transform: translate3d(var(--motion-enter-x, 0px), var(--motion-enter-y, 34px), 0);
+    transform: translateY(var(--motion-enter-y, 18px));
   }
   to {
     opacity: 1;
-    transform: translate3d(0, 0, 0);
+    transform: translateY(0);
   }
 }
 
 @keyframes today-prayer-card-exit {
   from {
     opacity: 1;
-    transform: translate3d(0, 0, 0);
+    transform: translateY(0);
   }
   to {
     opacity: 0;
-    transform: translate3d(var(--motion-exit-x, 0px), var(--motion-exit-y, -14px), 0);
+    transform: translateY(var(--motion-exit-y, -8px));
   }
 }
 
 @keyframes today-prayer-complete-enter {
   from {
     opacity: 0;
-    transform: translate3d(var(--motion-enter-x, 0px), var(--motion-enter-y, 34px), 0);
+    transform: translateY(var(--motion-enter-y, 18px));
   }
   to {
     opacity: 1;
-    transform: translate3d(0, 0, 0);
+    transform: translateY(0);
   }
 }
 
 @keyframes graceful-reveal-enter {
   from {
-    filter: blur(var(--motion-enter-blur, 0px));
     opacity: var(--motion-enter-opacity, 0);
-    transform: translate3d(var(--motion-enter-x, 0px), var(--motion-enter-y, 34px), 0) scale(var(--motion-enter-scale, 1));
-  }
-  58% {
-    opacity: 0.86;
+    transform: translateY(var(--motion-enter-y, 16px));
   }
   to {
-    filter: blur(0);
     opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: translateY(0);
   }
 }
 
 @keyframes today-flow-action-item {
   from {
     opacity: 0;
-    transform: translate3d(0, 18px, 0);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
-    transform: translate3d(0, 0, 0);
+    transform: translateY(0);
   }
 }
 
@@ -370,7 +338,7 @@
   .today-flow-action-item,
   .graceful-reveal-prep,
   .graceful-reveal-enter {
-    filter: none;
+    animation: none !important;
     opacity: 1;
     transform: none;
   }

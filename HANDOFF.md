@@ -210,6 +210,24 @@
   - Vercel deployment URL: `https://semeron-nx66n1i0d-asterworks.vercel.app`。
   - `curl -I -L https://semeron-app.vercel.app/ja/church/eifuku-minami/today` で production が応答することを確認。未ログインのため `/ja` → `/ja/login` にリダイレクトされ、最終 `HTTP/2 200` / `server: Vercel`。
   - 注意: 今後CLIから直接 `vercel deploy --prod --yes` したい場合は、Vercel CLIの認証を `asterworks` 側プロジェクトへアクセスできるアカウント/チームに戻すか、`.vercel/project.json` を現行のアクセス可能なSemeronプロジェクトへ relink する必要がある。
+- PWAアニメーションちらつき対応（2026-07-04 06:42 JST / 実装・検証済み）:
+  - Jimiが iPhone 16e のPWAで、Todayアニメーションがちらついて全然良くないと報告。
+  - 原因候補として、テキストを含む大きなブロックへの `filter: blur()` / `scale()` / `translate3d()` / 常時 `will-change` / `backface-visibility` が、iOS WebKit standalone PWAで再ラスタライズやレイヤーちらつきを起こしていると判断。
+  - `app/globals.css` の5つの `motion-pattern-*` は維持しつつ、パターン差を duration / easing / 小さな `translateY` のみに変更。
+  - `graceful-reveal-enter` から `filter` と `scale` を完全に除去。`will-change: opacity, transform, filter` と `backface-visibility` も除去。
+  - `today-prayer-card-*` と `today-flow-action-item` も `translate3d()` から `translateY()` に変更し、PWAでの不要な3Dレイヤー化を抑制。
+  - `TodayPrayerCarousel` の5パターンdurationを、PWAでちらつきが目立ちにくい 2020〜2760ms enter / 700〜880ms exit に短縮。
+  - `git diff --check` PASS。
+  - `npm run typecheck` PASS。
+  - `npm run lint` PASS。
+  - `npm run test -- tests/unit/today-prayers.test.ts` PASS（4 tests）。
+  - `npm test` PASS（7 files / 43 tests）。
+  - `npm run build` PASS。
+  - `.next` 削除 → `npm run dev` 再起動済み。確認URL: `http://localhost:3070/ja/church/eifuku-minami/today`（dev server session `66235`）。
+  - Playwright mobile viewport（iPhone相当UA / 393x852 / touch）で初回Todayを確認。`data-animate-flow="true"`、`graceful-reveal-enter` が発火し、computed style は `filter: none` / `will-change: auto` / `transform: matrix(...)`（2D translate）であることを確認。
+  - ブラウザ上の配信CSSに `filter: blur` / `motion-enter-blur` / `scale(` / `translate3d(` / `backface-visibility` が含まれないことを確認。
+  - `.motion-pattern-1`〜`.motion-pattern-5` の5パターンはブラウザ上でも5件存在し、duration / easing / 小さな `translateY` の違いとして維持されていることを確認。
+  - アプリ内ブラウザも新規タブで `http://localhost:3070/ja/church/eifuku-minami/today?pwaAnimationFix=...` を開き、ページ応答を確認。
 
 ## 次に行うこと
 - 必要なら通常のリリース手順: `git status` → commit → push → Vercel production deploy。
