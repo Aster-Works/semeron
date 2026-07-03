@@ -6,6 +6,12 @@ import { cn } from "@/app/lib/utils";
 type MotionPattern = 1 | 2 | 3 | 4 | 5;
 type RevealTrigger = "mount" | "in-view";
 
+export const IN_VIEW_REVEAL_OPTIONS: IntersectionObserverInit = {
+  root: null,
+  rootMargin: "0px 0px -32% 0px",
+  threshold: 0.24,
+};
+
 function randomPattern(): MotionPattern {
   return (Math.floor(Math.random() * 5) + 1) as MotionPattern;
 }
@@ -50,7 +56,7 @@ export function GracefulReveal({
         frame = window.requestAnimationFrame(() => setPattern(randomPattern()));
         observer.disconnect();
       },
-      { root: null, rootMargin: "0px 0px -18% 0px", threshold: 0.18 },
+      IN_VIEW_REVEAL_OPTIONS,
     );
     observer.observe(element);
     return () => {

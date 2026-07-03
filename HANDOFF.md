@@ -266,9 +266,31 @@
   - Vercel deployment URL: `https://semeron-42rvjt6ub-asterworks.vercel.app`。
   - `curl -I -L 'https://semeron-app.vercel.app/ja/church/eifuku-minami/today?replayTodayAnimation=1'` で production が応答することを確認。未ログインのため `/ja` → `/ja/login` にリダイレクトされ、最終 `HTTP/2 200` / `server: Vercel`。
   - 注意: `vercel deploy --prod --yes` の直接CLI実行は、現行Vercel認証から旧 `asterworks` チーム/プロジェクトへアクセスできないため引き続き不可。今回はGitHub連携デプロイで本番反映を確認済み。
+- ビューポート発火タイミング調整（2026-07-04 / 実装中）:
+  - Jimiの追加FB: ビューポート判定は、もう少しスクロールしてから発火してほしい。
+  - `?replayTodayAnimation=1` / `?pwaAnimationFix=<任意の値>` でアニメーションを再発火できるオプションは維持する。
+  - `GracefulReveal` の `IntersectionObserver` 設定を `rootMargin: "0px 0px -18% 0px"` / `threshold: 0.18` から、`rootMargin: "0px 0px -32% 0px"` / `threshold: 0.24` に変更。
+  - これにより、後続セクションが以前より画面内へ深く入ってから reveal animation が始まる。
+  - `tests/unit/graceful-reveal.test.tsx` を追加し、in-view reveal のObserver設定を固定。
+- 旧アニメーション復帰（2026-07-04 / 実装中）:
+  - Jimiの追加FB: `opacity + ごく小さい translateY` にする以前のアニメーションへ戻す。
+  - `bc7b2d2 Optimize Today animations for mobile PWA` で短縮/軽量化したToday motionを、直前のゆっくりした5パターンへ戻した。
+  - `app/globals.css` の `motion-pattern-*` に `--motion-enter-x` / `--motion-enter-scale` / `--motion-enter-blur` を戻し、`graceful-reveal-enter` は blur / scale / translate3d を含む旧keyframesへ復帰。
+  - `TodayPrayerCarousel` の5パターンdurationも 2860〜3360ms enter / 1040〜1200ms exit に戻した。
+  - `?replayTodayAnimation=1` / `?pwaAnimationFix=<任意の値>` のURL再発火オプションは維持。
+  - `git diff --check` PASS。
+  - `npm run test -- tests/unit/graceful-reveal.test.tsx tests/unit/today-devotion-flow.test.tsx` PASS（2 files / 3 tests）。
+  - `npm run typecheck` PASS。
+  - `npm run lint` PASS。
+  - `npm test` PASS（9 files / 46 tests）。
+  - `npm run build` PASS。
+  - `.next` 削除 → `npm run dev` 再起動済み（session `80371` / `http://localhost:3070`）。
+  - アプリ内ブラウザで `http://localhost:3070/ja/church/eifuku-minami/today?replayTodayAnimation=1&motionRestoreCheck=2` を開き、`data-animate-flow="true"` / `data-animation-replay="true"` を確認。
+  - 配信CSSに `filter: blur(var(--motion-enter-blur` / `scale(var(--motion-enter-scale` / `translate3d(` が含まれることを確認。実行中の `graceful-reveal-enter` も `animationName=graceful-reveal-enter` / `animationDuration=3.28s` を確認。
 
 ## 次に行うこと
-- JimiのiPhone実機PWAで `?replayTodayAnimation=1` 付きURL、または `?pwaAnimationFix=<任意の値>` 付きURLを開いて、同日内に何度でもアニメーションを確認する。
+- リリースする場合は通常手順: `git status` → commit → push → GitHub連携Vercel Production deployment確認。
+- JimiのiPhone実機PWAで `?replayTodayAnimation=1` 付きURL、または `?pwaAnimationFix=<任意の値>` 付きURLを開いて、同日内に何度でもアニメーションと発火タイミングを確認する。
 - 将来の拡張候補: 管理者が明示的に「今日の祈りへピン留め」できる列/UIを追加する。
 
 ---
