@@ -295,7 +295,7 @@
   - Vercel deployment URL: `https://semeron-g8udocnok-asterworks.vercel.app`。
   - `curl -I -L 'https://semeron-app.vercel.app/ja/church/eifuku-minami/today?replayTodayAnimation=1'` で production が応答することを確認。未ログインのため `/ja` → `/ja/login` にリダイレクトされ、最終 `HTTP/2 200` / `server: Vercel`。
   - 注意: `vercel deploy --prod --yes` の直接CLI実行は、現行Vercel認証から旧 `asterworks` チーム/プロジェクトへアクセスできないため引き続き不可。今回はGitHub連携デプロイで本番反映を確認済み。
-- スクロール誘導キュー追加（2026-07-04 / 実装中）:
+- スクロール誘導キュー追加（2026-07-04 / 出荷済み）:
   - Jimiの追加FB: スクロールで後続セクションのアニメーションが発火する前に、ユーザーへ「スクロールできる」ことをうっすら伝えたい。
   - `TodayDevotionFlow` に `today-scroll-cue` を追加。初回/リプレイ演出中、`stage < 4` の間だけ画面下に控えめな「続きへ / Continue」ピルを表示する。
   - 通常の同日2回目表示（`data-animate-flow="false"`）では表示しない。
@@ -309,9 +309,16 @@
   - `npm run build` PASS。
   - アプリ内ブラウザで `http://localhost:3070/ja/church/eifuku-minami/today?replayTodayAnimation=1&scrollCueCheck=1` を開き、`data-animate-flow="true"` / `data-animation-replay="true"` / `today-scroll-cue` 表示を確認。キューは fixed / pointer-events none / text `続きへ`。
   - 同じタブで通常URL `http://localhost:3070/ja/church/eifuku-minami/today` を開き、`data-animate-flow="false"` / `data-animation-replay="false"` / `today-scroll-cue` 非表示を確認。
+- スクロール誘導キュー追加リリース結果（2026-07-04 07:34 JST）:
+  - アプリ変更コミット: `ddf2bfd Add Today scroll cue`。
+  - `git push origin main` PASS。`origin/main` は `abd7775..ddf2bfd` へ更新。
+  - GitHub連携Vercel Production deployment成功。commit `ddf2bfd4ea2c9a82a92e61fe748b5dc6e07b5e35` の `context=Vercel` / `state=success` / `description=Deployment has completed` を確認。
+  - GitHub deployment: `5305505256` / Production。
+  - Vercel deployment URL: `https://semeron-32q3bxfcd-asterworks.vercel.app`。
+  - `curl -I -L 'https://semeron-app.vercel.app/ja/church/eifuku-minami/today?replayTodayAnimation=1&scrollCueCheck=1'` で production が応答することを確認。未ログインのため `/ja` → `/ja/login` にリダイレクトされ、最終 `HTTP/2 200` / `server: Vercel`。
+  - 注意: `vercel deploy --prod --yes` の直接CLI実行は、現行Vercel認証から旧 `asterworks` チーム/プロジェクトへアクセスできないため引き続き不可。今回はGitHub連携デプロイで本番反映を確認済み。
 
 ## 次に行うこと
-- スクロール誘導キュー追加をcommit/pushし、GitHub連携Vercel Production deploymentを確認する。
 - JimiのiPhone実機PWAで `?replayTodayAnimation=1` 付きURL、または `?pwaAnimationFix=<任意の値>` 付きURLを開いて、同日内に何度でもアニメーションと発火タイミング、スクロール誘導キューを確認する。
 - 将来の拡張候補: 管理者が明示的に「今日の祈りへピン留め」できる列/UIを追加する。
 
