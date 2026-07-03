@@ -28,6 +28,7 @@ export interface PrayerVM {
 export interface ReflectionVM {
   item: ContentItem;
   authorName: string;
+  isMine: boolean;
   reactions: { type: ReactionType; count: number; active: boolean }[];
 }
 
@@ -89,8 +90,9 @@ export async function getTodayDevotion(
   now: Date = new Date(),
 ): Promise<ContentItem | null> {
   const today = toDateKey(now, church.timezone);
+  // content_feed 経由（基底表 content_items の直接 select は作者列剥奪で不可）。
   const { data } = await supabase
-    .from("content_items")
+    .from("content_feed")
     .select("*")
     .eq("church_id", church.id)
     .eq("type", "devotion")
@@ -191,6 +193,7 @@ export async function getReflections(
   return rows.map((r) => ({
     item: mapContent(r),
     authorName: r.author_membership_id ? (nameById.get(r.author_membership_id) ?? anonName(locale)) : anonName(locale),
+    isMine: Boolean(viewer.membership && r.author_membership_id === viewer.membership.id),
     reactions: (["amen", "thanks"] as ReactionType[]).map((type) => ({
       type,
       count: count.get(`${r.id}:${type}`) ?? 0,
@@ -261,24 +264,38 @@ export async function getUnreadInboxCount(supabase: SupabaseClient, viewer: View
 export async function getModerationQueue(
   supabase: SupabaseClient,
   viewer: Viewer,
+  locale: Locale,
 ): Promise<{ item: ContentItem; authorName: string }[]> {
-  // モデレータは content_items 本体を直接読める（作者名も見える）
+  // 完全匿名: content_feed 経由で読むことで、匿名投稿の作者はモデレーターにも
+  // 伏せられる（author_membership_id が null になる）。非匿名のみ実名を解決する。
   const { data } = await supabase
-    .from("content_items")
-    .select("*, author:memberships!content_items_author_membership_id_fkey(display_name)")
+    .from("content_feed")
+    .select("*")
     .eq("church_id", viewer.church.id)
     .eq("type", "prayer_request")
     .eq("status", "pending_review")
     .order("created_at", { ascending: false });
-  return (data ?? []).map((r: any) => ({
+  const rows = data ?? [];
+  const authorIds = [...new Set(rows.map((r: any) => r.author_membership_id).filter(Boolean))];
+  const nameById = new Map<string, string>();
+  if (authorIds.length > 0) {
+    const { data: mems } = await supabase
+      .from("memberships")
+      .select("id, display_name")
+      .in("id", authorIds);
+    (mems ?? []).forEach((m: any) => nameById.set(m.id, m.display_name));
+  }
+  return rows.map((r: any) => ({
     item: mapContent(r),
-    authorName: r.author?.display_name ?? (viewer.church.defaultLocale === "ja" ? "匿名" : "Anonymous"),
+    authorName: r.author_membership_id
+      ? (nameById.get(r.author_membership_id) ?? anonName(locale))
+      : anonName(locale),
   }));
 }
 
 export async function getAllDevotions(supabase: SupabaseClient, churchId: string): Promise<ContentItem[]> {
   const { data } = await supabase
-    .from("content_items")
+    .from("content_feed")
     .select("*")
     .eq("church_id", churchId)
     .eq("type", "devotion")
@@ -286,7 +303,7 @@ export async function getAllDevotions(supabase: SupabaseClient, churchId: string
   return (data ?? []).map(mapContent);
 }
 export async function getDevotion(supabase: SupabaseClient, id: string): Promise<ContentItem | null> {
-  const { data } = await supabase.from("content_items").select("*").eq("id", id).eq("type", "devotion").maybeSingle();
+  const { data } = await supabase.from("content_feed").select("*").eq("id", id).eq("type", "devotion").maybeSingle();
   return data ? mapContent(data) : null;
 }
 export async function countReactions(
@@ -332,11 +349,8 @@ export async function getChurchGroups(supabase: SupabaseClient, churchId: string
   return (data ?? []).map(mapGroup);
 }
 export async function getChurchNotifications(supabase: SupabaseClient, churchId: string): Promise<AppNotification[]> {
-  const { data } = await supabase
-    .from("notifications")
-    .select("*")
-    .eq("church_id", churchId)
-    .order("created_at", { ascending: false });
+  // 受信者・content連結を含まない配信メタデータのみ（匿名解除の逆引きを封じる definer RPC）。
+  const { data } = await supabase.rpc("church_notification_ops", { target_church: churchId });
   return (data ?? []).map(mapNotification);
 }
 
@@ -390,7 +404,7 @@ export async function getOpsDashboard(
       .eq("type", "prayer_request")
       .eq("status", "pending_review"),
     supabase
-      .from("content_items")
+      .from("content_feed")
       .select("*")
       .eq("church_id", churchId)
       .eq("type", "devotion")
@@ -402,7 +416,7 @@ export async function getOpsDashboard(
       .eq("church_id", churchId)
       .eq("type", "prayer_request")
       .eq("status", "published"),
-    supabase.from("notifications").select("*").eq("church_id", churchId).eq("status", "failed"),
+    supabase.rpc("church_notification_ops", { target_church: churchId, p_only_failed: true }),
   ]);
   const vbMap = new Map<string, number>();
   (pubRes.data ?? []).forEach((r: any) => vbMap.set(r.visibility, (vbMap.get(r.visibility) ?? 0) + 1));

@@ -91,12 +91,13 @@ describe("visibility roles", () => {
   });
 });
 
-describe("anonymous_church", () => {
-  it("visible to members but author hidden; admins & author see the author", () => {
+describe("anonymous_church (完全匿名)", () => {
+  it("row visible to members; author hidden from everyone except the author", () => {
     const anon = item("ci_e_pr_anon");
     expect(canViewContent(taro, anon, DEMO_NOW)).toBe(true);
     expect(isAuthorVisibleTo(taro, anon)).toBe(false); // normal member: hidden
-    expect(isAuthorVisibleTo(jimi, anon)).toBe(true); // admin: visible
+    expect(isAuthorVisibleTo(jimi, anon)).toBe(false); // admin (pastor): hidden too
+    expect(isAuthorVisibleTo(ken, anon)).toBe(false); // prayer_team (moderator): hidden too
     expect(isAuthorVisibleTo(aoi, anon)).toBe(true); // author (aoi) sees own
   });
 });

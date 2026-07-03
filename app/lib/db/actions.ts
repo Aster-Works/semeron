@@ -309,6 +309,55 @@ export async function postReflection(
   return { ok: true };
 }
 
+/**
+ * 自分の応答（reflection）を後から編集する。
+ * RLS(content_update)は type='reflection' の作者更新を許すため、公開状態のまま更新できる
+ * （応答は非モデレーションの carve-out）。所有権はサーバー側でも二重確認する。
+ */
+export async function updateReflection(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  contentId: string;
+  body: string;
+}): Promise<ActionResult> {
+  const body = input.body.trim();
+  if (!body) return { ok: false, error: "empty" };
+  const supabase = await createServerSupabase();
+  const membershipId = await myMembershipId(supabase, input.churchId);
+  if (!membershipId) return { ok: false, error: "not a member" };
+
+  // 作者列は authenticated から列レベルで剥奪済み → 本人判定は owns_content(definer) で行う。
+  const { data: owns } = await supabase.rpc("owns_content", { content_id: input.contentId });
+  if (!owns) return { ok: false, error: "not found or not permitted" };
+
+  // 現行本文を取得し、多言語 jsonb の当該ロケールだけ差し替える（他言語を消さない）。
+  const { data: cur } = await supabase
+    .from("content_items")
+    .select("body")
+    .eq("id", input.contentId)
+    .eq("church_id", input.churchId)
+    .eq("type", "reflection")
+    .maybeSingle();
+  if (!cur) return { ok: false, error: "not found or not permitted" };
+  const nextBody = { ...(cur.body as Record<string, string> | null), [input.locale]: body };
+
+  // RLS(content_update)=作者本人(type=reflection)を担保。owns_content で二重に確認済み。
+  const { data, error } = await supabase
+    .from("content_items")
+    .update({ body: nextBody })
+    .eq("id", input.contentId)
+    .eq("church_id", input.churchId)
+    .eq("type", "reflection")
+    .select("id");
+  if (error) return { ok: false, error: error.message };
+  if (!data || data.length === 0) return { ok: false, error: "not found or not permitted" };
+
+  revalidatePath(`/${input.locale}/church/${input.churchSlug}/today`);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 /* ---------- Prayer requests ---------- */
 export async function submitPrayerRequest(input: {
   churchId: string;
@@ -341,6 +390,10 @@ export async function submitPrayerRequest(input: {
 
   const timing = await getChurchTiming(supabase, input.churchId);
   const expiresAt = expiryDateToIso(normalizeDateKey(input.expiresAt), timing.timezone);
+  // 匿名は単一の真実(anonymous)に集約する。公開範囲カードで anonymous_church を
+  // 選んだ場合もトグル同様に匿名扱いとし、後段のモデレーションで公開範囲が
+  // 変わっても匿名が剥がれないようにする（DBトリガでも同不変条件を保証）。
+  const anonymous = input.anonymous || input.visibility === "anonymous_church";
   const { error } = await supabase.from("content_items").insert({
     church_id: input.churchId,
     group_id: groupId,
@@ -351,13 +404,111 @@ export async function submitPrayerRequest(input: {
     requested_visibility: input.visibility,
     title: { [input.locale]: input.title },
     body: { [input.locale]: input.body },
-    anonymous: input.anonymous,
+    anonymous,
     includes_third_party: input.includesThirdParty,
     expires_at: expiresAt,
     prayer_outcome: "open",
   });
   if (error) return { ok: false, error: error.message };
   revalidatePath(`/${input.locale}/church/${input.churchSlug}/prayers`);
+  return { ok: true };
+}
+
+/**
+ * 自分の祈祷課題を編集する。承認制を守るため:
+ *  - 公開済み(published)を編集したら再審査（pending_review）へ戻す。
+ *  - 匿名は sticky（true へのみ・DBトリガでも保証）。編集で匿名を外せない。
+ * 本文/タイトルは当該ロケールのみ差し替え、匿名は「入れる」方向のみ反映する。
+ */
+export async function updatePrayerRequest(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  contentId: string;
+  title: string;
+  body: string;
+  anonymous: boolean;
+}): Promise<ActionResult> {
+  const title = input.title.trim();
+  const body = input.body.trim();
+  if (!title || !body) return { ok: false, error: "empty" };
+  const supabase = await createServerSupabase();
+  const membershipId = await myMembershipId(supabase, input.churchId);
+  if (!membershipId) return { ok: false, error: "not a member" };
+
+  // 本人判定は owns_content(definer)。作者列は authenticated から剥奪済みのため直接引かない。
+  const { data: owns } = await supabase.rpc("owns_content", { content_id: input.contentId });
+  if (!owns) return { ok: false, error: "not found or not permitted" };
+
+  const { data: cur } = await supabase
+    .from("content_items")
+    .select("status, visibility, requested_visibility, anonymous, title, body")
+    .eq("id", input.contentId)
+    .eq("church_id", input.churchId)
+    .eq("type", "prayer_request")
+    .maybeSingle();
+  if (!cur) return { ok: false, error: "not found or not permitted" };
+
+  const reReview = cur.status === "published";
+  const nextStatus = reReview ? "pending_review" : cur.status;
+  // 匿名は入れる方向のみ（sticky）。既に匿名ならそのまま。
+  const nextAnonymous =
+    cur.anonymous ||
+    input.anonymous ||
+    cur.visibility === "anonymous_church" ||
+    cur.requested_visibility === "anonymous_church";
+  const nextTitle = { ...(cur.title as Record<string, string> | null), [input.locale]: title };
+  const nextBody = { ...(cur.body as Record<string, string> | null), [input.locale]: body };
+
+  const { data, error } = await supabase
+    .from("content_items")
+    .update({
+      title: nextTitle,
+      body: nextBody,
+      anonymous: nextAnonymous,
+      status: nextStatus,
+      // 再審査に戻す場合は公開日時をクリアし、承認で再付与させる。
+      published_at: reReview ? null : undefined,
+    })
+    .eq("id", input.contentId)
+    .eq("church_id", input.churchId)
+    .eq("type", "prayer_request")
+    .select("id");
+  if (error) return { ok: false, error: error.message };
+  if (!data || data.length === 0) return { ok: false, error: "not found or not permitted" };
+
+  revalidatePath(`/${input.locale}/church/${input.churchSlug}/prayers`);
+  revalidatePath("/", "layout");
+  return { ok: true, data: { reReview } };
+}
+
+/** 自分の祈祷課題を取り下げる（削除）。RLS(content_delete)=作者本人 or 管理者。 */
+export async function withdrawPrayerRequest(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  contentId: string;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const membershipId = await myMembershipId(supabase, input.churchId);
+  if (!membershipId) return { ok: false, error: "not a member" };
+
+  // 本人判定は owns_content(definer)。RLS(content_delete)=作者本人 or 管理者。
+  const { data: owns } = await supabase.rpc("owns_content", { content_id: input.contentId });
+  if (!owns) return { ok: false, error: "not found or not permitted" };
+
+  const { data, error } = await supabase
+    .from("content_items")
+    .delete()
+    .eq("id", input.contentId)
+    .eq("church_id", input.churchId)
+    .eq("type", "prayer_request")
+    .select("id");
+  if (error) return { ok: false, error: error.message };
+  if (!data || data.length === 0) return { ok: false, error: "not found or not permitted" };
+
+  revalidatePath(`/${input.locale}/church/${input.churchSlug}/prayers`);
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 

@@ -93,7 +93,7 @@ export function ModerationCard({
   return (
     <Card as="article">
       <CardBody className="space-y-4">
-        {/* 投稿者（モデレーターには匿名でも実名が見える） + 希望/推奨 */}
+        {/* 投稿者（完全匿名の投稿はモデレーターにも「匿名」と表示される） + 希望/推奨 */}
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-cedar-soft text-cedar-ink">

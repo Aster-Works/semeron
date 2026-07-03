@@ -843,6 +843,23 @@ export type Database = {
       }
     }
     Functions: {
+      church_notification_ops: {
+        Args: { p_only_failed?: boolean; target_church: string }
+        Returns: {
+          body: Json
+          channel: string
+          church_id: string
+          created_at: string
+          failure_reason: string
+          id: string
+          read: boolean
+          scheduled_at: string
+          sent_at: string
+          status: string
+          title: Json
+          type: string
+        }[]
+      }
       create_church: {
         Args: {
           p_content_languages?: string[]
@@ -943,6 +960,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      owns_content: { Args: { content_id: string }; Returns: boolean }
       remove_member_from_church: {
         Args: { p_church_id: string; p_membership_id: string }
         Returns: {

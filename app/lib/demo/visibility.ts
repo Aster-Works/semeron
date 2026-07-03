@@ -144,13 +144,14 @@ export function isGroupLeaderOf(viewer: Viewer, groupId: string): boolean {
 
 /**
  * 投稿者名をこの閲覧者に表示してよいか。
- * anonymous_church / anonymous=true は一般会員に作者を隠す。管理者・作者本人には見せる。
+ * anonymous_church / anonymous=true は「完全匿名」。作者本人以外には、
+ * 牧師・役員（管理者）・祈祷チーム（モデレーター）を含め誰にも作者を出さない。
+ * （DB には帰属を保持するが、画面には出さない = content_feed のマスクと一致。）
  */
 export function isAuthorVisibleTo(viewer: Viewer, item: ContentItem): boolean {
   const anonymous = item.visibility === "anonymous_church" || item.anonymous === true;
   if (!anonymous) return true;
-  if (isAuthor(viewer, item)) return true;
-  return isChurchAdmin(viewer) || canModerate(viewer);
+  return isAuthor(viewer, item);
 }
 
 /** 一覧向け: 閲覧者が見られるものだけに絞る。 */

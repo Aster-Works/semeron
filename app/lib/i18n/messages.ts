@@ -155,6 +155,30 @@ export const messages = {
     en: "This request is pending review. Once approved, it will appear only to the visibility you chose.",
   },
   "prayer.expiresOn": { ja: "表示期限", en: "Shown until" },
+  "prayer.edited": { ja: "編集済み", en: "edited" },
+  "prayer.anonSelf": { ja: "あなた（匿名で投稿）", en: "You (posted anonymously)" },
+  "prayer.anonSelfNote": {
+    ja: "他の人には匿名で表示されます。牧師や役員にも名前は表示されません。",
+    en: "Others see this as anonymous — your name is hidden even from pastors and leaders.",
+  },
+  "prayer.edit": { ja: "編集する", en: "Edit" },
+  "prayer.editTitle": { ja: "祈祷課題を編集", en: "Edit prayer request" },
+  "prayer.editReReviewNote": {
+    ja: "公開済みの課題を編集すると、もう一度承認待ちになります。",
+    en: "Editing a published request sends it back for review.",
+  },
+  "prayer.anonymousLocked": {
+    ja: "一度匿名にした課題は実名に戻せません。実名で出したいときは取り下げて投稿し直してください。",
+    en: "Once anonymous, a request can't be un-anonymized. To post with your name, withdraw and repost.",
+  },
+  "prayer.withdraw": { ja: "取り下げる", en: "Withdraw" },
+  "prayer.withdrawTitle": { ja: "祈祷課題を取り下げますか？", en: "Withdraw this request?" },
+  "prayer.withdrawBody": {
+    ja: "この祈祷課題を削除します。祈った記録も一緒に消え、元には戻せません。",
+    en: "This deletes the request and its prayer records. This cannot be undone.",
+  },
+  "reflection.edited": { ja: "編集済み", en: "edited" },
+  "reflection.edit": { ja: "編集する", en: "Edit" },
 
   "prayerForm.title": { ja: "祈祷課題を送る", en: "Share a prayer request" },
   "prayerForm.titleLabel": { ja: "タイトル", en: "Title" },

@@ -17,7 +17,7 @@ export default async function PrayerModerationPage({
   const t = createT(locale as "ja" | "en");
   const visLabels = resolveVisibilityLabels(viewer.church, locale as "ja" | "en");
 
-  const queue = await getModerationQueue(supabase, viewer);
+  const queue = await getModerationQueue(supabase, viewer, locale as "ja" | "en");
 
   return (
     <>

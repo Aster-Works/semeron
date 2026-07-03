@@ -58,9 +58,9 @@ select is(
   null::uuid, 'anon: 一般会員には作者が伏せられる（content_feed）');
 
 select pg_temp.login('a0000000-0000-0000-0000-0000000000e1'); -- jimi (管理者)
-select isnt(
+select is(
   (select author_membership_id from public.content_feed where id='e1000000-0000-0000-0000-000000000012'),
-  null::uuid, 'anon: 管理者には作者が見える');
+  null::uuid, 'anon: 管理者にも作者は伏せられる（完全匿名）');
 
 select pg_temp.login('a0000000-0000-0000-0000-0000000000e5'); -- aoi (作者本人)
 select isnt(
