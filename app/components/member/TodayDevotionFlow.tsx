@@ -30,6 +30,7 @@ export function TodayDevotionFlow({
   church,
   locale,
   todayKey,
+  animationReplayKey,
   initialRead,
   initialPrayed,
   prayers,
@@ -42,6 +43,7 @@ export function TodayDevotionFlow({
   church: Church;
   locale: Locale;
   todayKey: string;
+  animationReplayKey?: string;
   initialRead: boolean;
   initialPrayed: boolean;
   prayers: PrayerVM[];
@@ -53,6 +55,9 @@ export function TodayDevotionFlow({
   const t = createT(locale);
   const roleLabels = useMemo(() => resolveRoleLabels(church, locale), [church, locale]);
   const dailyOpenKey = `semeron:today-flow-opened:${church.id}:${todayKey}`;
+  const dailyOpenDecisionKey = animationReplayKey
+    ? `${dailyOpenKey}:replay:${animationReplayKey}`
+    : dailyOpenKey;
   const initialPrayerDone = prayers.length === 0 || prayers.every((vm) => vm.viewerPrayed);
   const [ready, setReady] = useState(false);
   const [stage, setStage] = useState<FlowStage>(0);
@@ -82,15 +87,16 @@ export function TodayDevotionFlow({
   }, [animateFlow, prayersDone, ready]);
 
   useEffect(() => {
-    if (dailyOpenDecision.current?.key !== dailyOpenKey) {
+    if (dailyOpenDecision.current?.key !== dailyOpenDecisionKey) {
       let openedToday = false;
+      const shouldReplayAnimation = Boolean(animationReplayKey);
       try {
-        openedToday = window.localStorage.getItem(dailyOpenKey) === "true";
-        if (!openedToday) window.localStorage.setItem(dailyOpenKey, "true");
+        openedToday = shouldReplayAnimation ? false : window.localStorage.getItem(dailyOpenKey) === "true";
+        if (shouldReplayAnimation || !openedToday) window.localStorage.setItem(dailyOpenKey, "true");
       } catch {
         openedToday = false;
       }
-      dailyOpenDecision.current = { key: dailyOpenKey, shouldAnimate: !openedToday };
+      dailyOpenDecision.current = { key: dailyOpenDecisionKey, shouldAnimate: shouldReplayAnimation || !openedToday };
     }
 
     if (!dailyOpenDecision.current.shouldAnimate) {
@@ -102,13 +108,15 @@ export function TodayDevotionFlow({
       return () => window.cancelAnimationFrame(frame);
     }
 
+    setReady(false);
+    setStage(0);
     const frame = window.requestAnimationFrame(() => setAnimateFlow(true));
     const timer = window.setTimeout(() => setReady(true), 900);
     return () => {
       window.cancelAnimationFrame(frame);
       window.clearTimeout(timer);
     };
-  }, [dailyOpenKey]);
+  }, [animationReplayKey, dailyOpenDecisionKey, dailyOpenKey]);
 
   useEffect(() => {
     if (!animateFlow) return undefined;
@@ -186,6 +194,7 @@ export function TodayDevotionFlow({
       className="today-flow min-h-[72vh] space-y-6"
       data-testid="today-flow"
       data-animate-flow={animateFlow === true ? "true" : animateFlow === false ? "false" : "pending"}
+      data-animation-replay={animationReplayKey ? "true" : "false"}
       onPointerDown={onPointerDown}
     >
       {!ready || animateFlow == null ? null : (

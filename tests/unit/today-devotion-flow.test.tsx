@@ -1,0 +1,134 @@
+import { act, cleanup, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Church, ContentItem } from "@/app/lib/demo/types";
+import { TodayDevotionFlow } from "@/app/components/member/TodayDevotionFlow";
+
+vi.mock("@/app/lib/db/actions", () => ({
+  postReflection: vi.fn(async () => ({ ok: true })),
+  setCompletion: vi.fn(async () => ({ ok: true })),
+  toggleReaction: vi.fn(async () => ({ ok: true })),
+}));
+
+const church: Church = {
+  id: "church_1",
+  slug: "eifuku-minami",
+  name: { ja: "永福南キリスト教会" },
+  defaultLocale: "ja",
+  contentLanguages: ["ja"],
+  timezone: "Asia/Tokyo",
+  morningNotificationTime: "06:30",
+  status: "active",
+  softGateMode: "gentle",
+  plan: "small",
+  inviteCode: "invite",
+  pastorAssistEnabled: false,
+  allowPrayerAi: false,
+  roleLabels: {},
+};
+
+const devotion: ContentItem = {
+  id: "devotion_1",
+  churchId: church.id,
+  type: "devotion",
+  status: "published",
+  visibility: "church",
+  title: { ja: "主に聞く朝" },
+  body: { ja: "今日、主の御声に耳を傾けます。" },
+  scriptureReference: "詩篇 46:10",
+  scriptureTranslation: "新改訳2017",
+  scriptureQuote: { ja: "やめよ。知れ。わたしこそ神。" },
+  reflectionQuestion: { ja: "何を静めるよう招かれていますか。" },
+  prayerGuide: { ja: "主の前に心を静めましょう。" },
+  devotionDate: "2026-07-04",
+  createdAt: "2026-07-04T00:00:00+09:00",
+  updatedAt: "2026-07-04T00:00:00+09:00",
+  publishedAt: "2026-07-04T00:00:00+09:00",
+};
+
+const dailyOpenKey = "semeron:today-flow-opened:church_1:2026-07-04";
+
+function installLocalStorage() {
+  const store = new Map<string, string>();
+  const storage = {
+    get length() {
+      return store.size;
+    },
+    clear: vi.fn(() => store.clear()),
+    getItem: vi.fn((key: string) => store.get(key) ?? null),
+    key: vi.fn((index: number) => Array.from(store.keys())[index] ?? null),
+    removeItem: vi.fn((key: string) => store.delete(key)),
+    setItem: vi.fn((key: string, value: string) => store.set(key, value)),
+  } satisfies Storage;
+
+  Object.defineProperty(window, "localStorage", {
+    configurable: true,
+    value: storage,
+  });
+}
+
+function renderFlow(animationReplayKey?: string) {
+  return render(
+    <TodayDevotionFlow
+      devotion={devotion}
+      church={church}
+      locale="ja"
+      todayKey="2026-07-04"
+      animationReplayKey={animationReplayKey}
+      initialRead={false}
+      initialPrayed={false}
+      prayers={[]}
+      reflections={[]}
+      shareHref="/ja/church/eifuku-minami/prayers/new"
+      prayersHref="/ja/church/eifuku-minami/prayers"
+      talkToPastorLabel="牧師に相談する"
+    />,
+  );
+}
+
+async function finishInitialTimers() {
+  await act(async () => {
+    vi.advanceTimersByTime(1000);
+  });
+}
+
+describe("TodayDevotionFlow daily animation replay", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    installLocalStorage();
+    window.localStorage.clear();
+    window.requestAnimationFrame = vi.fn((callback: FrameRequestCallback) =>
+      window.setTimeout(() => callback(window.performance.now()), 0),
+    );
+    window.cancelAnimationFrame = vi.fn((id: number) => window.clearTimeout(id));
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+    window.localStorage.clear();
+  });
+
+  it("keeps the normal same-day revisit static after the daily open flag exists", async () => {
+    window.localStorage.setItem(dailyOpenKey, "true");
+
+    renderFlow();
+    await finishInitialTimers();
+
+    const flow = screen.getByTestId("today-flow");
+    expect(flow).toHaveAttribute("data-animate-flow", "false");
+    expect(flow).toHaveAttribute("data-animation-replay", "false");
+  });
+
+  it("replays the Today animation for an explicit verification key even after the daily open flag exists", async () => {
+    window.localStorage.setItem(dailyOpenKey, "true");
+
+    renderFlow("pwa-check");
+    await finishInitialTimers();
+
+    const flow = screen.getByTestId("today-flow");
+    expect(flow).toHaveAttribute("data-animate-flow", "true");
+    expect(flow).toHaveAttribute("data-animation-replay", "true");
+    expect(window.localStorage.getItem(dailyOpenKey)).toBe("true");
+  });
+});

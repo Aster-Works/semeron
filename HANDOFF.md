@@ -33,6 +33,9 @@
   - アニメーション進行は1日のうちで最初にTodayを開いたときだけ発動する。
   - 「今日の応答」は「今日の祈り」の後に配置する。
   - デボーションが書かれていない/配信されていない日は、「今日の祈り」だけがアニメーションで表示されるようにする。
+- 追加FB（2026-07-04 実機検証）:
+  - 1日1回制限のため、iPhone実機PWAでアニメーションを繰り返し検証できない。
+  - 本番ユーザー向けの初回のみ仕様は維持しつつ、検証URLだけ同日内でもアニメーションを再生できる逃げ道を追加する。
 
 ## 完了したこと（調査）
 - 途中保存ルール `/Users/james/checkpoint.md` を確認済み。
@@ -236,9 +239,29 @@
   - Vercel deployment URL: `https://semeron-jptkw9vk7-asterworks.vercel.app`。
   - `curl -I -L https://semeron-app.vercel.app/ja/church/eifuku-minami/today` で production が応答することを確認。未ログインのため `/ja` → `/ja/login` にリダイレクトされ、最終 `HTTP/2 200` / `server: Vercel`。
   - 注意: `vercel deploy --prod --yes` の直接CLI実行は、現行Vercel認証から旧 `asterworks` チーム/プロジェクトへアクセスできないため引き続き不可。今回はGitHub連携デプロイで本番反映を確認済み。
+- 実機検証用アニメーションリプレイ対応（2026-07-04 07:00 JST / 調査・方針確定）:
+  - `TodayDevotionFlow` は `localStorage` の `semeron:today-flow-opened:<churchId>:<todayKey>` で「その日の初回オープン」を判定している。
+  - そのため同じiPhone PWAでは、通常リロード/再オープンだけでは2回目以降 `data-animate-flow="false"` になり、アニメーション検証ができない。
+  - 方針: `?replayTodayAnimation=1` または既存検証URLの `?pwaAnimationFix=...` が付いた時だけ、日次フラグを無視して `animateFlow=true` にする。
+  - 通常URLではこれまで通り1日1回だけ発火する。本番ユーザー向けUIには検証ボタンや説明文を出さない。
+  - 実装: `app/[locale]/church/[churchSlug]/today/page.tsx` が `searchParams` から検証キーを読み取り、`TodayDevotionFlow` に `animationReplayKey` として渡す。
+  - 実装: `TodayDevotionFlow` は `animationReplayKey` がある時だけ日次フラグを無視し、`setStage(0)` / `setReady(false)` から初回演出を再発火する。通常URLでは従来通り日次フラグを見る。
+  - 実装: DOM確認用に `data-animation-replay="true|false"` を追加。
+  - 追加テスト: `tests/unit/today-devotion-flow.test.tsx` で、日次フラグありの通常再訪は静的表示、検証キーありは同日でも `data-animate-flow="true"` になることを確認する。
+  - `git diff --check` PASS。
+  - `npm run typecheck` PASS。
+  - `npm run lint` PASS。
+  - `npm run test -- tests/unit/today-devotion-flow.test.tsx` PASS（2 tests）。
+  - `npm test` PASS（8 files / 45 tests）。
+  - `npm run build` PASS。
+  - `npm run dev` 起動済み（session `10478` / `http://localhost:3070`）。
+  - アプリ内ブラウザで `http://localhost:3070/ja/church/eifuku-minami/today?pwaAnimationFix=codex-replay-check` を開き、`data-animate-flow="true"` / `data-animation-replay="true"` を確認。
+  - 同じタブで通常URL `http://localhost:3070/ja/church/eifuku-minami/today` を開くと、`data-animate-flow="false"` / `data-animation-replay="false"` になり、通常の1日1回制限が維持されることを確認。
+  - `http://localhost:3070/ja/church/eifuku-minami/today?replayTodayAnimation=1` でも `data-animate-flow="true"` / `data-animation-replay="true"` を確認。
 
 ## 次に行うこと
-- PWAの実機確認でまだちらつきが残る場合は、animation duration/easingではなく描画対象の分割、固定高さ、iOS standalone時のさらに軽い motion preset を検討する。
+- JimiのiPhone実機PWAで `?replayTodayAnimation=1` 付きURL、または `?pwaAnimationFix=<任意の値>` 付きURLを開いて、同日内に何度でもアニメーションを確認する。
+- リリースする場合は通常手順: `git status` → commit → push → GitHub連携Vercel Production deployment確認。
 - 将来の拡張候補: 管理者が明示的に「今日の祈りへピン留め」できる列/UIを追加する。
 
 ---

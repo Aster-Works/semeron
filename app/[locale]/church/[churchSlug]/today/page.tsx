@@ -14,12 +14,35 @@ import { TodayPrayerCarousel } from "@/app/components/member/TodayPrayerCarousel
 import { fmt, resolveRoleLabels } from "@/app/lib/roleLabels";
 import { EmptyState } from "@/app/components/ui";
 
+type SearchParamValue = string | string[] | undefined;
+type TodaySearchParams = {
+  replayTodayAnimation?: SearchParamValue;
+  pwaAnimationFix?: SearchParamValue;
+};
+
+function firstSearchParam(value: SearchParamValue): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function enabledSearchParam(value: SearchParamValue): string | undefined {
+  const raw = firstSearchParam(value);
+  if (raw == null) return undefined;
+  const normalized = raw.trim().toLowerCase();
+  if (["0", "false", "off", "no"].includes(normalized)) return undefined;
+  return raw || "1";
+}
+
 export default async function TodayPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; churchSlug: string }>;
+  searchParams?: Promise<TodaySearchParams>;
 }) {
   const { locale, churchSlug } = await params;
+  const sp = (await searchParams) ?? {};
+  const animationReplayKey =
+    enabledSearchParam(sp.replayTodayAnimation) ?? enabledSearchParam(sp.pwaAnimationFix);
   const { supabase, viewer } = await requireChurchContext(locale, churchSlug);
   const church = viewer.church;
   const t = createT(locale as "ja" | "en");
@@ -65,6 +88,7 @@ export default async function TodayPage({
           church={church}
           locale={locale as "ja" | "en"}
           todayKey={todayKey}
+          animationReplayKey={animationReplayKey}
           initialRead={completion?.read ?? false}
           initialPrayed={completion?.prayed ?? false}
           prayers={prayers}
