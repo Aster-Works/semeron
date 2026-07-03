@@ -325,6 +325,7 @@
     gap: 0.25rem;
     letter-spacing: 0;
     padding: 0.42rem 0.7rem 0.42rem 0.78rem;
+    white-space: nowrap;
   }
 
   .today-scroll-cue svg {

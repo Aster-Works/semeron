@@ -22,8 +22,32 @@ import { ReflectionComposer } from "./ReflectionComposer";
 import { TodayActions } from "./TodayActions";
 import { TodayPrayerCarousel } from "./TodayPrayerCarousel";
 
-type FlowStage = 0 | 1 | 2 | 3 | 4;
+type FlowStage = 0 | 1 | 2 | 3 | 4 | 5;
 type RevealTrigger = "mount" | "in-view";
+type ScrollCueTone = "initial" | "before-prayer" | "after-prayer" | "after-response";
+
+function cueLabel(locale: Locale, tone: ScrollCueTone) {
+  if (locale !== "ja") {
+    if (tone === "before-prayer") return "Today's prayer";
+    if (tone === "after-response") return "Responses";
+    return "Continue";
+  }
+
+  if (tone === "before-prayer") return "今日の祈りへ";
+  if (tone === "after-response") return "みんなの応答へ";
+  return "続きへ";
+}
+
+function ScrollCue({ label }: { label: string }) {
+  return (
+    <div className="today-scroll-cue" data-testid="today-scroll-cue" aria-hidden="true">
+      <div className="today-scroll-cue-inner">
+        <span>{label}</span>
+        <ChevronDown className="h-4 w-4" aria-hidden />
+      </div>
+    </div>
+  );
+}
 
 export function TodayDevotionFlow({
   devotion,
@@ -80,11 +104,12 @@ export function TodayDevotionFlow({
     setStage((current) => {
       if (current < 1) return 1;
       if (current < 2) return 2;
-      if (current < 3) return 3;
-      if (current < 4 && prayersDone) return 4;
+      if (current < 3) return prayersDone ? 3 : current;
+      if (current < 4) return prayersDone ? 4 : current;
+      if (current < 5 && reflections.length > 0) return 5;
       return current;
     });
-  }, [animateFlow, prayersDone, ready]);
+  }, [animateFlow, prayersDone, ready, reflections.length]);
 
   useEffect(() => {
     if (dailyOpenDecision.current?.key !== dailyOpenDecisionKey) {
@@ -121,7 +146,7 @@ export function TodayDevotionFlow({
   useEffect(() => {
     if (!animateFlow) return undefined;
     if (stage >= 2 && prayersDone) {
-      const timer = window.setTimeout(() => revealAtLeast(4), 1400);
+      const timer = window.setTimeout(() => revealAtLeast(3), 1400);
       return () => window.clearTimeout(timer);
     }
     return undefined;
@@ -170,18 +195,28 @@ export function TodayDevotionFlow({
 
   const onTodayPrayersCompleted = () => {
     setPrayersDone(true);
-    revealAtLeast(4);
+    revealAtLeast(3);
   };
 
   const onReflectionPosted = () => {
-    revealAtLeast(4);
+    if (reflections.length > 0) revealAtLeast(5);
   };
 
   const reflectionQuestion = localize(devotion.reflectionQuestion, locale, church.defaultLocale);
   const prayerGuide = localize(devotion.prayerGuide, locale, church.defaultLocale);
   const actionStyle = (delay: string) => ({ "--today-flow-action-delay": delay }) as CSSProperties;
-  const showScrollCue = Boolean(animateFlow && ready && stage < 4);
-  const scrollCueLabel = locale === "ja" ? "続きへ" : "Continue";
+  const fixedScrollCueTone: ScrollCueTone | null =
+    !animateFlow || !ready
+      ? null
+      : stage === 0
+        ? "initial"
+        : stage === 1 || (stage === 2 && !prayersDone)
+          ? "before-prayer"
+          : stage === 2 || stage === 3
+            ? "after-prayer"
+            : stage === 4 && reflections.length > 0
+              ? "after-response"
+              : null;
   const reveal = (children: ReactNode, delayMs: number, trigger: RevealTrigger = "in-view") =>
     animateFlow ? (
       <GracefulReveal delayMs={delayMs} trigger={trigger}>
@@ -313,28 +348,6 @@ export function TodayDevotionFlow({
                     animate={Boolean(animateFlow)}
                     onCompleted={onTodayPrayersCompleted}
                   />
-                  <div className="grid gap-2 sm:grid-cols-2" data-testid="today-prayer-links">
-                    <ButtonLink
-                      href={shareHref}
-                      variant="secondary"
-                      size="sm"
-                      className={animateFlow ? "today-flow-action-item" : undefined}
-                      style={animateFlow ? actionStyle("520ms") : undefined}
-                    >
-                      <Send className="h-4 w-4" aria-hidden />
-                      {t("today.shareRequest")}
-                    </ButtonLink>
-                    <ButtonLink
-                      href={shareHref}
-                      variant="quiet"
-                      size="sm"
-                      className={animateFlow ? "today-flow-action-item" : undefined}
-                      style={animateFlow ? actionStyle("780ms") : undefined}
-                    >
-                      <MessageCircleHeart className="h-4 w-4" aria-hidden />
-                      {talkToPastorLabel}
-                    </ButtonLink>
-                  </div>
                 </>
               )}
             </section>,
@@ -344,6 +357,34 @@ export function TodayDevotionFlow({
 
       {stage >= 3
         ? reveal(
+            <section className="grid gap-2 sm:grid-cols-2" data-testid="today-prayer-links">
+              <ButtonLink
+                href={shareHref}
+                variant="secondary"
+                size="sm"
+                className={animateFlow ? "today-flow-action-item" : undefined}
+                style={animateFlow ? actionStyle("520ms") : undefined}
+              >
+                <Send className="h-4 w-4" aria-hidden />
+                {t("today.shareRequest")}
+              </ButtonLink>
+              <ButtonLink
+                href={shareHref}
+                variant="quiet"
+                size="sm"
+                className={animateFlow ? "today-flow-action-item" : undefined}
+                style={animateFlow ? actionStyle("780ms") : undefined}
+              >
+                <MessageCircleHeart className="h-4 w-4" aria-hidden />
+                {talkToPastorLabel}
+              </ButtonLink>
+            </section>,
+            180,
+          )
+        : null}
+
+      {stage >= 4
+        ? reveal(
             <section className="space-y-3" data-testid="today-reflection-section">
               <SectionHeading title={t("today.yourReflection")} />
               <ReflectionComposer churchId={church.id} churchSlug={church.slug} onPosted={onReflectionPosted} />
@@ -352,7 +393,7 @@ export function TodayDevotionFlow({
           )
         : null}
 
-      {stage >= 4 && reflections.length > 0
+      {stage >= 5 && reflections.length > 0
         ? reveal(
             <section className="space-y-3" data-testid="today-recent-reflections">
               <SectionHeading title={t("today.recentReflections")} />
@@ -364,13 +405,8 @@ export function TodayDevotionFlow({
           )
         : null}
 
-      {showScrollCue ? (
-        <div className="today-scroll-cue" data-testid="today-scroll-cue" aria-hidden="true">
-          <div className="today-scroll-cue-inner">
-            <span>{scrollCueLabel}</span>
-            <ChevronDown className="h-4 w-4" aria-hidden />
-          </div>
-        </div>
+      {fixedScrollCueTone ? (
+        <ScrollCue label={cueLabel(locale, fixedScrollCueTone)} />
       ) : null}
     </div>
   );

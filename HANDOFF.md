@@ -317,8 +317,32 @@
   - Vercel deployment URL: `https://semeron-32q3bxfcd-asterworks.vercel.app`。
   - `curl -I -L 'https://semeron-app.vercel.app/ja/church/eifuku-minami/today?replayTodayAnimation=1&scrollCueCheck=1'` で production が応答することを確認。未ログインのため `/ja` → `/ja/login` にリダイレクトされ、最終 `HTTP/2 200` / `server: Vercel`。
   - 注意: `vercel deploy --prod --yes` の直接CLI実行は、現行Vercel認証から旧 `asterworks` チーム/プロジェクトへアクセスできないため引き続き不可。今回はGitHub連携デプロイで本番反映を確認済み。
+- スクロール誘導キューの複数地点化 + 祈り導線整理（2026-07-04 / 実装中）:
+  - Jimiの追加FB: スクロール誘導UIを最初だけでなく、「今日の祈り」の前、「今日の祈り」の後、「今日の応答」の後にも表示したい。
+  - `TodayDevotionFlow` のステージを `0..5` に拡張。祈り完了後に一気に応答/みんなの応答へ進めず、`祈り完了 → 祈り後キュー → 祈祷課題/牧師相談ボタン → 今日の応答 → 応答後キュー → みんなの応答` の順にした。
+  - 固定の `today-scroll-cue` はステージに応じて `続きへ` / `今日の祈りへ` / `みんなの応答へ` を表示。
+  - Jimiの追加FB（画像確認後）: セクション内・左下に出るピルは不要。最初に中央下部へさりげなく出る固定キューと同じ見え方を、セクションの変わり目にも使う。
+  - `today-scroll-cue-inline` と各セクション内のインラインキューDOMを撤去。スクロール誘導は中央下部の固定表示のみ。
+  - `祈祷課題を送る` / `牧師に相談する` は `stage >= 3`、つまり5件の祈り完了後にだけ表示し、`GracefulReveal` の in-view 発火でゆっくりフェードインする。
+  - `TodayPrayerCarousel` の通常祈りカードから `さらに祈る` を削除。`今日、共に覚えて祈りました` 完了カードのみに `さらに祈る` を残した。
+  - `tests/unit/today-devotion-flow.test.tsx` に段階表示の回帰テストを追加。`tests/unit/today-prayer-carousel.test.tsx` を追加し、`さらに祈る` の配置を固定。
+  - `git diff --check` PASS。
+  - `npm run test -- tests/unit/today-devotion-flow.test.tsx tests/unit/today-prayer-carousel.test.tsx tests/unit/graceful-reveal.test.tsx` PASS（3 files / 6 tests）。
+  - `npm run typecheck` PASS。
+  - `npm run lint` PASS。
+  - `npm test` PASS（10 files / 49 tests）。
+  - `npm run build` PASS。
+  - ローカルブラウザ確認: `http://localhost:3070/ja/church/eifuku-minami/today?replayTodayAnimation=1&scrollCueCenterCheck=1` を開き、`data-animate-flow="true"` / `data-animation-replay="true"` を確認。
+  - 初期固定キュー: `fixedPosition="fixed"` / `fixedCueText="続きへ"` / `centerDelta=0`。`.today-scroll-cue-inline` は0件、旧インラインtest idも存在しない。
+  - 初期: 固定キュー `続きへ`、祈り/応答/祈り後リンク/みんなの応答は未表示。
+  - 1回目スクロール後: 中央下部の固定キューで `今日の祈りへ` 表示。`centerDelta=0` / `.today-scroll-cue-inline` は0件。
+  - 祈りセクション: 完了カードにのみ `さらに祈る` が残り、`祈祷課題を送る` / `牧師に相談する` は祈り完了後の段階で表示。`今日の応答` はまだ未表示。
+  - 次スクロール後: `今日の応答` 表示、中央下部の固定キューで `みんなの応答へ` 表示、`みんなの応答` はまだ未表示。
+  - 次スクロール後: `みんなの応答` 表示、固定キューは消える。
+  - 注意: 127.0.0.1 で開くと Next dev の cross-origin HMR ブロックで hydration が止まるため、ローカルブラウザ確認は `localhost:3070` を使う。
 
 ## 次に行うこと
+- 今回の導線整理をcommit/push/deployする。
 - JimiのiPhone実機PWAで `?replayTodayAnimation=1` 付きURL、または `?pwaAnimationFix=<任意の値>` 付きURLを開いて、同日内に何度でもアニメーションと発火タイミング、スクロール誘導キューを確認する。
 - 将来の拡張候補: 管理者が明示的に「今日の祈りへピン留め」できる列/UIを追加する。
 

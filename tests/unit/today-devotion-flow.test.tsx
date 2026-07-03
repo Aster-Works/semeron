@@ -1,6 +1,7 @@
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Church, ContentItem } from "@/app/lib/demo/types";
+import type { PrayerVM, ReflectionVM } from "@/app/lib/db/queries";
 import { TodayDevotionFlow } from "@/app/components/member/TodayDevotionFlow";
 
 vi.mock("@/app/lib/db/actions", () => ({
@@ -66,7 +67,57 @@ function installLocalStorage() {
   });
 }
 
-function renderFlow(animationReplayKey?: string) {
+function prayerVm(id: string, viewerPrayed = false): PrayerVM {
+  return {
+    item: {
+      id,
+      churchId: church.id,
+      type: "prayer_request",
+      status: "published",
+      visibility: "church",
+      title: { ja: `祈り ${id}` },
+      body: { ja: `${id}のために祈ります。` },
+      prayerOutcome: "open",
+      createdAt: "2026-07-04T00:00:00+09:00",
+      updatedAt: "2026-07-04T00:00:00+09:00",
+      publishedAt: "2026-07-04T00:00:00+09:00",
+    },
+    authorName: "Member",
+    prayedCount: viewerPrayed ? 1 : 0,
+    viewerPrayed,
+    isMine: false,
+  };
+}
+
+function reflectionVm(id: string): ReflectionVM {
+  return {
+    item: {
+      id,
+      churchId: church.id,
+      type: "reflection",
+      status: "published",
+      visibility: "church",
+      title: { ja: "応答" },
+      body: { ja: "主に信頼します。" },
+      createdAt: "2026-07-04T00:00:00+09:00",
+      updatedAt: "2026-07-04T00:00:00+09:00",
+      publishedAt: "2026-07-04T00:00:00+09:00",
+    },
+    authorName: "Member",
+    isMine: false,
+    reactions: [],
+  };
+}
+
+function renderFlow({
+  animationReplayKey,
+  prayers = [],
+  reflections = [],
+}: {
+  animationReplayKey?: string;
+  prayers?: PrayerVM[];
+  reflections?: ReflectionVM[];
+} = {}) {
   return render(
     <TodayDevotionFlow
       devotion={devotion}
@@ -76,8 +127,8 @@ function renderFlow(animationReplayKey?: string) {
       animationReplayKey={animationReplayKey}
       initialRead={false}
       initialPrayed={false}
-      prayers={[]}
-      reflections={[]}
+      prayers={prayers}
+      reflections={reflections}
       shareHref="/ja/church/eifuku-minami/prayers/new"
       prayersHref="/ja/church/eifuku-minami/prayers"
       talkToPastorLabel="牧師に相談する"
@@ -88,6 +139,18 @@ function renderFlow(animationReplayKey?: string) {
 async function finishInitialTimers() {
   await act(async () => {
     vi.advanceTimersByTime(1000);
+  });
+}
+
+async function scrollDown() {
+  await act(async () => {
+    fireEvent.wheel(window, { deltaY: 24 });
+  });
+}
+
+async function waitForGestureWindow(ms = 920) {
+  await act(async () => {
+    vi.advanceTimersByTime(ms);
   });
 }
 
@@ -124,7 +187,7 @@ describe("TodayDevotionFlow daily animation replay", () => {
   it("replays the Today animation for an explicit verification key even after the daily open flag exists", async () => {
     window.localStorage.setItem(dailyOpenKey, "true");
 
-    renderFlow("pwa-check");
+    renderFlow({ animationReplayKey: "pwa-check" });
     await finishInitialTimers();
 
     const flow = screen.getByTestId("today-flow");
@@ -132,5 +195,44 @@ describe("TodayDevotionFlow daily animation replay", () => {
     expect(flow).toHaveAttribute("data-animation-replay", "true");
     expect(screen.getByTestId("today-scroll-cue")).toBeInTheDocument();
     expect(window.localStorage.getItem(dailyOpenKey)).toBe("true");
+  });
+
+  it("keeps prayer links, the response, and recent reflections behind separate scroll moments", async () => {
+    window.localStorage.setItem(dailyOpenKey, "true");
+
+    renderFlow({
+      animationReplayKey: "stage-check",
+      prayers: [prayerVm("prayer_1", true)],
+      reflections: [reflectionVm("reflection_1")],
+    });
+    await finishInitialTimers();
+
+    expect(screen.queryByTestId("today-prayer-links")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("today-reflection-section")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("today-recent-reflections")).not.toBeInTheDocument();
+
+    await scrollDown();
+    expect(screen.getByTestId("today-scroll-cue")).toHaveTextContent("今日の祈りへ");
+
+    await waitForGestureWindow();
+    await scrollDown();
+    await act(async () => {
+      vi.advanceTimersByTime(1500);
+    });
+
+    expect(screen.getByTestId("today-scroll-cue")).toHaveTextContent("続きへ");
+    expect(screen.getByTestId("today-prayer-links")).toBeInTheDocument();
+    expect(screen.queryByTestId("today-reflection-section")).not.toBeInTheDocument();
+
+    await waitForGestureWindow();
+    await scrollDown();
+    expect(screen.getByTestId("today-reflection-section")).toBeInTheDocument();
+    expect(screen.getByTestId("today-scroll-cue")).toHaveTextContent("みんなの応答へ");
+    expect(screen.queryByTestId("today-recent-reflections")).not.toBeInTheDocument();
+
+    await waitForGestureWindow();
+    await scrollDown();
+    expect(screen.getByTestId("today-recent-reflections")).toBeInTheDocument();
+    expect(screen.queryByTestId("today-scroll-cue")).not.toBeInTheDocument();
   });
 });

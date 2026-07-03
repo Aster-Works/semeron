@@ -274,14 +274,11 @@ export function TodayPrayerCarousel({
               ) : null}
             </div>
 
-            <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:items-center sm:justify-between">
+            <div className="pt-1">
               <Button type="button" onClick={markPrayed} disabled={pending || isChanging} variant="primary" fullWidth>
                 <HeartHandshake className="h-4 w-4" aria-hidden />
                 {t("common.iPrayed")}
               </Button>
-              <ButtonLink href={prayersHref} variant="quiet" size="sm" className="sm:shrink-0">
-                {t("todayPrayer.more")}
-              </ButtonLink>
             </div>
 
             {error ? (
