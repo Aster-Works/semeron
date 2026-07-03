@@ -258,10 +258,17 @@
   - アプリ内ブラウザで `http://localhost:3070/ja/church/eifuku-minami/today?pwaAnimationFix=codex-replay-check` を開き、`data-animate-flow="true"` / `data-animation-replay="true"` を確認。
   - 同じタブで通常URL `http://localhost:3070/ja/church/eifuku-minami/today` を開くと、`data-animate-flow="false"` / `data-animation-replay="false"` になり、通常の1日1回制限が維持されることを確認。
   - `http://localhost:3070/ja/church/eifuku-minami/today?replayTodayAnimation=1` でも `data-animate-flow="true"` / `data-animation-replay="true"` を確認。
+- 実機検証用アニメーションリプレイ対応リリース結果（2026-07-04 07:06 JST）:
+  - アプリ変更コミット: `1aeac9f Add Today animation replay mode`。
+  - `git push origin main` PASS。`origin/main` は `741b583..1aeac9f` へ更新。
+  - GitHub連携Vercel Production deployment成功。commit `1aeac9f2b0f493cb3dc61f52b3156f6e465edfbf` の `context=Vercel` / `state=success` / `description=Deployment has completed` を確認。
+  - GitHub deployment: `5305311466` / Production。
+  - Vercel deployment URL: `https://semeron-42rvjt6ub-asterworks.vercel.app`。
+  - `curl -I -L 'https://semeron-app.vercel.app/ja/church/eifuku-minami/today?replayTodayAnimation=1'` で production が応答することを確認。未ログインのため `/ja` → `/ja/login` にリダイレクトされ、最終 `HTTP/2 200` / `server: Vercel`。
+  - 注意: `vercel deploy --prod --yes` の直接CLI実行は、現行Vercel認証から旧 `asterworks` チーム/プロジェクトへアクセスできないため引き続き不可。今回はGitHub連携デプロイで本番反映を確認済み。
 
 ## 次に行うこと
 - JimiのiPhone実機PWAで `?replayTodayAnimation=1` 付きURL、または `?pwaAnimationFix=<任意の値>` 付きURLを開いて、同日内に何度でもアニメーションを確認する。
-- リリースする場合は通常手順: `git status` → commit → push → GitHub連携Vercel Production deployment確認。
 - 将来の拡張候補: 管理者が明示的に「今日の祈りへピン留め」できる列/UIを追加する。
 
 ---
