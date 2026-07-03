@@ -287,9 +287,16 @@
   - `.next` 削除 → `npm run dev` 再起動済み（session `80371` / `http://localhost:3070`）。
   - アプリ内ブラウザで `http://localhost:3070/ja/church/eifuku-minami/today?replayTodayAnimation=1&motionRestoreCheck=2` を開き、`data-animate-flow="true"` / `data-animation-replay="true"` を確認。
   - 配信CSSに `filter: blur(var(--motion-enter-blur` / `scale(var(--motion-enter-scale` / `translate3d(` が含まれることを確認。実行中の `graceful-reveal-enter` も `animationName=graceful-reveal-enter` / `animationDuration=3.28s` を確認。
+- ビューポート発火タイミング調整 + 旧アニメーション復帰リリース結果（2026-07-04 07:26 JST）:
+  - アプリ変更コミット: `f10596b Restore Today motion timing`。
+  - `git push origin main` PASS。`origin/main` は `dda9290..f10596b` へ更新。
+  - GitHub連携Vercel Production deployment成功。commit `f10596b5b4a06262a389bf04ff07e0dc8e97ea2d` の `context=Vercel` / `state=success` / `description=Deployment has completed` を確認。
+  - GitHub deployment: `5305456127` / Production。
+  - Vercel deployment URL: `https://semeron-g8udocnok-asterworks.vercel.app`。
+  - `curl -I -L 'https://semeron-app.vercel.app/ja/church/eifuku-minami/today?replayTodayAnimation=1'` で production が応答することを確認。未ログインのため `/ja` → `/ja/login` にリダイレクトされ、最終 `HTTP/2 200` / `server: Vercel`。
+  - 注意: `vercel deploy --prod --yes` の直接CLI実行は、現行Vercel認証から旧 `asterworks` チーム/プロジェクトへアクセスできないため引き続き不可。今回はGitHub連携デプロイで本番反映を確認済み。
 
 ## 次に行うこと
-- リリースする場合は通常手順: `git status` → commit → push → GitHub連携Vercel Production deployment確認。
 - JimiのiPhone実機PWAで `?replayTodayAnimation=1` 付きURL、または `?pwaAnimationFix=<任意の値>` 付きURLを開いて、同日内に何度でもアニメーションと発火タイミングを確認する。
 - 将来の拡張候補: 管理者が明示的に「今日の祈りへピン留め」できる列/UIを追加する。
 
