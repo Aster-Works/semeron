@@ -317,7 +317,7 @@
   - Vercel deployment URL: `https://semeron-32q3bxfcd-asterworks.vercel.app`。
   - `curl -I -L 'https://semeron-app.vercel.app/ja/church/eifuku-minami/today?replayTodayAnimation=1&scrollCueCheck=1'` で production が応答することを確認。未ログインのため `/ja` → `/ja/login` にリダイレクトされ、最終 `HTTP/2 200` / `server: Vercel`。
   - 注意: `vercel deploy --prod --yes` の直接CLI実行は、現行Vercel認証から旧 `asterworks` チーム/プロジェクトへアクセスできないため引き続き不可。今回はGitHub連携デプロイで本番反映を確認済み。
-- スクロール誘導キューの複数地点化 + 祈り導線整理（2026-07-04 / 実装中）:
+- スクロール誘導キューの複数地点化 + 祈り導線整理（2026-07-04 / 出荷済み）:
   - Jimiの追加FB: スクロール誘導UIを最初だけでなく、「今日の祈り」の前、「今日の祈り」の後、「今日の応答」の後にも表示したい。
   - `TodayDevotionFlow` のステージを `0..5` に拡張。祈り完了後に一気に応答/みんなの応答へ進めず、`祈り完了 → 祈り後キュー → 祈祷課題/牧師相談ボタン → 今日の応答 → 応答後キュー → みんなの応答` の順にした。
   - 固定の `today-scroll-cue` はステージに応じて `続きへ` / `今日の祈りへ` / `みんなの応答へ` を表示。
@@ -340,9 +340,17 @@
   - 次スクロール後: `今日の応答` 表示、中央下部の固定キューで `みんなの応答へ` 表示、`みんなの応答` はまだ未表示。
   - 次スクロール後: `みんなの応答` 表示、固定キューは消える。
   - 注意: 127.0.0.1 で開くと Next dev の cross-origin HMR ブロックで hydration が止まるため、ローカルブラウザ確認は `localhost:3070` を使う。
+  - Jimi指示により、出荷時の追加テスト再実行は省略（上記の検証は出荷前に実施済み）。
+- スクロール誘導キューの複数地点化 + 祈り導線整理リリース結果（2026-07-04 08:06 JST）:
+  - アプリ変更コミット: `2532b9f Refine Today scroll cue flow`。
+  - `git push origin main` PASS。`origin/main` は `b12dbf3..2532b9f` へ更新。
+  - GitHub連携Vercel Production deployment成功。commit `2532b9f9f70fa7a5dfb6db0d40671a3aaaae8c32` の `context=Vercel` / `state=success` / `description=Deployment has completed` を確認。
+  - GitHub deployment: `5305705172` / Production。
+  - Vercel deployment URL: `https://semeron-s4pux9l52-asterworks.vercel.app`。
+  - `curl -I -L 'https://semeron-app.vercel.app/ja/church/eifuku-minami/today?replayTodayAnimation=1&scrollCueCenterCheck=1'` で production が応答することを確認。未ログインのため `/ja` → `/ja/login` にリダイレクトされ、最終 `HTTP/2 200` / `server: Vercel`。
+  - 注意: `vercel deploy --prod --yes` の直接CLI実行は、現行Vercel認証から旧 `asterworks` チーム/プロジェクトへアクセスできないため引き続き不可。今回はGitHub連携デプロイで本番反映を確認済み。
 
 ## 次に行うこと
-- 今回の導線整理をcommit/push/deployする。
 - JimiのiPhone実機PWAで `?replayTodayAnimation=1` 付きURL、または `?pwaAnimationFix=<任意の値>` 付きURLを開いて、同日内に何度でもアニメーションと発火タイミング、スクロール誘導キューを確認する。
 - 将来の拡張候補: 管理者が明示的に「今日の祈りへピン留め」できる列/UIを追加する。
 
