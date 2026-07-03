@@ -295,9 +295,24 @@
   - Vercel deployment URL: `https://semeron-g8udocnok-asterworks.vercel.app`。
   - `curl -I -L 'https://semeron-app.vercel.app/ja/church/eifuku-minami/today?replayTodayAnimation=1'` で production が応答することを確認。未ログインのため `/ja` → `/ja/login` にリダイレクトされ、最終 `HTTP/2 200` / `server: Vercel`。
   - 注意: `vercel deploy --prod --yes` の直接CLI実行は、現行Vercel認証から旧 `asterworks` チーム/プロジェクトへアクセスできないため引き続き不可。今回はGitHub連携デプロイで本番反映を確認済み。
+- スクロール誘導キュー追加（2026-07-04 / 実装中）:
+  - Jimiの追加FB: スクロールで後続セクションのアニメーションが発火する前に、ユーザーへ「スクロールできる」ことをうっすら伝えたい。
+  - `TodayDevotionFlow` に `today-scroll-cue` を追加。初回/リプレイ演出中、`stage < 4` の間だけ画面下に控えめな「続きへ / Continue」ピルを表示する。
+  - 通常の同日2回目表示（`data-animate-flow="false"`）では表示しない。
+  - `?replayTodayAnimation=1` / `?pwaAnimationFix=<任意の値>` のURL再発火オプションは維持。
+  - `tests/unit/today-devotion-flow.test.tsx` に、通常再訪ではキュー非表示、リプレイ演出ではキュー表示の検証を追加。
+  - `git diff --check` PASS。
+  - `npm run test -- tests/unit/today-devotion-flow.test.tsx tests/unit/graceful-reveal.test.tsx` PASS（2 files / 3 tests）。
+  - `npm run typecheck` PASS。
+  - `npm run lint` PASS。
+  - `npm test` PASS（9 files / 46 tests）。
+  - `npm run build` PASS。
+  - アプリ内ブラウザで `http://localhost:3070/ja/church/eifuku-minami/today?replayTodayAnimation=1&scrollCueCheck=1` を開き、`data-animate-flow="true"` / `data-animation-replay="true"` / `today-scroll-cue` 表示を確認。キューは fixed / pointer-events none / text `続きへ`。
+  - 同じタブで通常URL `http://localhost:3070/ja/church/eifuku-minami/today` を開き、`data-animate-flow="false"` / `data-animation-replay="false"` / `today-scroll-cue` 非表示を確認。
 
 ## 次に行うこと
-- JimiのiPhone実機PWAで `?replayTodayAnimation=1` 付きURL、または `?pwaAnimationFix=<任意の値>` 付きURLを開いて、同日内に何度でもアニメーションと発火タイミングを確認する。
+- スクロール誘導キュー追加をcommit/pushし、GitHub連携Vercel Production deploymentを確認する。
+- JimiのiPhone実機PWAで `?replayTodayAnimation=1` 付きURL、または `?pwaAnimationFix=<任意の値>` 付きURLを開いて、同日内に何度でもアニメーションと発火タイミング、スクロール誘導キューを確認する。
 - 将来の拡張候補: 管理者が明示的に「今日の祈りへピン留め」できる列/UIを追加する。
 
 ---

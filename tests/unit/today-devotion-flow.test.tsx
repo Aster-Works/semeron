@@ -118,6 +118,7 @@ describe("TodayDevotionFlow daily animation replay", () => {
     const flow = screen.getByTestId("today-flow");
     expect(flow).toHaveAttribute("data-animate-flow", "false");
     expect(flow).toHaveAttribute("data-animation-replay", "false");
+    expect(screen.queryByTestId("today-scroll-cue")).not.toBeInTheDocument();
   });
 
   it("replays the Today animation for an explicit verification key even after the daily open flag exists", async () => {
@@ -129,6 +130,7 @@ describe("TodayDevotionFlow daily animation replay", () => {
     const flow = screen.getByTestId("today-flow");
     expect(flow).toHaveAttribute("data-animate-flow", "true");
     expect(flow).toHaveAttribute("data-animation-replay", "true");
+    expect(screen.getByTestId("today-scroll-cue")).toBeInTheDocument();
     expect(window.localStorage.getItem(dailyOpenKey)).toBe("true");
   });
 });

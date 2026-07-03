@@ -10,7 +10,7 @@ import {
   type PointerEvent,
   type ReactNode,
 } from "react";
-import { HeartHandshake, MessageCircleHeart, Send } from "lucide-react";
+import { ChevronDown, HeartHandshake, MessageCircleHeart, Send } from "lucide-react";
 import type { Church, ContentItem, Locale } from "@/app/lib/demo/types";
 import type { PrayerVM, ReflectionVM } from "@/app/lib/db/queries";
 import { createT, localize } from "@/app/lib/i18n";
@@ -180,6 +180,8 @@ export function TodayDevotionFlow({
   const reflectionQuestion = localize(devotion.reflectionQuestion, locale, church.defaultLocale);
   const prayerGuide = localize(devotion.prayerGuide, locale, church.defaultLocale);
   const actionStyle = (delay: string) => ({ "--today-flow-action-delay": delay }) as CSSProperties;
+  const showScrollCue = Boolean(animateFlow && ready && stage < 4);
+  const scrollCueLabel = locale === "ja" ? "続きへ" : "Continue";
   const reveal = (children: ReactNode, delayMs: number, trigger: RevealTrigger = "in-view") =>
     animateFlow ? (
       <GracefulReveal delayMs={delayMs} trigger={trigger}>
@@ -361,6 +363,15 @@ export function TodayDevotionFlow({
             120,
           )
         : null}
+
+      {showScrollCue ? (
+        <div className="today-scroll-cue" data-testid="today-scroll-cue" aria-hidden="true">
+          <div className="today-scroll-cue-inner">
+            <span>{scrollCueLabel}</span>
+            <ChevronDown className="h-4 w-4" aria-hidden />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
