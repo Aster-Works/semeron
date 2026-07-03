@@ -200,6 +200,16 @@
   - `npm test` PASS（7 files / 43 tests）。
   - `npm run build` PASS。
   - この時点では commit / push / Vercel deploy は未実行。次工程で実行する。
+- リリース結果（2026-07-04 06:28 JST）:
+  - アプリ変更コミット: `ba0930a Improve Today prayer and devotion flow`。
+  - `git push origin main` PASS。`origin/main` は `366ab94..ba0930a` へ更新。
+  - `vercel deploy --prod --yes` は失敗。理由: ローカル `.vercel/project.json` が旧チーム `team_DsJGOfctmTCJEy5JeL31PJHA` / project `prj_mIKUqeNK1wa0rWVAYmdiRS10RO1e` を指しているが、現在のVercel認証ではそのチーム/プロジェクトにアクセスできず、Project Settings取得が403相当で失敗。
+  - Vercel CLI / connectorで見える現在のチームは `jimiaki7s-projects` / `team_u5HgrjA3vb6FCq14KEFJO0A9` のみ。そこには `semeron` プロジェクトは存在しないため、新規プロジェクト作成や環境変数再設定は行っていない。
+  - GitHub連携デプロイは成功。`gh api repos/Aster-Works/semeron/commits/ba0930a/status` で `context=Vercel` / `state=success` / `description=Deployment has completed` を確認。
+  - GitHub deployment: `5304987487` / Production / sha `ba0930ac9ca11a65dbfef9a49b3a3e3f35a12253`。
+  - Vercel deployment URL: `https://semeron-nx66n1i0d-asterworks.vercel.app`。
+  - `curl -I -L https://semeron-app.vercel.app/ja/church/eifuku-minami/today` で production が応答することを確認。未ログインのため `/ja` → `/ja/login` にリダイレクトされ、最終 `HTTP/2 200` / `server: Vercel`。
+  - 注意: 今後CLIから直接 `vercel deploy --prod --yes` したい場合は、Vercel CLIの認証を `asterworks` 側プロジェクトへアクセスできるアカウント/チームに戻すか、`.vercel/project.json` を現行のアクセス可能なSemeronプロジェクトへ relink する必要がある。
 
 ## 次に行うこと
 - 必要なら通常のリリース手順: `git status` → commit → push → Vercel production deploy。
