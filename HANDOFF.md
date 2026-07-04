@@ -52,11 +52,14 @@
 
 ### リリース状況
 - Jimiから「すぐにデプロイまで」の依頼あり。
-- このチェックポイントの差分をリリース対象として、commit / push / Vercel production deployへ進む。
+- 変更一式を `791f568 Harden Semeron review findings` として `origin/main` へpush済み。
+- Vercel Git連携の commit status `Vercel` が success（Deployment has completed）を返したことを確認。
+- 本番URL `https://semeron-app.vercel.app/ja/login` がHTTP 200を返し、Semeronログイン画面HTMLを取得できることを確認。
+- ローカルVercel CLI/APIは `asterworks` scope の認証不足で直接deploy/log取得できなかったため、今回の本番反映確認はGitHub連携status + production URL疎通で実施。
 - `npm run db:test:reset` とPlaywright E2Eは未実行。今回の即時デプロイでは、既にgreenの軽量ゲートと `npm run db:test` を採用する。
 
 ### 次に行うこと
-- `git add` → commit → `git push origin main` → `vercel deploy --prod --yes`。
+- 必要なら別作業で Vercel CLI / MCP の `asterworks` scope 認証を更新し、`vercel logs --level error` まで確認できる状態に戻す。
 
 ## 依頼（JimiのパイロットFB）
 - Todayに表示する祈祷課題は全部ではなく「今日の祈り」5件にする。
