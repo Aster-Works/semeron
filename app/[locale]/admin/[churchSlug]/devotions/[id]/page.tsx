@@ -48,6 +48,7 @@ export default async function AdminDevotionEditPage({
           locale={locale as "ja" | "en"}
           churchId={church.id}
           churchSlug={church.slug}
+          churchTimezone={church.timezone}
           contentLanguages={church.contentLanguages}
           initial={devotion}
           assistEnabled={church.pastorAssistEnabled}

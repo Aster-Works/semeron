@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Church, ContentItem } from "@/app/lib/demo/types";
 import type { PrayerVM } from "@/app/lib/db/queries";
@@ -25,9 +25,9 @@ const church: Church = {
   roleLabels: {},
 };
 
-function prayer(viewerPrayed: boolean): PrayerVM {
+function prayer(viewerPrayed: boolean, id = "prayer_1"): PrayerVM {
   const item: ContentItem = {
-    id: "prayer_1",
+    id,
     churchId: church.id,
     type: "prayer_request",
     status: "published",
@@ -80,6 +80,25 @@ describe("TodayPrayerCarousel", () => {
       />,
     );
 
+    expect(screen.queryByRole("link", { name: "さらに祈る" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "祈りました" }));
+
     expect(screen.getByRole("link", { name: "さらに祈る" })).toBeInTheDocument();
+  });
+
+  it("starts at the first card even when all five prayers were already prayed", () => {
+    render(
+      <TodayPrayerCarousel
+        prayers={Array.from({ length: 5 }, (_, index) => prayer(true, `prayer_${index + 1}`))}
+        church={church}
+        locale="ja"
+        prayersHref="/ja/church/eifuku-minami/prayers"
+        animate={false}
+      />,
+    );
+
+    expect(screen.getByText("1 / 5")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "祈りました" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "さらに祈る" })).not.toBeInTheDocument();
   });
 });

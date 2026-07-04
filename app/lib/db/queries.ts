@@ -3,6 +3,7 @@
  * ContentItem 等のドメイン型 + 表示用の付随データ（作者名・リアクション数）を返す。
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Tables } from "@/app/lib/database.types";
 import type {
   AppNotification,
   Church,
@@ -17,7 +18,20 @@ import { toDateKey } from "@/app/lib/demo/selectors";
 import { selectTodayPrayers } from "@/app/lib/prayers/today";
 import { mapContent, mapGroup, mapMembership, mapNotification } from "./map";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+type ContentFeedRow = Tables<"content_feed">;
+type MembershipRow = Tables<"memberships">;
+type GroupRow = Tables<"groups">;
+type ReactionRow = Pick<Tables<"reactions">, "content_item_id" | "membership_id" | "type">;
+type MembershipNameRow = Pick<Tables<"memberships">, "id" | "display_name">;
+type MembershipWithJoins = MembershipRow & {
+  membership_roles?: { role: string }[] | null;
+  group_memberships?: { group_id: string }[] | null;
+};
+type GroupMembershipWithMember = {
+  membership: MembershipRow | MembershipRow[] | null;
+};
+
+const isString = (value: unknown): value is string => typeof value === "string" && value.length > 0;
 
 export interface PrayerVM {
   item: ContentItem;
@@ -38,13 +52,13 @@ const anonName = (locale: Locale) => (locale === "ja" ? "匿名" : "Anonymous");
 /** content_feed の行（author は RLS+マスク済み）を作者名解決付きで整える。 */
 async function attachPrayerVMs(
   supabase: SupabaseClient,
-  rows: any[],
+  rows: ContentFeedRow[],
   viewer: Viewer,
   locale: Locale,
 ): Promise<PrayerVM[]> {
   if (rows.length === 0) return [];
-  const ids = rows.map((r) => r.id);
-  const authorIds = [...new Set(rows.map((r) => r.author_membership_id).filter(Boolean))];
+  const ids = rows.map((r) => r.id).filter(isString);
+  const authorIds = [...new Set(rows.map((r) => r.author_membership_id).filter(isString))];
 
   // 作者名（マスクされていない分のみ）
   const nameById = new Map<string, string>();
@@ -53,7 +67,7 @@ async function attachPrayerVMs(
       .from("memberships")
       .select("id, display_name")
       .in("id", authorIds);
-    (mems ?? []).forEach((m: any) => nameById.set(m.id, m.display_name));
+    ((mems ?? []) as MembershipNameRow[]).forEach((m) => nameById.set(m.id, m.display_name));
   }
 
   // prayed 数 + 自分が祈ったか
@@ -64,12 +78,13 @@ async function attachPrayerVMs(
     .eq("type", "prayed");
   const prayedCount = new Map<string, number>();
   const viewerPrayed = new Set<string>();
-  (rxs ?? []).forEach((r: any) => {
+  ((rxs ?? []) as ReactionRow[]).forEach((r) => {
     prayedCount.set(r.content_item_id, (prayedCount.get(r.content_item_id) ?? 0) + 1);
     if (viewer.membership && r.membership_id === viewer.membership.id) viewerPrayed.add(r.content_item_id);
   });
 
   return rows.map((r) => {
+    const id = r.id ?? "";
     const item = mapContent(r);
     const authorName = r.author_membership_id
       ? (nameById.get(r.author_membership_id) ?? anonName(locale))
@@ -77,8 +92,8 @@ async function attachPrayerVMs(
     return {
       item,
       authorName,
-      prayedCount: prayedCount.get(r.id) ?? 0,
-      viewerPrayed: viewerPrayed.has(r.id),
+      prayedCount: prayedCount.get(id) ?? 0,
+      viewerPrayed: viewerPrayed.has(id),
       isMine: Boolean(viewer.membership && r.author_membership_id === viewer.membership.id),
     };
   });
@@ -132,7 +147,7 @@ export async function getPrayerFeed(
     .eq("type", "prayer_request")
     .eq("status", "published")
     .order("published_at", { ascending: false });
-  return attachPrayerVMs(supabase, data ?? [], viewer, locale);
+  return attachPrayerVMs(supabase, (data ?? []) as ContentFeedRow[], viewer, locale);
 }
 
 export async function getTodayPrayerSet(
@@ -159,7 +174,7 @@ export async function getMyPrayerRequests(
     .eq("type", "prayer_request")
     .eq("author_membership_id", viewer.membership.id)
     .order("created_at", { ascending: false });
-  return attachPrayerVMs(supabase, data ?? [], viewer, locale);
+  return attachPrayerVMs(supabase, (data ?? []) as ContentFeedRow[], viewer, locale);
 }
 
 export async function getReflections(
@@ -176,15 +191,15 @@ export async function getReflections(
     .eq("status", "published")
     .order("published_at", { ascending: false })
     .limit(limit);
-  const rows = data ?? [];
+  const rows = (data ?? []) as ContentFeedRow[];
   if (rows.length === 0) return [];
 
-  const ids = rows.map((r) => r.id);
-  const authorIds = [...new Set(rows.map((r) => r.author_membership_id).filter(Boolean))];
+  const ids = rows.map((r) => r.id).filter(isString);
+  const authorIds = [...new Set(rows.map((r) => r.author_membership_id).filter(isString))];
   const nameById = new Map<string, string>();
   if (authorIds.length) {
     const { data: mems } = await supabase.from("memberships").select("id, display_name").in("id", authorIds);
-    (mems ?? []).forEach((m: any) => nameById.set(m.id, m.display_name));
+    ((mems ?? []) as MembershipNameRow[]).forEach((m) => nameById.set(m.id, m.display_name));
   }
   const { data: rxs } = await supabase
     .from("reactions")
@@ -193,7 +208,7 @@ export async function getReflections(
     .in("type", ["amen", "thanks"]);
   const count = new Map<string, number>();
   const mine = new Map<string, Set<string>>();
-  (rxs ?? []).forEach((r: any) => {
+  ((rxs ?? []) as ReactionRow[]).forEach((r) => {
     const k = `${r.content_item_id}:${r.type}`;
     count.set(k, (count.get(k) ?? 0) + 1);
     if (viewer.membership && r.membership_id === viewer.membership.id) {
@@ -201,23 +216,26 @@ export async function getReflections(
       mine.get(r.content_item_id)!.add(r.type);
     }
   });
-  return rows.map((r) => ({
-    item: mapContent(r),
-    authorName: r.author_membership_id ? (nameById.get(r.author_membership_id) ?? anonName(locale)) : anonName(locale),
-    isMine: Boolean(viewer.membership && r.author_membership_id === viewer.membership.id),
-    reactions: (["amen", "thanks"] as ReactionType[]).map((type) => ({
-      type,
-      count: count.get(`${r.id}:${type}`) ?? 0,
-      active: mine.get(r.id)?.has(type) ?? false,
-    })),
-  }));
+  return rows.map((r) => {
+    const id = r.id ?? "";
+    return {
+      item: mapContent(r),
+      authorName: r.author_membership_id ? (nameById.get(r.author_membership_id) ?? anonName(locale)) : anonName(locale),
+      isMine: Boolean(viewer.membership && r.author_membership_id === viewer.membership.id),
+      reactions: (["amen", "thanks"] as ReactionType[]).map((type) => ({
+        type,
+        count: count.get(`${id}:${type}`) ?? 0,
+        active: mine.get(id)?.has(type) ?? false,
+      })),
+    };
+  });
 }
 
 /* ---------- Groups ---------- */
 export async function getMyGroups(supabase: SupabaseClient, viewer: Viewer): Promise<Group[]> {
   if (!viewer.membership || viewer.membership.groupIds.length === 0) return [];
   const { data } = await supabase.from("groups").select("*").in("id", viewer.membership.groupIds);
-  return (data ?? []).map(mapGroup);
+  return ((data ?? []) as GroupRow[]).map(mapGroup);
 }
 export async function getGroup(supabase: SupabaseClient, groupId: string): Promise<Group | null> {
   const { data } = await supabase.from("groups").select("*").eq("id", groupId).maybeSingle();
@@ -228,10 +246,10 @@ export async function getGroupMembers(supabase: SupabaseClient, groupId: string)
     .from("group_memberships")
     .select("membership:memberships(*)")
     .eq("group_id", groupId);
-  return (data ?? [])
-    .map((r: any) => r.membership)
-    .filter((m: any) => m?.status === "active")
-    .map((m: any) => mapMembership(m));
+  return ((data ?? []) as GroupMembershipWithMember[])
+    .map((r) => (Array.isArray(r.membership) ? r.membership[0] : r.membership))
+    .filter((m): m is MembershipRow => m?.status === "active")
+    .map((m) => mapMembership(m));
 }
 export async function getGroupPrayers(
   supabase: SupabaseClient,
@@ -246,7 +264,7 @@ export async function getGroupPrayers(
     .eq("status", "published")
     .eq("group_id", groupId)
     .order("published_at", { ascending: false });
-  return attachPrayerVMs(supabase, data ?? [], viewer, locale);
+  return attachPrayerVMs(supabase, (data ?? []) as ContentFeedRow[], viewer, locale);
 }
 
 /* ---------- Inbox ---------- */
@@ -286,17 +304,17 @@ export async function getModerationQueue(
     .eq("type", "prayer_request")
     .eq("status", "pending_review")
     .order("created_at", { ascending: false });
-  const rows = data ?? [];
-  const authorIds = [...new Set(rows.map((r: any) => r.author_membership_id).filter(Boolean))];
+  const rows = (data ?? []) as ContentFeedRow[];
+  const authorIds = [...new Set(rows.map((r) => r.author_membership_id).filter(isString))];
   const nameById = new Map<string, string>();
   if (authorIds.length > 0) {
     const { data: mems } = await supabase
       .from("memberships")
       .select("id, display_name")
       .in("id", authorIds);
-    (mems ?? []).forEach((m: any) => nameById.set(m.id, m.display_name));
+    ((mems ?? []) as MembershipNameRow[]).forEach((m) => nameById.set(m.id, m.display_name));
   }
-  return rows.map((r: any) => ({
+  return rows.map((r) => ({
     item: mapContent(r),
     authorName: r.author_membership_id
       ? (nameById.get(r.author_membership_id) ?? anonName(locale))
@@ -311,7 +329,7 @@ export async function getAllDevotions(supabase: SupabaseClient, churchId: string
     .eq("church_id", churchId)
     .eq("type", "devotion")
     .order("devotion_date", { ascending: false });
-  return (data ?? []).map(mapContent);
+  return ((data ?? []) as ContentFeedRow[]).map(mapContent);
 }
 export async function getDevotion(supabase: SupabaseClient, id: string): Promise<ContentItem | null> {
   const { data } = await supabase.from("content_feed").select("*").eq("id", id).eq("type", "devotion").maybeSingle();
@@ -347,17 +365,17 @@ export async function getMembers(supabase: SupabaseClient, churchId: string): Pr
     .select("*, membership_roles(role), group_memberships(group_id)")
     .eq("church_id", churchId)
     .order("joined_at", { ascending: true });
-  return (data ?? []).map((m: any) =>
+  return ((data ?? []) as MembershipWithJoins[]).map((m) =>
     mapMembership(
       m,
-      (m.membership_roles ?? []).map((r: any) => r.role),
-      (m.group_memberships ?? []).map((g: any) => g.group_id),
+      (m.membership_roles ?? []).map((r) => r.role),
+      (m.group_memberships ?? []).map((g) => g.group_id),
     ),
   );
 }
 export async function getChurchGroups(supabase: SupabaseClient, churchId: string): Promise<Group[]> {
   const { data } = await supabase.from("groups").select("*").eq("church_id", churchId);
-  return (data ?? []).map(mapGroup);
+  return ((data ?? []) as GroupRow[]).map(mapGroup);
 }
 export async function getChurchNotifications(supabase: SupabaseClient, churchId: string): Promise<AppNotification[]> {
   // 受信者・content連結を含まない配信メタデータのみ（匿名解除の逆引きを封じる definer RPC）。
@@ -430,10 +448,13 @@ export async function getOpsDashboard(
     supabase.rpc("church_notification_ops", { target_church: churchId, p_only_failed: true }),
   ]);
   const vbMap = new Map<string, number>();
-  (pubRes.data ?? []).forEach((r: any) => vbMap.set(r.visibility, (vbMap.get(r.visibility) ?? 0) + 1));
+  ((pubRes.data ?? []) as Pick<ContentFeedRow, "visibility">[]).forEach((r) => {
+    if (!r.visibility) return;
+    vbMap.set(r.visibility, (vbMap.get(r.visibility) ?? 0) + 1);
+  });
   return {
     pendingCount: pendingRes.count ?? 0,
-    scheduled: (scheduledRes.data ?? []).map(mapContent),
+    scheduled: ((scheduledRes.data ?? []) as ContentFeedRow[]).map(mapContent),
     visibilityBreakdown: [...vbMap.entries()].map(([visibility, count]) => ({ visibility, count })),
     failedNotifications: (failedRes.data ?? []).map(mapNotification),
   };

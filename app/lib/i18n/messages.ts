@@ -352,7 +352,11 @@ export const messages = {
   // --- editor ---
   "editor.newTitle": { ja: "デボーションを作成", en: "New devotion" },
   "editor.editTitle": { ja: "デボーションを編集", en: "Edit devotion" },
-  "editor.date": { ja: "配信日", en: "Date" },
+  "editor.date": { ja: "Todayに表示する日", en: "Today display date" },
+  "editor.dateHint": {
+    ja: "この日付のTodayに会員へ表示されます。",
+    en: "Members will see this in Today on this date.",
+  },
   "editor.scriptureRef": { ja: "聖書箇所", en: "Scripture reference" },
   "editor.translation": { ja: "翻訳（出典表示）", en: "Translation (attribution)" },
   "editor.scriptureQuote": { ja: "短い引用（任意）", en: "Short quotation (optional)" },
@@ -374,11 +378,23 @@ export const messages = {
     en: "Published in one language by default. Add another only when you need it.",
   },
   "editor.visibility": { ja: "公開範囲", en: "Visibility" },
-  "editor.scheduleAt": { ja: "予約配信", en: "Schedule" },
+  "editor.scheduleAt": { ja: "公開予約日", en: "Scheduled publish date" },
+  "editor.scheduleAtHint": {
+    ja: "予約する場合は明日以降を選んでください。公開時刻は教会の朝の配信時刻です。",
+    en: "For scheduled publishing, choose tomorrow or later. It will publish at the church's morning delivery time.",
+  },
+  "editor.scheduleFutureError": {
+    ja: "予約配信は明日以降の日付を選んでください。",
+    en: "Choose tomorrow or later for scheduled publishing.",
+  },
+  "editor.schedulePastError": {
+    ja: "予約配信日時は現在より未来にしてください。",
+    en: "Choose a scheduled publish time in the future.",
+  },
   "editor.previewHeading": { ja: "会員に見える形", en: "How members will see it" },
   "editor.publishNote": {
-    ja: "公開すると、選んだ配信日に会員へ表示されます。",
-    en: "Once published, members will see this on the chosen date.",
+    ja: "公開すると、選んだTodayの日付に会員へ表示されます。予約は公開だけを未来に送ります。",
+    en: "Publishing makes this visible on the selected Today date. Scheduling only delays when it is published.",
   },
 
   // --- Pastor Assist (Phase 1: disabled) ---

@@ -41,7 +41,7 @@ begin
     ('11111111-1111-1111-1111-111111111111',
      'c1000000-0000-0000-0000-0000000000e1',
      'devotion','published','pastor_only',
-     '{"ja":"牧師だけの通知"}'::jsonb,'{"ja":"本文"}'::jsonb,'2026-07-05')
+     '{"ja":"牧師だけの通知"}'::jsonb,'{"ja":"本文"}'::jsonb,'2099-07-05')
   returning id into new_id;
 
   select count(*)::int into n
@@ -61,7 +61,7 @@ begin
     ('11111111-1111-1111-1111-111111111111',
      'c1000000-0000-0000-0000-0000000000e1',
      'devotion','published','church',
-     '{"ja":"通知遷移先"}'::jsonb,'{"ja":"本文"}'::jsonb,'2026-08-01')
+     '{"ja":"通知遷移先"}'::jsonb,'{"ja":"本文"}'::jsonb,'2099-08-01')
   returning id into new_id;
 
   select data->>'target_path' into target
@@ -94,7 +94,7 @@ values
    '11111111-1111-1111-1111-111111111111',
    'c1000000-0000-0000-0000-0000000000e1',
    'devotion','published','pastor_only',
-   '{"ja":"牧師だけ"}'::jsonb,'{"ja":"本文"}'::jsonb,'2026-07-04');
+   '{"ja":"牧師だけ"}'::jsonb,'{"ja":"本文"}'::jsonb,'2099-07-04');
 
 select pg_temp.login('a0000000-0000-0000-0000-0000000000e5'); -- aoi: member
 select throws_ok(

@@ -17,6 +17,7 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
+    "db:test:reset": "npm run db:reset && npm run db:test",
     "db:types": "supabase gen types typescript --db-url \"postgresql://postgres:postgres@127.0.0.1:54622/postgres\" --schema public > app/lib/database.types.ts"
   },
   "dependencies": {
@@ -56,5 +57,5 @@
       "postcss": "8.5.10"
     }
   },
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+  "packageManager": "npm@11.17.0"
 }

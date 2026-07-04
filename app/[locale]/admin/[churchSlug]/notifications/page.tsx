@@ -38,6 +38,13 @@ export default async function AdminNotificationsPage({
   const church = viewer.church;
   const t = createT(locale);
   const notifications = await getChurchNotifications(supabase, church.id);
+  const statusCounts = notifications.reduce<Record<AppNotification["status"], number>>(
+    (acc, notification) => {
+      acc[notification.status] += 1;
+      return acc;
+    },
+    { queued: 0, sent: 0, skipped: 0, failed: 0 },
+  );
 
   return (
     <>
@@ -47,6 +54,20 @@ export default async function AdminNotificationsPage({
         <Callout tone="sage" icon={Radio}>
           {t("notifications.fallbackNote")}
         </Callout>
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {(["queued", "sent", "skipped", "failed"] as AppNotification["status"][]).map((status) => {
+            const meta = statusMeta[status];
+            return (
+              <Card key={status}>
+                <CardBody className="space-y-1.5">
+                  <p className="text-xs font-medium text-muted">{t(meta.label)}</p>
+                  <p className="text-2xl font-semibold tabular-nums text-ink">{statusCounts[status]}</p>
+                </CardBody>
+              </Card>
+            );
+          })}
+        </div>
 
         {notifications.length === 0 ? (
           <EmptyState icon={Bell} title={t("inbox.empty")} />

@@ -56,11 +56,11 @@ export function TodayPrayerCarousel({
 }) {
   const t = createT(locale);
   const roleLabels = useMemo(() => resolveRoleLabels(church, locale), [church, locale]);
-  const initialIndex = Math.max(0, prayers.findIndex((vm) => !vm.viewerPrayed));
-  const [index, setIndex] = useState(initialIndex === -1 ? 0 : initialIndex);
+  const [index, setIndex] = useState(0);
   const [entered, setEntered] = useState(0);
   const [isChanging, setIsChanging] = useState(false);
   const [isRepeating, setIsRepeating] = useState(false);
+  const [sessionComplete, setSessionComplete] = useState(false);
   const [motionPattern, setMotionPattern] = useState<MotionPattern | null>(animate ? null : PRAYER_MOTION_PATTERNS[0]);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
@@ -94,9 +94,7 @@ export function TodayPrayerCarousel({
   const displayName = showSelfAnon ? t("prayer.anonSelf") : active.authorName;
   const prayed = prayedById[item.id] ?? active.viewerPrayed;
   const prayedCount = countById[item.id] ?? active.prayedCount;
-  const completedCount = prayers.filter((vm) => prayedById[vm.item.id]).length;
-  const hasCompletedSet = completedCount >= prayers.length;
-  const showComplete = hasCompletedSet && !isRepeating;
+  const showComplete = sessionComplete && !isRepeating;
   const progressCurrent = showComplete ? prayers.length : Math.min(index + 1, prayers.length);
   const activeMotionPattern = motionPattern ?? PRAYER_MOTION_PATTERNS[0];
   const motionStyle = {
@@ -119,6 +117,7 @@ export function TodayPrayerCarousel({
     setError("");
     if (index >= prayers.length - 1) {
       setIsRepeating(false);
+      setSessionComplete(true);
       setMotionPattern((current) => randomPrayerPattern(current?.id));
       setEntered((current) => current + 1);
       notifyCompleted();
@@ -148,6 +147,7 @@ export function TodayPrayerCarousel({
     setError("");
     setIsChanging(false);
     setIsRepeating(true);
+    setSessionComplete(false);
     setMotionPattern((current) => randomPrayerPattern(current?.id));
     setIndex(0);
     setEntered((current) => current + 1);
@@ -172,6 +172,7 @@ export function TodayPrayerCarousel({
         advance();
       } else {
         setIsRepeating(false);
+        setSessionComplete(true);
         setMotionPattern((current) => randomPrayerPattern(current?.id));
         setEntered((current) => current + 1);
         notifyCompleted();

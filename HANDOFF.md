@@ -3,6 +3,61 @@
 対象リポ: /Users/james/syncthing/semeron
 セッション開始: 2026-07-04 00:33 JST / 担当: Codex
 
+## 現在のチェックポイント — 全体レビュー改善（2026-07-04 午後）
+
+### 今回の依頼
+- 前回の全体レビューで出したP1/P2/P3改善を、推奨順に実装していく。
+- コミット・プッシュ・デプロイの依頼はまだないため、現時点ではローカル実装と検証まで。
+
+### 完了したこと
+- Next.js App Router/Supabase作業方針を確認。
+- 既存未コミット差分を確認し、管理デボーション日付修正とToday祈祷カード初期表示修正は保持したまま作業中。
+- P1のうち、READMEの現状乖離、package manager表記、DB/RLS検証の再現性改善に着手。
+
+### 実装済み
+- `package.json`
+  - `packageManager` を実運用に合わせて `npm@11.17.0` に変更。
+  - `db:test:reset` を追加し、`db:reset` 後に `db:test` を走らせる明示的なリリース前ゲートを用意。
+- `README.md`
+  - 冒頭の「Phase 1 / Supabase未連携」表現を、実Supabase接続済みのパイロット版説明に更新。
+  - ローカル確認手順に `db:test:reset` を追加。
+  - 古い検証件数（unit 31 / RLS 56）を固定値として読ませない表現に変更。
+- `supabase/tests/rls_content_visibility.test.sql`
+  - 手動確認でseedデボーションにcompletion_logsが増えても集計テストが揺れないよう、テスト専用のpublished devotionとcompletion_logsをトランザクション内に作る形へ変更。
+- `supabase/tests/rls_regressions.test.sql`
+  - dirty DB上の既存デボーション日付と衝突しにくいよう、テスト挿入の devotion_date を2099年台へ変更。
+- `app/lib/db/action-helpers.ts`
+  - `actions.ts` に混在していた membership 解決、役割判定、教会タイムゾーン日付変換を server-only ヘルパーとして切り出し。
+  - 既存コンポーネントの import 先は変えず、`actions.ts` の外部API互換を維持。
+- `app/lib/db/map.ts` / `app/lib/db/queries.ts`
+  - DB行マッパと主要クエリの `any` 集中を緩和し、生成済みSupabase型・小さなRow型へ寄せた。
+  - `content_feed` view の nullable 生成型は、アプリのドメイン型へ入れる境界で吸収。
+- `tests/unit/devotion-form.test.tsx`
+  - 「Todayに表示する日」と「公開予約日」のラベル/説明が分かれることを固定。
+  - 公開予約日は明日以降だけ予約可能で、当日は無効化されることを固定。
+- `app/[locale]/admin/[churchSlug]/notifications/page.tsx`
+  - 通知一覧の上部に queued/sent/skipped/failed の状態別件数を表示。
+- `app/api/notifications/dispatch/route.ts`
+  - cron dispatch の匿名集計を `console.info` / `console.warn` / `console.error` に出し、Vercel logsで追えるようにした。
+
+### 検証結果
+- `npm run typecheck` PASS。
+- `npm run lint` PASS。
+- `npm test` PASS（11 files / 53 tests）。
+- `npm run build` PASS。
+- `npm audit --omit=dev` PASS（0 vulnerabilities）。
+- `npm run db:test` PASS（5 files / 97 tests）。リセットなしの現在ローカルDBでも通過。
+- `git diff --check` PASS。
+- `npm run db:test:reset` はDB resetを伴うため未実行。リリース前の強いゲートとして用意済み。
+
+### リリース状況
+- Jimiから「すぐにデプロイまで」の依頼あり。
+- このチェックポイントの差分をリリース対象として、commit / push / Vercel production deployへ進む。
+- `npm run db:test:reset` とPlaywright E2Eは未実行。今回の即時デプロイでは、既にgreenの軽量ゲートと `npm run db:test` を採用する。
+
+### 次に行うこと
+- `git add` → commit → `git push origin main` → `vercel deploy --prod --yes`。
+
 ## 依頼（JimiのパイロットFB）
 - Todayに表示する祈祷課題は全部ではなく「今日の祈り」5件にする。
 - 選出ロジックは5系統にする。
@@ -379,6 +434,103 @@
 ## 次に行うこと
 - JimiのiPhone実機PWAで `?replayTodayAnimation=1` 付きURL、または `?pwaAnimationFix=<任意の値>` 付きURLを開いて、同日内に何度でもアニメーションと発火タイミング、スクロール誘導キューを確認する。
 - 将来の拡張候補: 管理者が明示的に「今日の祈りへピン留め」できる列/UIを追加する。
+
+---
+
+# 現在のHANDOFF — 管理画面デボーション作成フォーム微調整
+
+開始: 2026-07-04 / 担当: Codex
+
+## 依頼
+- JimiのiPhoneスクリーンショットで、デボーション作成画面の上部日付カードと下部公開コントロールが崩れて見えるため微調整する。
+- 「配信日」と「予約配信」の両方があり分かりにくい。必要性を見直し、UI上で役割を分かりやすくする。
+- 予約配信日は現在より未来の日程しか入力できないようにする。
+
+## 調査結果
+- 該当UIは `app/components/admin/DevotionForm.tsx`。
+- `配信日` は `devotionDate` で、Todayに表示する対象日。
+- `予約配信` は `scheduledAt` で、`saveDevotion` 内の `scheduleDateToIso()` により教会の朝配信時刻へ変換される公開予約日。
+- 2つは役割が違うため削除せず、ラベルと補足で違いを明示する方針。
+- 現状の公開コントロールは `flex flex-wrap` + 予約日入力 `w-44` のため、モバイルで日付入力・ボタン配置が不揃いになりやすい。
+
+## 確定方針
+- `配信日` のラベルを「Todayに表示する日」に変更し、「この日に会員のTodayへ表示されます。」という補足を追加する。
+- `予約配信` のラベルを「公開予約日」に変更し、明日以降のみ選べることを補足する。
+- 予約配信はUI側で `min` を明日の日付に設定する。
+- サーバー側でも `status=scheduled` の `scheduled_at` が現在時刻以前なら保存を拒否する。
+- 下部公開コントロールはモバイルでは縦積み、ボタンは整った2列/フル幅のグリッドにする。
+
+## 未完了
+- コミット・プッシュ・デプロイは未実施（Jimiから依頼があれば進める）。
+
+## 実装済み
+- `app/components/admin/DevotionForm.tsx`
+  - `churchTimezone` prop を追加し、教会タイムゾーン基準で予約配信日の `min` を明日以降に設定。
+  - 上部フォームカードと公開コントロールに `min-w-0` を追加し、モバイルで入力欄やカードが横にはみ出しにくい構造へ調整。
+  - 下部公開コントロールを `flex-wrap` からグリッドへ変更。モバイルでは予約日/下書き/予約/公開が整って積まれる。
+  - 予約日が明日より前の場合は「予約する」を無効化し、フィールドをエラー調にする。
+- `app/[locale]/admin/[churchSlug]/devotions/new/page.tsx` / `[id]/page.tsx`
+  - `church.timezone` を `DevotionForm` へ渡すように変更。
+- `app/lib/i18n/messages.ts`
+  - `配信日` を `Todayに表示する日`、`予約配信` を `公開予約日` へ変更。
+  - 2つの日付の役割を説明する補足文と予約日エラー文を追加。
+- `app/lib/db/actions.ts`
+  - `saveDevotion` の `scheduled` 保存時、算出された `scheduled_at` が現在時刻以前なら保存を拒否する検証を追加。
+
+## 検証結果
+- `git diff --check` PASS。
+- `npm run typecheck` PASS。
+- `npm run lint` PASS。
+- `npm run test -- tests/unit/i18n.test.ts` PASS（4 tests）。
+- `npm run build` PASS。
+- 画面確認:
+  - `colima start` 後、`supabase start` でローカルSupabaseを復帰。
+  - `npm run dev -- --port 3070` を起動し、in-app browser を 393x852 のモバイル幅にして `/ja/admin/eifuku-minami/devotions/new` を確認。
+  - 上部カードは `docScrollWidth=393` / `innerWidth=393` で横溢れ 0。カード幅は 361px でビューポート内に収まる。
+  - 下部公開コントロールも横溢れ 0。予約日入力 319px、下書き保存 319px、予約/公開ボタン各 156px で整列。
+  - `公開予約日` の `min` は `2026-07-05`（2026-07-04 JST時点の明日）になっている。
+  - 予約日に `2026-07-05` を入力すると `予約する` が有効化。
+  - `2026-07-04` を入れた場合は input validity が false、`予約する` は無効、エラー補足「予約配信は明日以降の日付を選んでください。」が表示。
+  - date input のブラウザ差を避けるため、`onChange` に加えて `onInput` でも日付状態を拾うよう補強済み。
+- 確認後、in-app browser の viewport override は reset 済み。開発サーバーは停止済み。
+
+---
+
+# 現在のHANDOFF — Today祈祷カード初期表示修正
+
+開始: 2026-07-04 / 担当: Codex
+
+## 依頼
+- Todayの5件の祈祷課題カードで、最初に完了カードが表示されてしまう。
+- 初期表示は必ず `1 / 5` の祈祷課題カードにする。
+
+## 原因
+- `app/components/member/TodayPrayerCarousel.tsx` が `viewerPrayed` をもとに「完了済みか」を判定していた。
+- 5件すべて `viewerPrayed=true` の日や再訪時に、DB上の「祈った記録あり」を「この画面で5件を最後まで進めた」と同一視してしまい、初期表示から完了カードに寄っていた。
+
+## 実装済み
+- `TodayPrayerCarousel` の初期 `index` を常に `0` に変更。
+- DB上の祈祷済み状態とは別に `sessionComplete` state を追加。
+- 完了カードは、ユーザーがこの表示セッションで最後のカードまで進めたときだけ表示するよう変更。
+- 既に祈っているカードでは従来どおり `toggleReaction` を呼ばず、`祈りました` で次へ進む。
+- `tests/unit/today-prayer-carousel.test.tsx` を更新。
+  - 既に祈った1件でも初期状態では `さらに祈る` を表示せず、クリック後に完了カードへ進むことを確認。
+  - 5件すべて `viewerPrayed=true` でも初期表示が `1 / 5` であることを確認。
+
+## 検証結果
+- `npm run test -- tests/unit/today-prayer-carousel.test.tsx` PASS（3 tests）。
+- `npm run typecheck` PASS。
+- `npm run lint` PASS。
+- `git diff --check` PASS。
+- `npm run build` PASS。
+- ローカルdev server `http://localhost:3070` でブラウザ確認:
+  - `http://localhost:3070/ja/church/eifuku-minami/today?replayTodayAnimation=1&carouselStartCheck=1` をモバイル幅 393x852 で確認。
+  - スクロールで `今日の祈り` セクションを表示した時点で、完了カードではなく `1 / 5` の祈祷課題カードと `祈りました` ボタンが出ることを確認。
+  - `今日、共に覚えて祈りました。` は初期表示では出ていない。
+- 確認後、in-app browser の viewport override は reset 済み。開発サーバーは停止済み。
+
+## 未完了
+- コミット・プッシュ・デプロイは未実施（Jimiから依頼があれば進める）。
 
 ---
 

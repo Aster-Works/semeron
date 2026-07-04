@@ -30,6 +30,24 @@ const LOC_FIELDS: (keyof Pick<ContentItem, "title" | "body" | "reflectionQuestio
   "prayerGuide",
   "scriptureQuote",
 ];
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function dateKeyInTimeZone(date: Date, timeZone: string): string {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(date);
+  } catch {
+    return date.toISOString().slice(0, 10);
+  }
+}
+
+function futureDateKey(timeZone: string, daysFromNow: number): string {
+  return dateKeyInTimeZone(new Date(Date.now() + DAY_MS * daysFromNow), timeZone);
+}
 
 /**
  * 初期の有効言語。既存なら本文に入っている言語、無ければ教会の配信言語（既定は1つ）。
@@ -53,6 +71,7 @@ export function DevotionForm({
   locale,
   churchId,
   churchSlug,
+  churchTimezone,
   contentLanguages,
   initial,
   assistEnabled = false,
@@ -61,6 +80,7 @@ export function DevotionForm({
   locale: Locale;
   churchId: string;
   churchSlug: string;
+  churchTimezone: string;
   /** 教会が配信する言語（先頭が主言語・既定は1つ）。ここから初期の入力言語を決める。 */
   contentLanguages: string[];
   initial?: ContentItem;
@@ -92,6 +112,14 @@ export function DevotionForm({
   const [refl, setRefl] = useState<Localized>(initial?.reflectionQuestion ?? {});
   const [prayer, setPrayer] = useState<Localized>(initial?.prayerGuide ?? {});
   const [quote, setQuote] = useState<Localized>(initial?.scriptureQuote ?? {});
+  const minScheduleDate = useMemo(() => futureDateKey(churchTimezone, 1), [churchTimezone]);
+  const scheduleTooEarly = Boolean(scheduleAt && scheduleAt < minScheduleDate);
+  const visibleError = useMemo(() => {
+    if (!error) return null;
+    if (error === "schedule date required") return t("editor.scheduleFutureError");
+    if (error === "schedule date must be in the future") return t("editor.schedulePastError");
+    return error;
+  }, [error, t]);
 
   const clean = (v: Localized): Record<string, string> => {
     const o: Record<string, string> = {};
@@ -159,16 +187,23 @@ export function DevotionForm({
   }, [locale, primary, title, body, refl, prayer, quote]);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
       {/* --- 編集フォーム --- */}
-      <div className="space-y-5">
-        <Card>
-          <CardBody className="space-y-5">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label={t("editor.date")} htmlFor="dv-date">
-                <Input id="dv-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+      <div className="min-w-0 space-y-5">
+        <Card className="min-w-0">
+          <CardBody className="min-w-0 space-y-5">
+            <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+              <Field label={t("editor.date")} hint={t("editor.dateHint")} htmlFor="dv-date" className="min-w-0">
+                <Input
+                  id="dv-date"
+                  type="date"
+                  value={date}
+                  onInput={(e) => setDate(e.currentTarget.value)}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="min-w-0"
+                />
               </Field>
-              <Field label={t("editor.visibility")} htmlFor="dv-vis">
+              <Field label={t("editor.visibility")} htmlFor="dv-vis" className="min-w-0">
                 <Select id="dv-vis" value={visibility} onChange={(e) => setVisibility(e.target.value as Visibility)}>
                   {VIS.map((v) => (
                     <option key={v} value={v}>
@@ -179,11 +214,11 @@ export function DevotionForm({
               </Field>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label={t("editor.scriptureRef")} htmlFor="dv-ref">
+            <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+              <Field label={t("editor.scriptureRef")} htmlFor="dv-ref" className="min-w-0">
                 <Input id="dv-ref" value={scriptureRef} onChange={(e) => setScriptureRef(e.target.value)} placeholder="詩篇 121:1–2" />
               </Field>
-              <Field label={t("editor.translation")} htmlFor="dv-tr">
+              <Field label={t("editor.translation")} htmlFor="dv-tr" className="min-w-0">
                 <Input id="dv-tr" value={translation} onChange={(e) => setTranslation(e.target.value)} placeholder="新改訳2017" />
               </Field>
             </div>
@@ -267,8 +302,8 @@ export function DevotionForm({
         />
 
         {/* --- 公開コントロール（AIとは別の、独立したフッター） --- */}
-        <Card>
-          <CardBody className="space-y-3">
+        <Card className="min-w-0">
+          <CardBody className="min-w-0 space-y-4">
             <p className="text-xs text-muted">{t("editor.publishNote")}</p>
             {saved ? (
               <p className="flex items-center gap-1.5 text-sm text-sage-ink" role="status">
@@ -276,28 +311,62 @@ export function DevotionForm({
                 {t(`status.${saved}`)} — {locale === "ja" ? "保存しました" : "saved"}
               </p>
             ) : null}
-            {error ? <p className="text-sm text-rose-ink">{error}</p> : null}
-            <div className="flex flex-wrap items-center gap-2">
-              <Field label={t("editor.scheduleAt")} htmlFor="dv-sch" className="mr-auto">
-                <Input id="dv-sch" type="date" value={scheduleAt} onChange={(e) => setScheduleAt(e.target.value)} className="w-44" />
-              </Field>
-              <Button variant="secondary" size="md" disabled={pending} onClick={() => save("draft")}>
-                {t("common.saveDraft")}
-              </Button>
-              <Button variant="secondary" size="md" onClick={() => save("scheduled")} disabled={!scheduleAt || pending}>
-                {t("common.schedule")}
-              </Button>
-              <Button size="md" disabled={pending} onClick={() => save("published")}>
-                <Send className="h-4 w-4" aria-hidden />
-                {t("common.publish")}
-              </Button>
+            {visibleError ? <p className="text-sm text-rose-ink">{visibleError}</p> : null}
+            <div className="grid min-w-0 gap-3">
+              <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+                <Field
+                  label={t("editor.scheduleAt")}
+                  hint={scheduleTooEarly ? t("editor.scheduleFutureError") : t("editor.scheduleAtHint")}
+                  htmlFor="dv-sch"
+                  className="min-w-0"
+                >
+                  <Input
+                    id="dv-sch"
+                    type="date"
+                    value={scheduleAt}
+                    min={minScheduleDate}
+                    onInput={(e) => setScheduleAt(e.currentTarget.value)}
+                    onChange={(e) => setScheduleAt(e.target.value)}
+                    className={cn("min-w-0", scheduleTooEarly && "border-rose/60 focus:border-rose-ink focus:ring-rose/20")}
+                  />
+                </Field>
+                <Button
+                  variant="secondary"
+                  size="md"
+                  disabled={pending}
+                  onClick={() => save("draft")}
+                  className="w-full whitespace-nowrap sm:mt-6 sm:w-auto"
+                >
+                  {t("common.saveDraft")}
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onClick={() => save("scheduled")}
+                  disabled={!scheduleAt || scheduleTooEarly || pending}
+                  className="w-full whitespace-nowrap"
+                >
+                  {t("common.schedule")}
+                </Button>
+                <Button
+                  size="md"
+                  disabled={pending}
+                  onClick={() => save("published")}
+                  className="w-full whitespace-nowrap"
+                >
+                  <Send className="h-4 w-4" aria-hidden />
+                  {t("common.publish")}
+                </Button>
+              </div>
             </div>
           </CardBody>
         </Card>
       </div>
 
       {/* --- 会員プレビュー --- */}
-      <div className="lg:sticky lg:top-4 lg:self-start">
+      <div className="min-w-0 lg:sticky lg:top-4 lg:self-start">
         <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted">
           <Eye className="h-3.5 w-3.5" aria-hidden />
           {t("editor.previewHeading")}

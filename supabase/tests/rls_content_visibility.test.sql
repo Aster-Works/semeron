@@ -23,6 +23,21 @@ begin
   return n;
 end; $$;
 
+-- 手動確認や別テストで seed の今日デボーションに completion_logs が増えても
+-- 集計テストが揺れないよう、トランザクション内に専用デボーションを作る。
+insert into public.content_items
+  (id, church_id, author_membership_id, type, status, visibility, title, body, devotion_date)
+values
+  ('e1000000-0000-0000-0000-00000000f001',
+   '11111111-1111-1111-1111-111111111111',
+   'c1000000-0000-0000-0000-0000000000e1',
+   'devotion','published','church',
+   '{"ja":"RLS集計テスト"}'::jsonb,'{"ja":"本文"}'::jsonb,'2099-07-06');
+
+insert into public.completion_logs (church_id, content_item_id, membership_id, completed_read_at, completed_prayed_at) values
+  ('11111111-1111-1111-1111-111111111111','e1000000-0000-0000-0000-00000000f001','c1000000-0000-0000-0000-0000000000e5','2099-07-06T08:10:00+09:00','2099-07-06T08:10:00+09:00'),
+  ('11111111-1111-1111-1111-111111111111','e1000000-0000-0000-0000-00000000f001','c1000000-0000-0000-0000-0000000000e7','2099-07-06T08:20:00+09:00',null);
+
 -- users: jimi e1(owner/pastor) hana e2(elder) ken e3(prayer_team)
 --        yuki e4(leader) aoi e5(member,young) emi e6(member,author-pending) taro e7(member)
 -- content: pending e…10 / prayer_team e…13 / pastor_only e…14 / group e…15
@@ -79,26 +94,26 @@ select is(pg_temp.sees('a0000000-0000-0000-0000-0000000000e1','e1000000-0000-000
 -- ── completion_logs は本人のみ（管理者にも生ログは見せない）────────────
 select pg_temp.login('a0000000-0000-0000-0000-0000000000e5'); -- aoi（自分の完了ログあり）
 select is((select count(*)::int from public.completion_logs
-           where content_item_id='e1000000-0000-0000-0000-000000000001'),
+           where content_item_id='e1000000-0000-0000-0000-00000000f001'),
           1, 'completion: 本人は自分の完了ログを見られる');
 select pg_temp.login('a0000000-0000-0000-0000-0000000000e3'); -- ken（完了ログ無し）
 select is((select count(*)::int from public.completion_logs
-           where content_item_id='e1000000-0000-0000-0000-000000000001'),
+           where content_item_id='e1000000-0000-0000-0000-00000000f001'),
           0, 'completion: 他人の完了ログは見えない（2件あっても0）');
 select pg_temp.login('a0000000-0000-0000-0000-0000000000e7'); -- taro（自分の分のみ）
 select is((select count(*)::int from public.completion_logs
-           where content_item_id='e1000000-0000-0000-0000-000000000001'),
+           where content_item_id='e1000000-0000-0000-0000-00000000f001'),
           1, 'completion: 本人は自分の分だけ見える（他人の分は含まれない）');
 
 -- ── 匿名集計は管理者のみ。数だけ返る ───────────────────────────────────
 select pg_temp.login('a0000000-0000-0000-0000-0000000000e1'); -- jimi(admin)
-select is((select read_count from public.devotion_completion_counts('e1000000-0000-0000-0000-000000000001')),
+select is((select read_count from public.devotion_completion_counts('e1000000-0000-0000-0000-00000000f001')),
           2::bigint, 'aggregate: 管理者は読了数(2)を取得できる');
-select is((select prayed_count from public.devotion_completion_counts('e1000000-0000-0000-0000-000000000001')),
+select is((select prayed_count from public.devotion_completion_counts('e1000000-0000-0000-0000-00000000f001')),
           1::bigint, 'aggregate: 管理者は祈り数(1)を取得できる');
 select pg_temp.login('a0000000-0000-0000-0000-0000000000e5'); -- aoi(member)
 select is_empty(
-  $$ select * from public.devotion_completion_counts('e1000000-0000-0000-0000-000000000001') $$,
+  $$ select * from public.devotion_completion_counts('e1000000-0000-0000-0000-00000000f001') $$,
   'aggregate: 一般会員は集計を取得できない（空）');
 
 -- ── staff（管理者だがモデレータではない）: admin と moderator の境界 ────

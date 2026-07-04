@@ -24,8 +24,22 @@ async function handle(req: Request) {
   }
   try {
     const summary = await dispatchQueuedNotifications();
+    const logPayload = {
+      published: summary.published,
+      processed: summary.processed,
+      sent: summary.sent,
+      skipped: summary.skipped,
+      failed: summary.failed,
+      pushConfigured: summary.pushConfigured,
+    };
+    if (summary.failed > 0) {
+      console.warn("[notifications.dispatch] completed with failures", logPayload);
+    } else {
+      console.info("[notifications.dispatch] completed", logPayload);
+    }
     return NextResponse.json({ ok: true, ...summary });
   } catch (err) {
+    console.error("[notifications.dispatch] failed", err);
     return NextResponse.json(
       { ok: false, error: err instanceof Error ? err.message : "dispatch_failed" },
       { status: 500 },

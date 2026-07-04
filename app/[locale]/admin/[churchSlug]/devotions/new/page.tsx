@@ -36,6 +36,7 @@ export default async function NewDevotionPage({
           locale={locale as "ja" | "en"}
           churchId={church.id}
           churchSlug={church.slug}
+          churchTimezone={church.timezone}
           contentLanguages={church.contentLanguages}
           assistEnabled={church.pastorAssistEnabled}
         />
