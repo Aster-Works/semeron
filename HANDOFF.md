@@ -45,8 +45,16 @@
 - `npm test` PASS（14 files / 62 tests）。
 - `npm run build` PASS。
 
+### リリース状況
+- 修正コミット: `2101572 Gate prayer-only Today animation daily`。
+- `git push origin main` PASS。`origin/main` は `9fe0074..2101572` へ更新。
+- GitHub連携Vercel Production deployment成功。
+  - commit `2101572` の `context=Vercel` / `state=success` / `description=Deployment has completed` を確認。
+  - Vercel status target: `https://vercel.com/asterworks/semeron/Cj1tzms38FzpHzkhE7YDEHNNFu8B`。
+- `curl -I -L https://semeron-app.vercel.app/ja/login` で production が `HTTP/2 200` / `server: Vercel` を返すことを確認。
+
 ### 未完了
-- コミット/プッシュ/デプロイは未実施。
+- なし。
 
 ## 現在のチェックポイント — Todayアニメーション日次判定の安定化（2026-07-05 22:38 JST）
 
