@@ -21,52 +21,17 @@ import { ReflectionCard } from "./ReflectionCard";
 import { ReflectionComposer } from "./ReflectionComposer";
 import { TodayActions } from "./TodayActions";
 import { TodayPrayerCarousel } from "./TodayPrayerCarousel";
+import {
+  dailyOpenCookieName,
+  readDailyOpenFlag,
+  todayDailyOpenKey,
+  writeDailyOpenFlag,
+} from "./todayDailyAnimation";
 
 type FlowStage = 0 | 1 | 2 | 3 | 4 | 5;
 type RevealTrigger = "mount" | "in-view";
 type ScrollCueTone = "initial" | "before-prayer" | "after-prayer" | "after-response";
 type ScrollTarget = "devotion-guidance" | "prayer" | "prayer-links" | "reflection" | "recent";
-
-const DAILY_OPEN_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 3;
-
-function dailyOpenCookieName(storageKey: string) {
-  let hash = 0;
-  for (let index = 0; index < storageKey.length; index += 1) {
-    hash = (hash * 31 + storageKey.charCodeAt(index)) % 2147483647;
-  }
-  return `semeron_today_flow_${hash.toString(36)}`;
-}
-
-function hasDailyOpenCookie(cookieName: string) {
-  if (typeof document === "undefined") return false;
-  return document.cookie
-    .split(";")
-    .some((cookie) => cookie.trim() === `${cookieName}=true`);
-}
-
-function readDailyOpenFlag(storageKey: string, cookieName: string) {
-  try {
-    if (window.localStorage.getItem(storageKey) === "true") return true;
-  } catch {
-    // Some PWA/private-browser contexts reject storage access; the cookie fallback keeps the daily gate stable.
-  }
-
-  return hasDailyOpenCookie(cookieName);
-}
-
-function writeDailyOpenFlag(storageKey: string, cookieName: string) {
-  try {
-    window.localStorage.setItem(storageKey, "true");
-  } catch {
-    // Keep going so cookie fallback can still persist the daily decision.
-  }
-
-  try {
-    document.cookie = `${cookieName}=true; Max-Age=${DAILY_OPEN_COOKIE_MAX_AGE_SECONDS}; Path=/; SameSite=Lax`;
-  } catch {
-    // If both storage mechanisms are unavailable, the in-memory ref still prevents duplicate replay in this mount.
-  }
-}
 
 function cueLabel(locale: Locale, tone: ScrollCueTone) {
   if (locale !== "ja") {
@@ -126,7 +91,7 @@ export function TodayDevotionFlow({
 }) {
   const t = createT(locale);
   const roleLabels = useMemo(() => resolveRoleLabels(church, locale), [church, locale]);
-  const dailyOpenKey = `semeron:today-flow-opened:${church.id}:${todayKey}`;
+  const dailyOpenKey = todayDailyOpenKey(church.id, todayKey);
   const dailyOpenCookieKey = dailyOpenCookieName(dailyOpenKey);
   const dailyOpenDecisionKey = animationReplayKey
     ? `${dailyOpenKey}:replay:${animationReplayKey}`

@@ -3,6 +3,51 @@
 対象リポ: /Users/james/syncthing/semeron
 セッション開始: 2026-07-04 00:33 JST / 担当: Codex
 
+## 現在のチェックポイント — デボーションなし日のToday祈りアニメーション日次判定（2026-07-05 22:52 JST）
+
+### 今回の依頼
+- パイロット中、今日はデボーション配信なしにしたところ、「今日の祈り」が毎回アニメーション付きで表示されるため確認・修正する。
+
+### 確認済みの事実
+- `app/[locale]/church/[churchSlug]/today/page.tsx` のデボーションあり分岐は `TodayDevotionFlow` を通り、日次判定の対象になっている。
+- デボーションなし分岐は `GracefulReveal delayMs={140}` を直接使っており、`localStorage` / cookie fallback の日次判定を通っていなかった。
+- そのためデボーション配信なしの日は、ページ表示のたびに「今日の祈り」だけが毎回アニメーションしていた。
+- `?replayTodayAnimation=1` / `?pwaAnimationFix=...` は検証用の明示リプレイとして維持する。
+
+### 方針
+- デボーションあり・なしの両方で、Todayページ全体の同じ日次キー `semeron:today-flow-opened:<churchId>:<todayKey>` を共有する。
+- 通常URLでは1日1回だけアニメーションし、2回目以降は静的表示にする。
+- `localStorage` が使えないPWA/実機環境でも前回と同じcookie fallbackを使う。
+- 明示リプレイURLだけは従来通り毎回アニメーションする。
+
+### 実装済み
+- `app/components/member/todayDailyAnimation.ts` を追加。
+  - `TodayDevotionFlow` に入っていた日次キー生成、cookie名生成、`localStorage` / cookie fallback の読み書きを共通化。
+- `app/components/member/TodayPrayerPreviewFlow.tsx` を追加。
+  - デボーションなし日の「今日の祈り」表示に日次判定を適用。
+  - 初回通常表示は `GracefulReveal`、同日2回目以降は子要素を静的表示。
+  - DOM確認用に `data-testid="today-prayer-preview-flow"` / `data-animate-flow` / `data-animation-replay` を付与。
+- `app/[locale]/church/[churchSlug]/today/page.tsx`
+  - `!devotion` 分岐を `GracefulReveal` 直書きから `TodayPrayerPreviewFlow` に差し替え。
+- `app/components/member/TodayDevotionFlow.tsx`
+  - 日次判定ヘルパーを共通ファイルからimportする形に変更。挙動は維持。
+- `tests/unit/today-prayer-preview-flow.test.tsx` を追加。
+  - デボーションなし日の初回通常表示だけアニメーションすることを確認。
+  - 同日remountは静的表示になることを確認。
+  - `localStorage` 例外時もcookie fallbackで2回目が静的表示になることを確認。
+  - 明示リプレイキーでは同日でもアニメーションすることを確認。
+
+### 検証結果
+- `git diff --check` PASS。
+- `npm run test -- tests/unit/today-prayer-preview-flow.test.tsx tests/unit/today-devotion-flow.test.tsx tests/unit/today-prayer-carousel.test.tsx` PASS（3 files / 12 tests）。
+- `npm run typecheck` PASS。
+- `npm run lint` PASS。
+- `npm test` PASS（14 files / 62 tests）。
+- `npm run build` PASS。
+
+### 未完了
+- コミット/プッシュ/デプロイは未実施。
+
 ## 現在のチェックポイント — Todayアニメーション日次判定の安定化（2026-07-05 22:38 JST）
 
 ### 今回の依頼

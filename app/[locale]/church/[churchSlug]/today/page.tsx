@@ -8,8 +8,8 @@ import {
 } from "@/app/lib/db/queries";
 import { toDateKey } from "@/app/lib/demo/selectors";
 import { createT } from "@/app/lib/i18n";
-import { GracefulReveal } from "@/app/components/member/GracefulReveal";
 import { TodayDevotionFlow } from "@/app/components/member/TodayDevotionFlow";
+import { TodayPrayerPreviewFlow } from "@/app/components/member/TodayPrayerPreviewFlow";
 import { TodayPrayerCarousel } from "@/app/components/member/TodayPrayerCarousel";
 import { fmt, resolveRoleLabels } from "@/app/lib/roleLabels";
 import { EmptyState } from "@/app/components/ui";
@@ -79,9 +79,13 @@ export default async function TodayPage({
   return (
     <>
       {!devotion ? (
-        <GracefulReveal delayMs={140}>
+        <TodayPrayerPreviewFlow
+          churchId={church.id}
+          todayKey={todayKey}
+          animationReplayKey={animationReplayKey}
+        >
           {prayerPreview}
-        </GracefulReveal>
+        </TodayPrayerPreviewFlow>
       ) : (
         <TodayDevotionFlow
           devotion={devotion}
