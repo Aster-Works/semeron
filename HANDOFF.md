@@ -64,8 +64,20 @@
 - `supabase db advisors --local --level error --fail-on error` PASS（No issues found）。
 
 ### 未完了
-- remote Supabase migration適用。
-- コミット/プッシュ/デプロイ。
+- なし。
+
+### リリース状況
+- 修正コミット: `94c297e Harden group prayers and anonymous reflections`。
+- `git push origin main` PASS。`origin/main` は `eb32d44..94c297e` へ更新。
+- remote Supabase migration適用済み。
+  - `supabase db push --yes` は `20260705135614_group_privacy_reflection_anonymity.sql` を適用し `Finished supabase db push.` で完了。
+  - pg-delta catalog cache 警告は出たが、`supabase migration list --linked` で remote `20260705135614` を確認。
+  - `supabase db query --linked` で `supabase_migrations.schema_migrations` の `20260705135614` が `applied=1` であることを確認。
+  - `supabase db advisors --linked --level error --fail-on error` PASS（No issues found）。
+- GitHub連携Vercel Production deployment成功。
+  - commit `94c297e` の `context=Vercel` / `state=success` / `description=Deployment has completed` を確認。
+  - Vercel status target: `https://vercel.com/asterworks/semeron/AX2HBrN3EPxeqFQntQAjXs3CYD3L`。
+- `curl -I -L https://semeron-app.vercel.app/ja/login` で production が `HTTP/2 200` / `server: Vercel` を返すことを確認。
 
 ## 現在のチェックポイント — デボーションなし日のToday祈りアニメーション日次判定（2026-07-05 22:52 JST）
 
