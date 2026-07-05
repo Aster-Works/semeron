@@ -38,7 +38,7 @@
 - Vercel Cron に `/api/retention/cleanup` を追加済み。
 
 ### 次に行うこと
-- remote Supabase push とVercel production deployを完了する。
+- なし。
 
 ### 検証状況
 - `npm run db:reset` PASS。新migration `20260705180903_retention_notification_controls.sql` 適用済み。
@@ -50,6 +50,18 @@
 - `npm run build` PASS。
 - `supabase db advisors --local --level error --fail-on error` PASS（No issues found）。
 - `git diff --check` PASS。
+
+### リリース状況
+- 修正コミット: `3320ad8 Add retention cleanup and safer social controls`。
+- `git push origin main` PASS。`origin/main` は `5755c60..3320ad8` へ更新。
+- remote Supabase migration適用済み。
+  - `supabase db push --yes` は `20260705180903_retention_notification_controls.sql` を適用し `Finished supabase db push.` で完了。
+  - pg-delta catalog cache 警告は出たが、`supabase_migrations.schema_migrations` で `20260705180903` が `applied=1` であることを確認。
+  - `supabase db advisors --linked --level error --fail-on error` PASS（No issues found）。
+- GitHub連携Vercel Production deployment成功。
+  - commit `3320ad8` の `context=Vercel` / `state=success` / `description=Deployment has completed` を確認。
+  - Vercel status target: `https://vercel.com/asterworks/semeron/7fw9CQQFNVARzU1hfSQvTREAsQSw`。
+- `curl -I -L https://semeron-app.vercel.app/ja/login` で production が `HTTP/2 200` / `server: Vercel` を返すことを確認。
 
 ## 現在のチェックポイント — 教会設定の基本項目編集（2026-07-05 23:26 JST）
 
