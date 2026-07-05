@@ -65,8 +65,27 @@
 - 本番デプロイは未実施。
 - コミット/プッシュは未実施。
 
+### リリース状況（2026-07-05 21:43 JST）
+- 実装一式を `a007f50 Add pastoral follow-up and safety admin tools` として `origin/main` へpush済み。
+- Supabase remote migration 適用済み。
+  - `supabase migration list` で remote に `20260705081244` が入っていることを確認。
+  - `supabase db query --linked` で `churches.invite_code_expires_at` / `invite_code_rotated_at` の存在を確認。
+  - `eifuku-minami` に期限/発行時刻がbackfill済みであることを確認。
+  - `supabase db push` は `Finished supabase db push.` で完了。pg-delta catalog cache 警告は出たが、migration list/queryで実適用を確認済み。
+- Vercel CLI `vercel deploy --prod --yes` は既知の `asterworks` scope 認証問題で失敗。
+  - エラー: `Could not retrieve Project Settings.`
+  - Vercel connectorも同scopeで403。
+  - 代替としてGitHub連携statusを確認。
+- GitHub commit status `Vercel` は success。
+  - 対象: `a007f50`
+  - description: `Deployment has completed`
+  - target: `https://vercel.com/asterworks/semeron/CpkpvPrXZRtiPZJ2dQo5eYyt55km`
+- 本番疎通確認:
+  - `https://semeron-app.vercel.app/ja/login` が HTTP 200。
+  - `https://semeron-app.vercel.app/ja/admin/eifuku-minami/audit` は未ログイン時に `/ja/login` へredirectし、最終HTTP 200。
+
 ### 次に行うこと
-- Jimiが希望すれば、既存の「牧師に相談」差分と今回の4/5差分をまとめて commit/push/deploy する。
+- deploy status 追記コミットをpushし、GitHub/Vercel status と本番疎通を再確認する。
 
 ## 現在のチェックポイント — 「牧師に相談」実保存/通知（2026-07-05）
 
