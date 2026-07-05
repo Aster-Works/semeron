@@ -201,6 +201,7 @@ export async function postReflection(
     type: "reflection",
     status: "published",
     visibility: "church",
+    anonymous: true,
     title: {},
     body: { [locale]: body },
     published_at: new Date().toISOString(),

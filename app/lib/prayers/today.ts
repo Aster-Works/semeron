@@ -56,6 +56,12 @@ function isOpenPublishedPrayer(vm: PrayerVM, now: Date): boolean {
   return Number.isNaN(expiresAt) || expiresAt > now.getTime();
 }
 
+function isVisibleToViewer(vm: PrayerVM, viewer: Viewer): boolean {
+  if (vm.item.visibility !== "group") return true;
+  if (vm.isMine) return true;
+  return Boolean(vm.item.groupId && viewer.membership?.groupIds.includes(vm.item.groupId));
+}
+
 function isUrgent(vm: PrayerVM): boolean {
   return vm.item.sensitiveFlags?.includes("self_harm_or_immediate_danger") ?? false;
 }
@@ -84,7 +90,7 @@ export function selectTodayPrayers(
   const todayKey = toDateKey(now, viewer.church.timezone);
   const viewerSeed = viewer.membership?.id ?? "guest";
   const timezone = viewer.church.timezone;
-  const active = prayers.filter((vm) => isOpenPublishedPrayer(vm, now));
+  const active = prayers.filter((vm) => isOpenPublishedPrayer(vm, now) && isVisibleToViewer(vm, viewer));
   const selected: PrayerVM[] = [];
   const selectedIds = new Set<string>();
 

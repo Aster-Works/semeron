@@ -6,7 +6,7 @@
 -- ║  3) 完全匿名: 管理者・祈祷チームにも作者は出ない。作者本人だけ見える。  ║
 -- ╚══════════════════════════════════════════════════════════════════════╝
 begin;
-select plan(13);
+select plan(17);
 
 create function pg_temp.login(uid uuid) returns void language plpgsql as $$
 begin
@@ -131,6 +131,32 @@ select pg_temp.login('a0000000-0000-0000-0000-0000000000e6'); -- emi(member)
 select is(
   (select count(*)::int from public.church_notification_ops('11111111-1111-1111-1111-111111111111', false)),
   0, 'church_notification_ops は非管理者に空を返す');
+
+-- ── デボーション応答(reflection)は全員匿名表示 ────────────────────────
+set local role postgres;
+insert into public.content_items
+  (id, church_id, author_membership_id, type, status, visibility, title, body, anonymous, published_at)
+values
+  ('fc000000-0000-0000-0000-0000000000c1','11111111-1111-1111-1111-111111111111',
+   'c1000000-0000-0000-0000-0000000000e5','reflection','published','church',
+   '{"ja":"応答"}','{"ja":"本文"}', false, now());
+
+select is(
+  (select anonymous from public.content_items where id='fc000000-0000-0000-0000-0000000000c1'),
+  true, 'reflection: insert 時に anonymous=true が強制される');
+
+select pg_temp.login('a0000000-0000-0000-0000-0000000000e6'); -- emi(member)
+select is(
+  (select author_membership_id from public.content_feed where id='fc000000-0000-0000-0000-0000000000c1'),
+  null::uuid, 'reflection: 他者には作者が出ない');
+
+select pg_temp.login('a0000000-0000-0000-0000-0000000000e5'); -- aoi(author)
+select is(
+  (select author_membership_id from public.content_feed where id='fc000000-0000-0000-0000-0000000000c1'),
+  null::uuid, 'reflection: 作者本人にも表示用 author は出ない');
+select is(
+  public.owns_content('fc000000-0000-0000-0000-0000000000c1'),
+  true, 'reflection: 作者本人の編集可否は owns_content で判定できる');
 
 select * from finish();
 rollback;

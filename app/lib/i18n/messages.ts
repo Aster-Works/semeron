@@ -123,8 +123,8 @@ export const messages = {
   },
   "today.reflectionPost": { ja: "分かち合う", en: "Share" },
   "today.reflectionNote": {
-    ja: "短い応答は、同じ教会の仲間に届きます。牧師の問いへの答えでも大丈夫です。",
-    en: "Short reflections are shared with your church. Answering the pastor's question is welcome.",
+    ja: "短い応答は匿名で同じ教会の仲間に届きます。牧師の問いへの答えでも大丈夫です。",
+    en: "Short reflections are shared anonymously with your church. Answering the pastor's question is welcome.",
   },
   "today.churchPrayers": { ja: "教会の祈祷課題", en: "Prayer requests" },
   "todayPrayer.eyebrow": { ja: "今日、共に覚えること", en: "Praying together today" },

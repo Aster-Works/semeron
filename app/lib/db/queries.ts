@@ -55,6 +55,12 @@ export interface AuditLogVM {
 
 const anonName = (locale: Locale) => (locale === "ja" ? "匿名" : "Anonymous");
 
+function canIncludeGroupScopedRow(row: Pick<ContentFeedRow, "visibility" | "group_id" | "author_membership_id">, viewer: Viewer) {
+  if (row.visibility !== "group") return true;
+  if (!viewer.membership || !row.group_id) return false;
+  return viewer.membership.groupIds.includes(row.group_id) || row.author_membership_id === viewer.membership.id;
+}
+
 /** content_feed の行（author は RLS+マスク済み）を作者名解決付きで整える。 */
 async function attachPrayerVMs(
   supabase: SupabaseClient,
@@ -153,7 +159,8 @@ export async function getPrayerFeed(
     .eq("type", "prayer_request")
     .eq("status", "published")
     .order("published_at", { ascending: false });
-  return attachPrayerVMs(supabase, (data ?? []) as ContentFeedRow[], viewer, locale);
+  const rows = ((data ?? []) as ContentFeedRow[]).filter((row) => canIncludeGroupScopedRow(row, viewer));
+  return attachPrayerVMs(supabase, rows, viewer, locale);
 }
 
 export async function getTodayPrayerSet(
@@ -201,11 +208,14 @@ export async function getReflections(
   if (rows.length === 0) return [];
 
   const ids = rows.map((r) => r.id).filter(isString);
-  const authorIds = [...new Set(rows.map((r) => r.author_membership_id).filter(isString))];
-  const nameById = new Map<string, string>();
-  if (authorIds.length) {
-    const { data: mems } = await supabase.from("memberships").select("id, display_name").in("id", authorIds);
-    ((mems ?? []) as MembershipNameRow[]).forEach((m) => nameById.set(m.id, m.display_name));
+  const ownIds = new Set<string>();
+  if (viewer.membership) {
+    await Promise.all(
+      ids.map(async (id) => {
+        const { data: owns } = await supabase.rpc("owns_content", { content_id: id });
+        if (owns) ownIds.add(id);
+      }),
+    );
   }
   const { data: rxs } = await supabase
     .from("reactions")
@@ -226,8 +236,8 @@ export async function getReflections(
     const id = r.id ?? "";
     return {
       item: mapContent(r),
-      authorName: r.author_membership_id ? (nameById.get(r.author_membership_id) ?? anonName(locale)) : anonName(locale),
-      isMine: Boolean(viewer.membership && r.author_membership_id === viewer.membership.id),
+      authorName: anonName(locale),
+      isMine: ownIds.has(id),
       reactions: (["amen", "thanks"] as ReactionType[]).map((type) => ({
         type,
         count: count.get(`${id}:${type}`) ?? 0,
@@ -263,14 +273,17 @@ export async function getGroupPrayers(
   groupId: string,
   locale: Locale,
 ): Promise<PrayerVM[]> {
+  if (!viewer.membership?.groupIds.includes(groupId)) return [];
   const { data } = await supabase
     .from("content_feed")
     .select("*")
+    .eq("church_id", viewer.church.id)
     .eq("type", "prayer_request")
     .eq("status", "published")
     .eq("group_id", groupId)
     .order("published_at", { ascending: false });
-  return attachPrayerVMs(supabase, (data ?? []) as ContentFeedRow[], viewer, locale);
+  const rows = ((data ?? []) as ContentFeedRow[]).filter((row) => canIncludeGroupScopedRow(row, viewer));
+  return attachPrayerVMs(supabase, rows, viewer, locale);
 }
 
 /* ---------- Inbox ---------- */

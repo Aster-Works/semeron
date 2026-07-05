@@ -3,7 +3,7 @@
 -- ║ 04 §4 Visibility / §5 Status / §10 Security Test Cases                 ║
 -- ╚══════════════════════════════════════════════════════════════════════╝
 begin;
-select plan(32);
+select plan(33);
 
 create function pg_temp.login(uid uuid) returns void language plpgsql as $$
 begin
@@ -62,7 +62,11 @@ select is(pg_temp.sees('a0000000-0000-0000-0000-0000000000e7','e1000000-0000-000
 -- ── group（青年会） ────────────────────────────────────────────────────
 select is(pg_temp.sees('a0000000-0000-0000-0000-0000000000e5','e1000000-0000-0000-0000-000000000015'),1,'group: グループ員は見える');
 select is(pg_temp.sees('a0000000-0000-0000-0000-0000000000e7','e1000000-0000-0000-0000-000000000015'),0,'group: グループ外の会員は見えない');
-select is(pg_temp.sees('a0000000-0000-0000-0000-0000000000e1','e1000000-0000-0000-0000-000000000015'),1,'group: 管理者は見える');
+select is(pg_temp.sees('a0000000-0000-0000-0000-0000000000e1','e1000000-0000-0000-0000-000000000015'),0,'group: 管理者でもグループ外なら published 投稿は見えない');
+select pg_temp.login('a0000000-0000-0000-0000-0000000000e7'); -- taro (group outsider)
+select is(
+  (select count(*)::int from public.content_feed where id='e1000000-0000-0000-0000-000000000015'),
+  0, 'group: content_feed でもグループ外には出ない');
 
 -- ── anonymous_church: 行は見えるが作者は伏せる（content_feed） ─────────
 select is(pg_temp.sees('a0000000-0000-0000-0000-0000000000e7','e1000000-0000-0000-0000-000000000012'),1,'anon: 会員に行は見える');

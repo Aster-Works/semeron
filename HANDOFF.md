@@ -3,6 +3,70 @@
 対象リポ: /Users/james/syncthing/semeron
 セッション開始: 2026-07-04 00:33 JST / 担当: Codex
 
+## 現在のチェックポイント — 小グループ祈祷課題の公開範囲 + 応答匿名化（2026-07-05 23:04 JST）
+
+### 今回の依頼
+- 小グループ向けに提出した祈祷課題が他の人にも見えてしまっているため修正する。
+- デボーションへの応答は全員匿名表示にする。
+
+### 確認済みの事実
+- 既存RLSでは `published` な `visibility='group'` のコンテンツを、当該グループメンバーに加えて church admin も閲覧できる設計だった。
+- `groups` / `group_memberships` のRLSも、同一教会のactive memberなら小グループメタデータ・メンバー一覧を読める設計だった。
+- `/church/{churchSlug}/groups/{groupId}` はURL直打ち時の所属チェックをページ側でしていなかった。
+- デボーション応答(reflection)は `content_feed` の `author_membership_id` が残る場合、`getReflections` が実名を解決して `ReflectionCard` に渡していた。
+- 既存の匿名強制トリガは祈祷課題のみを対象にしており、reflection は対象外だった。
+
+### 方針
+- 小グループ向け `published` content は、作者本人 + 当該グループ所属者だけを通常閲覧可にする。
+- 管理者は未承認レビュー段階では見られるが、公開後の会員向け表示ではグループ外なら出さない。
+- 小グループ詳細ページは、会員側では当該グループ所属者だけにする。管理者の管理用途は `/admin/.../groups` 側に分ける。
+- デボーション応答は既存分も今後分も匿名表示に固定する。編集可否は作者ID表示ではなく `owns_content` RPC で判定する。
+
+### 実装済み
+- `supabase migration new group_privacy_reflection_anonymity` で `20260705135614_group_privacy_reflection_anonymity.sql` を作成。
+  - `private.can_view_content` を更新し、`published` group content の管理者例外を外した。
+  - `groups_select` / `group_memberships_select` を更新し、小グループ情報は所属者または管理者だけに限定。
+  - `private.enforce_prayer_anonymity` を更新し、reflection は常に `anonymous=true` にする。
+  - 既存reflectionを `anonymous=true` にbackfill。
+  - `private.feed_author` を更新し、reflection は本人にも管理者にも `author_membership_id` を返さない。
+  - group devotion通知も当該グループ所属者だけに送るよう更新。
+- `app/lib/db/queries.ts`
+  - prayer feed / group prayers で group-scoped row をアプリ側でも二重フィルタ。
+  - reflection の `authorName` は常に匿名名へ固定。
+  - reflection の `isMine` は `owns_content` RPC で判定。
+- `app/lib/db/actions.ts`
+  - `postReflection` が `anonymous: true` を明示してinsert。
+- `app/lib/prayers/today.ts`
+  - Today選定の安全弁として、viewerの小グループ外のgroup prayerを除外。
+- `app/[locale]/church/[churchSlug]/groups/[groupId]/page.tsx`
+  - 会員側小グループ詳細ページに所属チェックを追加。
+- `app/lib/i18n/messages.ts`
+  - 応答フォームの説明を匿名共有に合わせて更新。
+- `supabase/tests/rls_content_visibility.test.sql`
+  - group content は管理者でもグループ外ならpublished閲覧不可、content_feedにも出ないことを追加/更新。
+- `supabase/tests/rls_regressions.test.sql`
+  - 非所属者が小グループ詳細/メンバー一覧を読めないことを追加。
+- `supabase/tests/rls_anonymity.test.sql`
+  - reflection がinsert時に匿名化され、content_feed上は作者本人にもauthorが出ず、編集可否は `owns_content` で残ることを追加。
+- `tests/unit/today-prayers.test.ts`
+  - 他グループの祈祷課題がToday選定に入らない回帰テストを追加。
+
+### 検証結果
+- Supabase changelog確認: 直近のbreaking changeに今回のRLS/既存public table更新へ直接影響するものはなし。
+- `git diff --check` PASS。
+- `npm run test -- tests/unit/today-prayers.test.ts` PASS（1 file / 5 tests）。
+- `npm run typecheck` PASS。
+- `npm run lint` PASS。
+- `npm test` PASS（14 files / 63 tests）。
+- `npm run db:reset` PASS。新migration `20260705135614_group_privacy_reflection_anonymity.sql` 適用済み。
+- `npm run db:test` PASS（5 files / 107 tests）。
+- `npm run build` PASS。
+- `supabase db advisors --local --level error --fail-on error` PASS（No issues found）。
+
+### 未完了
+- remote Supabase migration適用。
+- コミット/プッシュ/デプロイ。
+
 ## 現在のチェックポイント — デボーションなし日のToday祈りアニメーション日次判定（2026-07-05 22:52 JST）
 
 ### 今回の依頼

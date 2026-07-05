@@ -111,6 +111,36 @@ describe("selectTodayPrayers", () => {
     expect(evening).toEqual(morning);
   });
 
+  it("does not select prayers scoped to another small group", () => {
+    const selected = selectTodayPrayers(
+      [
+        vm("other-group", {
+          visibility: "group",
+          groupId: "group_other",
+          prayedCount: 0,
+          viewerPrayed: false,
+        }),
+        vm("own-group", {
+          visibility: "group",
+          groupId: "group_young",
+          prayedCount: 0,
+          viewerPrayed: false,
+        }),
+        vm("church-wide", {
+          prayedCount: 0,
+          viewerPrayed: false,
+        }),
+      ],
+      viewer,
+      now,
+    );
+
+    const ids = selected.map((p) => p.item.id);
+    expect(ids).toContain("own-group");
+    expect(ids).toContain("church-wide");
+    expect(ids).not.toContain("other-group");
+  });
+
   it("rotates the fallback set when the church day changes", () => {
     const prayers = Array.from({ length: 12 }, (_, index) =>
       vm(`rotation-${index}`, { prayedCount: 5, viewerPrayed: true }),

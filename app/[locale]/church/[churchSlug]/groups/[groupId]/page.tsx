@@ -20,6 +20,7 @@ export default async function GroupDetailPage({
 
   const group = await getGroup(supabase, groupId);
   if (!group) notFound();
+  if (!viewer.membership?.groupIds.includes(group.id)) notFound();
 
   const [members, prayers] = await Promise.all([
     getGroupMembers(supabase, groupId),

@@ -4,7 +4,7 @@
 -- ║ restricted devotion notifications, duplicate published devotion.      ║
 -- ╚══════════════════════════════════════════════════════════════════════╝
 begin;
-select plan(12);
+select plan(15);
 
 create function pg_temp.login(uid uuid) returns void language plpgsql as $$
 begin
@@ -127,8 +127,18 @@ select throws_ok(
              '{"ja":"青年会へ"}'::jsonb,'{"ja":"祈ってください"}'::jsonb,'group') $$,
   '42501', null, '非所属者は group prayer を投稿できない');
 
--- group_memberships / leader_membership_id は同一教会メンバーだけ許可する。
+select is(
+  (select count(*)::int from public.groups where id = 'd1000000-0000-0000-0000-000000000001'),
+  0, '非所属者は小グループ詳細を読めない');
+select is(
+  (select count(*)::int from public.group_memberships where group_id = 'd1000000-0000-0000-0000-000000000001'),
+  0, '非所属者は小グループのメンバー一覧を読めない');
 select pg_temp.login('a0000000-0000-0000-0000-0000000000e1'); -- jimi: Eifuku owner
+select is(
+  (select count(*)::int from public.groups where id = 'd1000000-0000-0000-0000-000000000001'),
+  1, '管理者は管理画面用に小グループメタデータを読める');
+
+-- group_memberships / leader_membership_id は同一教会メンバーだけ許可する。
 select throws_ok(
   $$ insert into public.group_memberships (group_id, membership_id, role)
      values ('d1000000-0000-0000-0000-000000000001',
