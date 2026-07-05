@@ -3,6 +3,171 @@
 対象リポ: /Users/james/syncthing/semeron
 セッション開始: 2026-07-04 00:33 JST / 担当: Codex
 
+## 現在のチェックポイント — 招待リンク失効/再生成 + 監査ログ閲覧（2026-07-05）
+
+### 今回の依頼
+- 前回提案の4と5を実装する。
+- 文脈上、4=招待リンクの失効/再生成、5=監査ログ閲覧として実装中。
+- 既存未コミットの「牧師に相談」実保存/通知差分は保持したまま作業。
+
+### 実装済み
+- `supabase migration new invite_code_rotation_audit_logs` で `20260705081244_invite_code_rotation_audit_logs.sql` を作成。
+- `churches` に `invite_code_expires_at` / `invite_code_rotated_at` を追加。
+- 既存招待コードは移行時点から30日後に期限切れになるよう backfill。
+- `create_church` は新規教会作成時に30日招待コードを作るよう更新。
+- `join_church` は期限切れ招待コードを拒否するよう更新。
+- `expireInviteCode` / `rotateInviteCode` Server Action を追加。
+  - owner/pastor のみ操作可能。
+  - 再生成時は10文字の新コード、30日期限、監査ログ `invite.rotated` を記録。
+  - 失効時は `invite_code_expires_at=now()`、監査ログ `invite.expired` を記録。
+  - 監査ログには招待コード本文を残さない。
+- 設定画面の `InviteLinkCard` を操作可能にし、期限・発行時刻・失効/再生成ボタンを表示。
+- メンバー画面の招待ボタンは期限切れコードを共有できないようにした。
+- 管理ナビに「監査ログ」を追加し、`/admin/{churchSlug}/audit` ページを追加。
+  - 直近100件の監査ログを日時・実行者・操作・対象・metadata で表示。
+  - 閲覧権限は既存RLSとページ側 `isChurchAdmin` で管理者限定。
+- `tests/unit/invite-link-card.test.tsx` を追加。
+- `supabase/tests/membership_lifecycle.test.sql` に招待コード期限切れ/期限内のDB回帰テストを追加。
+
+### 変更ファイル
+- `supabase/migrations/20260705081244_invite_code_rotation_audit_logs.sql`
+- `supabase/tests/membership_lifecycle.test.sql`
+- `app/lib/demo/types.ts`
+- `app/lib/database.types.ts`
+- `app/lib/db/actions.ts`
+- `app/lib/db/map.ts`
+- `app/lib/db/queries.ts`
+- `app/components/admin/InviteLinkCard.tsx`
+- `app/components/admin/InviteButton.tsx`
+- `app/components/admin/AdminNav.tsx`
+- `app/[locale]/admin/[churchSlug]/settings/page.tsx`
+- `app/[locale]/admin/[churchSlug]/members/page.tsx`
+- `app/[locale]/admin/[churchSlug]/audit/page.tsx`
+- `app/lib/i18n/messages.ts`
+- `tests/unit/invite-link-card.test.tsx`
+- `tests/e2e/settings.spec.ts`
+- `HANDOFF.md`
+
+### 検証結果
+- `npm run typecheck` PASS。
+- `npm run lint` PASS。
+- `npm run test -- tests/unit/invite-link-card.test.tsx tests/unit/prayer-request-form.test.tsx` PASS（2 files / 4 tests）。
+- `npm test` PASS（13 files / 57 tests）。
+- `npm run build` PASS。
+- `npm run db:reset` PASS。新マイグレーション適用後、seed状態へ復帰済み。
+  - 初回reset時に pg-delta catalog cache timeout 警告が出たが reset は成功。最終resetでは警告なし。
+- `npm run db:test` PASS（5 files / 99 tests）。
+- `npx playwright test tests/e2e/settings.spec.ts` PASS（2 tests）。
+  - 途中で既に `en` 追加済みのDB状態により既存テストが一度タイムアウトしたため、テストを冪等化して再実行済み。
+- `git diff --check` PASS。
+
+### 未完了のこと
+- 本番デプロイは未実施。
+- コミット/プッシュは未実施。
+
+### 次に行うこと
+- Jimiが希望すれば、既存の「牧師に相談」差分と今回の4/5差分をまとめて commit/push/deploy する。
+
+## 現在のチェックポイント — 「牧師に相談」実保存/通知（2026-07-05）
+
+### 今回の依頼
+- 前回提案のP0-1「『牧師に相談』トグルを実装する」を実装する。
+
+### 実装済み
+- `PrayerRequestForm` が `pastorConsult` を `submitPrayerRequest` へ渡すようにした。
+- `submitPrayerRequest` が `content_items.metadata.pastor_consult_requested = true` を保存するようにした。
+- `submitPrayerRequest` 成功後、owner/pastor の active membership 宛に in-app 通知を作るようにした。
+  - 通知種別: `prayer_request_submitted_to_moderators`
+  - 遷移先: `/{locale}/admin/{churchSlug}/prayer-requests`
+  - 通知失敗は投稿をブロックせず、server log に出す。
+- 投稿IDはServer Action内で `randomUUID()` 生成し、`insert().select()` は使わない。
+  - 理由: 匿名強化後、`content_items` 直接SELECTは列レベルで制限されており、`insert().select("id")` は実行時にRLSエラーになったため。
+- 通知 `data` には `author_membership_id` を入れない。
+  - 理由: 匿名投稿の「牧師にも作者を見せない」境界を崩さないため。
+- `ContentItem` / `mapContent` が `pastorConsultRequested` を読み取るようにした。
+- モデレーションカードに「個別相談の希望があります」Calloutを表示するようにした。
+- `tests/unit/prayer-request-form.test.tsx` を追加し、トグルON時に `pastorConsult: true` がServer Actionへ渡ることを固定した。
+- `tests/e2e/pastor-consult.spec.ts` を追加し、会員投稿→管理モデレーション画面で相談希望Calloutが見えることを確認した。
+
+### 変更ファイル
+- `app/components/member/PrayerRequestForm.tsx`
+- `app/lib/db/actions.ts`
+- `app/lib/demo/types.ts`
+- `app/lib/db/map.ts`
+- `app/components/admin/ModerationCard.tsx`
+- `app/lib/i18n/messages.ts`
+- `tests/unit/prayer-request-form.test.tsx`
+- `tests/e2e/pastor-consult.spec.ts`
+- `HANDOFF.md`
+
+### 検証結果
+- `npm run typecheck` PASS。
+- `npm run test -- tests/unit/prayer-request-form.test.tsx` PASS。
+- 初回 `npx playwright test tests/e2e/pastor-consult.spec.ts` はFAIL。
+  - 原因: `insert().select("id")` が匿名強化後の `content_items` 直接SELECT制限/RLSに当たった。
+  - 修正: Server Actionで `randomUUID()` を生成し、insert後のselectを廃止。
+- `npm run db:reset && npx playwright test tests/e2e/pastor-consult.spec.ts` PASS。
+- `npm run lint` PASS。
+- `npm test` PASS（12 files / 54 tests）。
+- `npm run build` PASS。
+- `npm run db:test` PASS（5 files / 97 tests）。
+- `git diff --check` PASS。
+
+### 未完了のこと
+- 本番デプロイは未実施。
+
+### 次に行うこと
+- Jimiが希望すれば、commit/push/deployへ進む。
+
+## 現在のチェックポイント — 機能確認と今後機能提案（2026-07-05）
+
+### 今回の依頼
+- Semeronの現機能を確認し、「安心・安全・健全に利用できるアプリ」にするため今後実装すべき機能を提案する。
+- 現時点ではコード変更依頼ではなく、現状把握と優先順位づけが主目的。
+
+### 完了したこと
+- `/Users/james/checkpoint.md` を確認し、途中保存ルールを再確認した。
+- CodexメモリーのSemeron項目を確認し、直近の本番リリース、Supabase/Vercel/Playwright検証、プライバシー/テナント分離/通知修正履歴の存在を把握した。
+- `README.md`、`package.json`、`app/`、`supabase/`、`tests/`、既存 `HANDOFF.md` の冒頭を確認し、現在の機能マップ作成に着手した。
+- `git status --short` は空で、調査開始時点のワークツリーはcleanだった。
+- JimiVault `02_Area/個人/Aster Works/Semeron/` の設計/セキュリティ/ロードマップ/実装メモを確認した。
+- 主要Server Actions、Today、祈祷課題投稿/編集/モデレーション、Pastor Assist、通知dispatch、招待/参加、メンバー管理、Me画面、管理ダッシュボード、Playwright E2E範囲を確認した。
+
+### 確認済みの現機能
+- 会員向け: Today、祈り、グループ、受信、自分、設定、PWA、通知設定、退会/アカウント削除導線。
+- 管理向け: ダッシュボード、デボーション、祈祷課題モデレーション/CSV取り込み/週報、グループ、メンバー、通知、設定、Pastor Assist。
+- 安全基盤: Supabase RLS、教会分離、匿名マスク、承認制、期限切れ非表示、完了ログ本人限定、監査ログ、AI opt-in/人間レビュー前提。
+
+### 主な所見
+- 現状は「デボーションPWA」よりかなり進んでおり、教会作成/招待、認証、会員Today、祈祷課題承認、グループ、通知、管理、AI補助、人間レビュー、退会/削除まで実装済み。
+- 安全設計の土台は強い。特にRLS、教会分離、匿名sticky、公開済み祈祷課題編集時の再審査、認証済みHTMLをPWAキャッシュしない方針は維持すべき。
+- ただし、広く安心して使うには「運用・同意・緊急対応・招待管理」の層がまだ弱い。
+- 具体的な穴: `PrayerRequestForm` の `pastorConsult` トグルはUI stateのみで、`submitPrayerRequest` に渡らずDBにも保存されない。利用者が牧師に相談したつもりでも、実際には特別な通知/フラグにならない。
+- `consent_records` と `audit_logs` のDB基盤はあるが、同意取得UI/管理UI/監査ログ閲覧UIはまだ限定的または未実装に見える。
+- 招待コードは固定表示/コピーが中心で、失効・再生成・参加承認・上限・漏洩時のローテーション導線は未確認。
+
+### 検証結果
+- `npm run typecheck` PASS。
+- `npm run lint` PASS。
+- `npm test` PASS（11 files / 53 tests）。
+- `npm run build` PASS。
+- `npm run db:test` PASS（5 files / 97 tests）。
+- Playwright E2Eは今回実行せず、既存テスト内容の確認のみ。対象は会員ライフサイクル、PWAキャッシュ、設定保存。
+
+### 提案方針
+- P0: 相談トグル実保存/通知、同意記録とプライバシー/利用規約、緊急・セーフガーディング導線、招待リンク失効/再生成、監査ログ閲覧を優先。
+- P1: 通知内容のプライバシー設定、公開範囲の二重確認/二者承認、報告/修正依頼ワークフロー、モデレーター向け安全チェックリスト、データ保持/エクスポート。
+- P2: 未成年/保護者同意、教会別ポリシーテンプレート、アクセシビリティ強化、オフラインは静的/非機微に限定。
+
+### 未完了のこと
+- 実ブラウザでの会員/管理者フロー目視確認。
+- Playwright E2Eの再実行。
+- 具体的な実装作業。
+
+### 次に行うこと
+- Jimiに機能確認結果と優先実装案を返す。
+- 実装へ進む場合はP0から順に、まず `pastorConsult` の永続化/通知と同意記録UIを切るのがよい。
+
 ## 現在のチェックポイント — 全体レビュー改善（2026-07-04 午後）
 
 ### 今回の依頼

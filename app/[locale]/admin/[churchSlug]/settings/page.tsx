@@ -92,7 +92,16 @@ export default async function AdminSettingsPage({
             </div>
 
             <Field label={t("settings.inviteCode")}>
-              <InviteLinkCard locale={locale} inviteCode={church.inviteCode} />
+              <InviteLinkCard
+                locale={locale}
+                churchId={church.id}
+                churchSlug={church.slug}
+                inviteCode={church.inviteCode}
+                inviteCodeExpiresAt={church.inviteCodeExpiresAt}
+                inviteCodeRotatedAt={church.inviteCodeRotatedAt}
+                inviteCodeExpired={church.inviteCodeExpired}
+                canEdit={canEditSettings}
+              />
             </Field>
           </CardBody>
         </Card>

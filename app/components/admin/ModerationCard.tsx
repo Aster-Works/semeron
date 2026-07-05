@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CheckCircle2, UserRound } from "lucide-react";
+import { CheckCircle2, HeartHandshake, UserRound } from "lucide-react";
 import type { ContentItem, Locale, Visibility } from "@/app/lib/demo/types";
 import { useLocale } from "@/app/lib/i18n/LocaleProvider";
 import { localize } from "@/app/lib/i18n";
@@ -131,6 +131,12 @@ export function ModerationCard({
 
         {item.includesThirdParty ? (
           <Callout tone="rose">{t("moderation.thirdPartyWarn")}</Callout>
+        ) : null}
+
+        {item.pastorConsultRequested ? (
+          <Callout tone="gold" icon={HeartHandshake} title={t("moderation.pastorConsultTitle")}>
+            {t("moderation.pastorConsultBody")}
+          </Callout>
         ) : null}
 
         {/* センシティブ確認（AI）。承認とは分離。提案のみ。 */}

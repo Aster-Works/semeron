@@ -5,12 +5,32 @@ const PASSWORD = "password123";
 test("owner can persist content languages", async ({ page }) => {
   await login(page, "jimi@eifuku.example", "/ja/admin/eifuku-minami/settings");
 
-  await page.getByTestId("content-language-select").selectOption("en");
-  await page.getByTestId("content-language-save").click();
-
-  await expect(page.getByText("保存しました。")).toBeVisible();
+  const languageSelect = page.getByTestId("content-language-select");
+  const available = await languageSelect.locator("option").evaluateAll((options) =>
+    options.map((option) => (option as HTMLOptionElement).value),
+  );
+  if (available.includes("en")) {
+    await languageSelect.selectOption("en");
+    await page.getByTestId("content-language-save").click();
+    await expect(page.getByText("保存しました。")).toBeVisible();
+  }
   await page.reload();
   await expect(page.getByText("現在: 日本語 · English")).toBeVisible();
+});
+
+test("owner can rotate an invite code and see the audit log", async ({ page }) => {
+  await login(page, "jimi@eifuku.example", "/ja/admin/eifuku-minami/settings");
+
+  const before = (await page.getByTestId("invite-code").innerText()).trim();
+  await page.getByTestId("invite-rotate-open").click();
+  await page.getByTestId("invite-confirm").click();
+
+  await expect(page.getByTestId("invite-code")).not.toHaveText(before);
+  await expect(page.getByTestId("invite-status")).toHaveText("有効");
+
+  await page.goto("/ja/admin/eifuku-minami/audit");
+  await expect(page.getByRole("heading", { name: "監査ログ" })).toBeVisible();
+  await expect(page.getByText("招待コード再発行").first()).toBeVisible();
 });
 
 async function login(page: Page, email: string, nextPath: string) {

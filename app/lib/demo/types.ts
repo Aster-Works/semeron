@@ -100,6 +100,11 @@ export interface Church {
   softGateMode: SoftGateMode;
   plan: PlanTier;
   inviteCode: string;
+  /** 招待コードの期限。期限切れなら join_church は拒否する。 */
+  inviteCodeExpiresAt?: string;
+  /** 招待コードを最後に発行/再生成した時刻。 */
+  inviteCodeRotatedAt?: string;
+  inviteCodeExpired?: boolean;
   /** Pastor Assist（管理者限定AI補助）を有効にするか。既定 false（opt-in）。 */
   pastorAssistEnabled: boolean;
   /** 祈祷課題の本文を AI に送ることを許可するか。要配慮情報のため既定 false。 */
@@ -164,9 +169,11 @@ export interface ContentItem {
   requestedVisibility?: Visibility;
   anonymous?: boolean;
   includesThirdParty?: boolean;
+  pastorConsultRequested?: boolean;
   sensitiveFlags?: SensitiveFlag[];
   /** 祈祷課題の状態（回答済み/感謝報告） */
   prayerOutcome?: "open" | "answered" | "thanksgiving";
+  metadata?: Record<string, unknown>;
 
   scheduledAt?: string;
   publishedAt?: string;

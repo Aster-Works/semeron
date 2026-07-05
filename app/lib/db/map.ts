@@ -4,6 +4,7 @@
  */
 import type {
   AppNotification,
+  AuditLog,
   Church,
   ContentItem,
   Group,
@@ -18,6 +19,7 @@ type GroupRow = Tables<"groups">;
 type ContentRow = Tables<"content_items"> | Tables<"content_feed">;
 type NotificationOpsRow = Database["public"]["Functions"]["church_notification_ops"]["Returns"][number];
 type NotificationRow = Tables<"notifications"> | NotificationOpsRow;
+type AuditLogRow = Tables<"audit_logs">;
 
 const loc = (v: Json | null | undefined): Localized => {
   if (!v || typeof v !== "object" || Array.isArray(v)) return {};
@@ -29,7 +31,13 @@ const roleLabels = (v: Json | null | undefined): Record<string, Localized> => {
   return v as Record<string, Localized>;
 };
 
+const metadata = (v: Json | null | undefined): Record<string, unknown> => {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return {};
+  return v as Record<string, unknown>;
+};
+
 export function mapChurch(r: ChurchRow): Church {
+  const inviteCodeExpiresAt = r.invite_code_expires_at ?? undefined;
   return {
     id: r.id,
     slug: r.slug,
@@ -42,6 +50,9 @@ export function mapChurch(r: ChurchRow): Church {
     softGateMode: r.soft_gate_mode as Church["softGateMode"],
     plan: r.plan as Church["plan"],
     inviteCode: r.invite_code,
+    inviteCodeExpiresAt,
+    inviteCodeRotatedAt: r.invite_code_rotated_at ?? undefined,
+    inviteCodeExpired: inviteCodeExpiresAt ? Date.parse(inviteCodeExpiresAt) <= Date.now() : false,
     pastorAssistEnabled: r.pastor_assist_enabled ?? false,
     allowPrayerAi: r.allow_prayer_ai ?? false,
     roleLabels: roleLabels(r.role_labels),
@@ -74,6 +85,7 @@ export function mapGroup(r: GroupRow): Group {
 }
 
 export function mapContent(r: ContentRow): ContentItem {
+  const meta = metadata(r.metadata);
   return {
     id: r.id ?? "",
     churchId: r.church_id ?? "",
@@ -93,8 +105,10 @@ export function mapContent(r: ContentRow): ContentItem {
     requestedVisibility: (r.requested_visibility ?? undefined) as ContentItem["requestedVisibility"],
     anonymous: r.anonymous ?? false,
     includesThirdParty: r.includes_third_party ?? false,
+    pastorConsultRequested: meta.pastor_consult_requested === true,
     sensitiveFlags: (r.sensitive_flags ?? []) as ContentItem["sensitiveFlags"],
     prayerOutcome: (r.prayer_outcome ?? undefined) as ContentItem["prayerOutcome"],
+    metadata: meta,
     scheduledAt: r.scheduled_at ?? undefined,
     publishedAt: r.published_at ?? undefined,
     expiresAt: r.expires_at ?? undefined,
@@ -119,5 +133,18 @@ export function mapNotification(r: NotificationRow): AppNotification {
     failureReason: r.failure_reason ?? undefined,
     createdAt: r.created_at,
     read: r.read ?? false,
+  };
+}
+
+export function mapAuditLog(r: AuditLogRow): AuditLog {
+  return {
+    id: r.id,
+    churchId: r.church_id ?? "",
+    actorMembershipId: r.actor_membership_id ?? undefined,
+    action: r.action,
+    targetType: r.target_type,
+    targetId: r.target_id ?? undefined,
+    metadata: metadata(r.metadata),
+    createdAt: r.created_at,
   };
 }

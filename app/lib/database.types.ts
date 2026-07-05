@@ -65,6 +65,8 @@ export type Database = {
           default_locale: string
           id: string
           invite_code: string
+          invite_code_expires_at: string | null
+          invite_code_rotated_at: string | null
           morning_notification_time: string | null
           name: Json
           pastor_assist_enabled: boolean
@@ -83,6 +85,8 @@ export type Database = {
           default_locale?: string
           id?: string
           invite_code: string
+          invite_code_expires_at?: string | null
+          invite_code_rotated_at?: string | null
           morning_notification_time?: string | null
           name?: Json
           pastor_assist_enabled?: boolean
@@ -101,6 +105,8 @@ export type Database = {
           default_locale?: string
           id?: string
           invite_code?: string
+          invite_code_expires_at?: string | null
+          invite_code_rotated_at?: string | null
           morning_notification_time?: string | null
           name?: Json
           pastor_assist_enabled?: boolean
@@ -877,6 +883,8 @@ export type Database = {
           default_locale: string
           id: string
           invite_code: string
+          invite_code_expires_at: string | null
+          invite_code_rotated_at: string | null
           morning_notification_time: string | null
           name: Json
           pastor_assist_enabled: boolean
@@ -911,6 +919,8 @@ export type Database = {
           default_locale: string
           id: string
           invite_code: string
+          invite_code_expires_at: string | null
+          invite_code_rotated_at: string | null
           morning_notification_time: string | null
           name: Json
           pastor_assist_enabled: boolean
@@ -1130,4 +1140,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

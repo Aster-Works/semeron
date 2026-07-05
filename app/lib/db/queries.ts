@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Tables } from "@/app/lib/database.types";
 import type {
   AppNotification,
+  AuditLog,
   Church,
   ContentItem,
   Group,
@@ -16,9 +17,10 @@ import type {
 } from "@/app/lib/demo/types";
 import { toDateKey } from "@/app/lib/demo/selectors";
 import { selectTodayPrayers } from "@/app/lib/prayers/today";
-import { mapContent, mapGroup, mapMembership, mapNotification } from "./map";
+import { mapAuditLog, mapContent, mapGroup, mapMembership, mapNotification } from "./map";
 
 type ContentFeedRow = Tables<"content_feed">;
+type AuditLogRow = Tables<"audit_logs">;
 type MembershipRow = Tables<"memberships">;
 type GroupRow = Tables<"groups">;
 type ReactionRow = Pick<Tables<"reactions">, "content_item_id" | "membership_id" | "type">;
@@ -45,6 +47,10 @@ export interface ReflectionVM {
   authorName: string;
   isMine: boolean;
   reactions: { type: ReactionType; count: number; active: boolean }[];
+}
+export interface AuditLogVM {
+  log: AuditLog;
+  actorName: string | null;
 }
 
 const anonName = (locale: Locale) => (locale === "ja" ? "匿名" : "Anonymous");
@@ -381,6 +387,39 @@ export async function getChurchNotifications(supabase: SupabaseClient, churchId:
   // 受信者・content連結を含まない配信メタデータのみ（匿名解除の逆引きを封じる definer RPC）。
   const { data } = await supabase.rpc("church_notification_ops", { target_church: churchId });
   return (data ?? []).map(mapNotification);
+}
+
+export async function getAuditLogs(
+  supabase: SupabaseClient,
+  churchId: string,
+  limit = 100,
+): Promise<AuditLogVM[]> {
+  const { data } = await supabase
+    .from("audit_logs")
+    .select("*")
+    .eq("church_id", churchId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  const rows = (data ?? []) as AuditLogRow[];
+  if (rows.length === 0) return [];
+
+  const actorIds = [...new Set(rows.map((r) => r.actor_membership_id).filter(isString))];
+  const nameById = new Map<string, string>();
+  if (actorIds.length > 0) {
+    const { data: mems } = await supabase
+      .from("memberships")
+      .select("id, display_name")
+      .in("id", actorIds);
+    ((mems ?? []) as MembershipNameRow[]).forEach((m) => nameById.set(m.id, m.display_name));
+  }
+
+  return rows.map((row) => {
+    const log = mapAuditLog(row);
+    return {
+      log,
+      actorName: log.actorMembershipId ? (nameById.get(log.actorMembershipId) ?? null) : null,
+    };
+  });
 }
 
 /* ---------- Admin dashboard ---------- */

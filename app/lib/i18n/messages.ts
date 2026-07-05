@@ -53,6 +53,7 @@ export const messages = {
   "adminNav.groups": { ja: "グループ", en: "Groups" },
   "adminNav.members": { ja: "メンバー", en: "Members" },
   "adminNav.notifications": { ja: "通知", en: "Notifications" },
+  "adminNav.audit": { ja: "監査ログ", en: "Audit Logs" },
   "adminNav.settings": { ja: "設定", en: "Settings" },
   "adminNav.backToMember": { ja: "会員画面へ", en: "Member view" },
 
@@ -531,6 +532,14 @@ export const messages = {
     ja: "本人以外の情報を含みます。同意と公開範囲に注意してください。",
     en: "Includes another person's information. Check consent and visibility carefully.",
   },
+  "moderation.pastorConsultTitle": {
+    ja: "個別相談の希望があります",
+    en: "Pastoral follow-up requested",
+  },
+  "moderation.pastorConsultBody": {
+    ja: "投稿者は牧師との個別の相談を希望しています。公開判断とは分けて、必要に応じて直接フォローしてください。",
+    en: "The author asked to talk with a pastor personally. Handle this separately from the publish decision and follow up directly if needed.",
+  },
   "moderation.decisionNote": { ja: "判断メモ（監査に残ります）", en: "Decision note (recorded in audit log)" },
 
   // --- CSV 取り込み ---
@@ -666,6 +675,21 @@ export const messages = {
     ja: "Web Push が失敗しても、アプリ内通知とメールでフォローします。通知でアプリが止まることはありません。",
     en: "If Web Push fails, in-app and email follow up. Notifications never block the app.",
   },
+
+  // --- audit logs (admin) ---
+  "audit.title": { ja: "監査ログ", en: "Audit logs" },
+  "audit.description": {
+    ja: "権限変更・承認・削除・招待コード操作など、安全運用に関わる履歴を確認します。",
+    en: "Review safety-relevant history such as role changes, moderation, deletion, and invite-code actions.",
+  },
+  "audit.empty": { ja: "監査ログはまだありません。", en: "No audit logs yet." },
+  "audit.colWhen": { ja: "日時", en: "When" },
+  "audit.colActor": { ja: "実行者", en: "Actor" },
+  "audit.colAction": { ja: "操作", en: "Action" },
+  "audit.colTarget": { ja: "対象", en: "Target" },
+  "audit.colDetails": { ja: "詳細", en: "Details" },
+  "audit.unknownActor": { ja: "不明または削除済み", en: "Unknown or deleted" },
+
   // 通知チャネル
   "channel.in_app": { ja: "アプリ内", en: "In-app" },
   "channel.email": { ja: "メール", en: "Email" },

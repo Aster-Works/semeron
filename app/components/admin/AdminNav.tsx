@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Bell,
   BookOpen,
+  FileClock,
   HeartHandshake,
   LayoutDashboard,
   Settings,
@@ -24,6 +25,7 @@ export type AdminSection =
   | "groups"
   | "members"
   | "notifications"
+  | "audit"
   | "settings";
 
 const ITEMS: { key: AdminSection; path: string; icon: LucideIcon; label: MessageId }[] = [
@@ -33,6 +35,7 @@ const ITEMS: { key: AdminSection; path: string; icon: LucideIcon; label: Message
   { key: "groups", path: "groups", icon: Users, label: "adminNav.groups" },
   { key: "members", path: "members", icon: UserRound, label: "adminNav.members" },
   { key: "notifications", path: "notifications", icon: Bell, label: "adminNav.notifications" },
+  { key: "audit", path: "audit", icon: FileClock, label: "adminNav.audit" },
   { key: "settings", path: "settings", icon: Settings, label: "adminNav.settings" },
 ];
 

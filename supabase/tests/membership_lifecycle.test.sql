@@ -3,7 +3,7 @@
 -- ║ 休止・退会・管理者による除外・通知対象除外の安全柵。                  ║
 -- ╚══════════════════════════════════════════════════════════════════════╝
 begin;
-select plan(23);
+select plan(25);
 
 create function pg_temp.login(uid uuid) returns void language plpgsql as $$
 begin
@@ -61,6 +61,27 @@ select throws_ok(
        '11111111-1111-1111-1111-111111111111'::uuid,
        'c1000000-0000-0000-0000-0000000000e7'::uuid) $$,
   '42501', null, '一般会員は他メンバーを教会から外せない');
+
+-- 招待コードは期限切れなら既存会員の再アクセスにも使えない。
+select pg_temp.as_postgres();
+update public.churches
+   set invite_code_expires_at = now() - interval '1 minute'
+ where id = '11111111-1111-1111-1111-111111111111';
+
+select pg_temp.login('a0000000-0000-0000-0000-0000000000e1'); -- jimi
+select throws_ok(
+  $$ select public.join_church('EIFUKU-2026', 'Jimi') $$,
+  '22023', null, '期限切れの招待コードでは参加できない');
+
+select pg_temp.as_postgres();
+update public.churches
+   set invite_code_expires_at = now() + interval '1 day'
+ where id = '11111111-1111-1111-1111-111111111111';
+
+select pg_temp.login('a0000000-0000-0000-0000-0000000000e1'); -- jimi
+select lives_ok(
+  $$ select public.join_church('EIFUKU-2026', 'Jimi') $$,
+  '期限内の招待コードは引き続き使える');
 
 select pg_temp.login('a0000000-0000-0000-0000-0000000000e1'); -- jimi: owner/pastor
 select throws_ok(

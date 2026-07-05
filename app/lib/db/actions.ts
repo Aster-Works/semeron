@@ -1,5 +1,6 @@
 "use server";
 
+import { randomBytes, randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -25,6 +26,17 @@ import type { Locale, ReactionType, Visibility } from "@/app/lib/demo/types";
 import { CONTENT_LANGUAGES } from "@/app/lib/i18n/languages";
 
 const CONTENT_LANGUAGE_CODES = new Set(CONTENT_LANGUAGES.map((l) => l.code));
+const INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const INVITE_CODE_TTL_DAYS = 30;
+
+function generateInviteCode(length = 10): string {
+  const bytes = randomBytes(length);
+  return Array.from(bytes, (b) => INVITE_CODE_ALPHABET[b % INVITE_CODE_ALPHABET.length]).join("");
+}
+
+function inviteExpiryIso(): string {
+  return new Date(Date.now() + INVITE_CODE_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+}
 
 /* ---------- Auth ---------- */
 export async function signInWithPassword(email: string, password: string): Promise<ActionResult> {
@@ -257,6 +269,7 @@ export async function submitPrayerRequest(input: {
   visibility: Visibility;
   anonymous: boolean;
   includesThirdParty: boolean;
+  pastorConsult: boolean;
   groupId?: string | null;
   expiresAt?: string | null;
 }): Promise<ActionResult> {
@@ -283,7 +296,9 @@ export async function submitPrayerRequest(input: {
   // 選んだ場合もトグル同様に匿名扱いとし、後段のモデレーションで公開範囲が
   // 変わっても匿名が剥がれないようにする（DBトリガでも同不変条件を保証）。
   const anonymous = input.anonymous || input.visibility === "anonymous_church";
+  const contentId = randomUUID();
   const { error } = await supabase.from("content_items").insert({
+    id: contentId,
     church_id: input.churchId,
     group_id: groupId,
     author_membership_id: membershipId,
@@ -297,10 +312,81 @@ export async function submitPrayerRequest(input: {
     includes_third_party: input.includesThirdParty,
     expires_at: expiresAt,
     prayer_outcome: "open",
+    metadata: input.pastorConsult ? { pastor_consult_requested: true } : {},
   });
   if (error) return { ok: false, error: error.message };
+  if (input.pastorConsult) {
+    await notifyPastorConsultRequested({
+      churchId: input.churchId,
+      churchSlug: input.churchSlug,
+      locale: input.locale,
+      contentId,
+    });
+  }
   revalidatePath(`/${input.locale}/church/${input.churchSlug}/prayers`);
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/prayer-requests`);
+  revalidatePath("/", "layout");
   return { ok: true };
+}
+
+async function notifyPastorConsultRequested(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  contentId: string;
+}): Promise<void> {
+  try {
+    const admin = createAdminClient();
+    const { data: recipients, error } = await admin
+      .from("memberships")
+      .select("id, membership_roles!inner(role)")
+      .eq("church_id", input.churchId)
+      .eq("status", "active")
+      .in("membership_roles.role", ["owner", "pastor"]);
+
+    if (error) {
+      console.error(`[prayer] pastor consult recipient lookup failed: ${error.message}`);
+      return;
+    }
+
+    type RecipientRow = { id: string; membership_roles?: { role: string }[] | null };
+    const recipientIds = [
+      ...new Set(((recipients ?? []) as RecipientRow[]).map((r) => r.id).filter(Boolean)),
+    ];
+    if (recipientIds.length === 0) return;
+
+    const targetPath = `/${input.locale}/admin/${input.churchSlug}/prayer-requests`;
+    const { error: insertError } = await admin.from("notifications").insert(
+      recipientIds.map((recipientId) => ({
+        church_id: input.churchId,
+        recipient_membership_id: recipientId,
+        type: "prayer_request_submitted_to_moderators",
+        channel: "in_app",
+        title: {
+          ja: "個別相談の希望があります",
+          en: "Pastoral follow-up requested",
+        },
+        body: {
+          ja: "祈祷課題の確認画面で内容を確認してください。",
+          en: "Review the request in the moderation queue.",
+        },
+        data: {
+          content_item_id: input.contentId,
+          target_path: targetPath,
+          pastor_consult_requested: true,
+        },
+      })),
+    );
+    if (insertError) {
+      console.error(`[prayer] pastor consult notification insert failed: ${insertError.message}`);
+    }
+  } catch (err) {
+    console.error(
+      `[prayer] pastor consult notification failed: ${
+        err instanceof Error ? err.message : "unknown error"
+      }`,
+    );
+  }
 }
 
 /**
@@ -582,6 +668,91 @@ export async function updateChurchSettings(input: {
   if (!data || data.length === 0) return { ok: false, error: "not permitted" };
   revalidatePath(`/${input.locale}/admin/${input.churchSlug}/settings`);
   return { ok: true };
+}
+
+/** 現在の招待コードを即時失効させる（owner/pastor 限定）。 */
+export async function expireInviteCode(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const me = await myMembership(supabase, input.churchId);
+  if (!me) return { ok: false, error: "not a member" };
+  if (!canManageMembers(me.roles)) return { ok: false, error: "owner/pastor role required" };
+
+  const expiredAt = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("churches")
+    .update({ invite_code_expires_at: expiredAt })
+    .eq("id", input.churchId)
+    .select("id")
+    .maybeSingle();
+  if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: "not permitted" };
+
+  await supabase.from("audit_logs").insert({
+    church_id: input.churchId,
+    actor_membership_id: me.id,
+    action: "invite.expired",
+    target_type: "church",
+    target_id: input.churchId,
+    metadata: { expired_at: expiredAt },
+  });
+
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/settings`);
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/members`);
+  return { ok: true };
+}
+
+/** 新しい30日招待コードを発行する（owner/pastor 限定）。 */
+export async function rotateInviteCode(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const me = await myMembership(supabase, input.churchId);
+  if (!me) return { ok: false, error: "not a member" };
+  if (!canManageMembers(me.roles)) return { ok: false, error: "owner/pastor role required" };
+
+  const rotatedAt = new Date().toISOString();
+  const expiresAt = inviteExpiryIso();
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const code = generateInviteCode();
+    const { data, error } = await supabase
+      .from("churches")
+      .update({
+        invite_code: code,
+        invite_code_expires_at: expiresAt,
+        invite_code_rotated_at: rotatedAt,
+      })
+      .eq("id", input.churchId)
+      .select("id, invite_code, invite_code_expires_at, invite_code_rotated_at")
+      .maybeSingle();
+
+    if (error?.code === "23505") continue;
+    if (error) return { ok: false, error: error.message };
+    if (!data) return { ok: false, error: "not permitted" };
+
+    await supabase.from("audit_logs").insert({
+      church_id: input.churchId,
+      actor_membership_id: me.id,
+      action: "invite.rotated",
+      target_type: "church",
+      target_id: input.churchId,
+      metadata: {
+        expires_at: expiresAt,
+        rotated_at: rotatedAt,
+      },
+    });
+
+    revalidatePath(`/${input.locale}/admin/${input.churchSlug}/settings`);
+    revalidatePath(`/${input.locale}/admin/${input.churchSlug}/members`);
+    return { ok: true, data };
+  }
+
+  return { ok: false, error: "could not generate invite code" };
 }
 
 /* ---------- 配信言語（owner/pastor 限定=RLS）---------- */

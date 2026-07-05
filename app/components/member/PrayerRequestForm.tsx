@@ -95,6 +95,7 @@ export function PrayerRequestForm({
         groupId: visibility === "group" ? groupId : null,
         anonymous,
         includesThirdParty: thirdParty,
+        pastorConsult,
         expiresAt: expiry || null,
       });
       if (res.ok) setSubmitted(true);

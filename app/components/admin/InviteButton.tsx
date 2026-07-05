@@ -13,18 +13,22 @@ import { Button } from "@/app/components/ui";
 export function InviteButton({
   locale,
   inviteCode,
+  inviteCodeExpired = false,
   churchName,
 }: {
   locale: Locale;
   inviteCode: string;
+  inviteCodeExpired?: boolean;
   churchName: string;
 }) {
   const { t } = useLocale();
   const ja = locale === "ja";
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const expired = inviteCodeExpired;
 
   const invite = async () => {
+    if (expired) return;
     const url = `${window.location.origin}/${locale}/join/${inviteCode}`;
     const text = ja
       ? `「${churchName}」の Semeron への招待です。リンクを開いて参加してください。`
@@ -50,9 +54,9 @@ export function InviteButton({
   };
 
   return (
-    <Button variant="secondary" size="sm" onClick={invite}>
+    <Button variant="secondary" size="sm" onClick={invite} disabled={expired}>
       {copied ? <Check className="h-4 w-4 text-sage-ink" aria-hidden /> : <UserPlus className="h-4 w-4" aria-hidden />}
-      {copied ? (ja ? "リンクをコピーしました" : "Link copied") : t("members.invite")}
+      {expired ? (ja ? "招待停止中" : "Invite expired") : copied ? (ja ? "リンクをコピーしました" : "Link copied") : t("members.invite")}
     </Button>
   );
 }

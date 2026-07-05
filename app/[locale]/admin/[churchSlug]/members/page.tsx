@@ -123,6 +123,7 @@ export default async function AdminMembersPage({
       <InviteButton
         locale={locale}
         inviteCode={church.inviteCode}
+        inviteCodeExpired={church.inviteCodeExpired}
         churchName={localize(church.name, locale, church.defaultLocale)}
       />
     </div>
