@@ -34,6 +34,7 @@ type GroupMembershipWithMember = {
 };
 
 const isString = (value: unknown): value is string => typeof value === "string" && value.length > 0;
+const SOCIAL_REACTIONS: ReactionType[] = ["prayed", "amen", "thanks"];
 
 export interface PrayerVM {
   item: ContentItem;
@@ -41,6 +42,7 @@ export interface PrayerVM {
   prayedCount: number;
   viewerPrayed: boolean;
   isMine: boolean;
+  reactions?: { type: ReactionType; count: number; active: boolean }[];
 }
 export interface ReflectionVM {
   item: ContentItem;
@@ -82,17 +84,22 @@ async function attachPrayerVMs(
     ((mems ?? []) as MembershipNameRow[]).forEach((m) => nameById.set(m.id, m.display_name));
   }
 
-  // prayed 数 + 自分が祈ったか
+  // 「祈っています / アーメン / 感謝」の静かなリアクション。
   const { data: rxs } = await supabase
     .from("reactions")
     .select("content_item_id, membership_id, type")
     .in("content_item_id", ids)
-    .eq("type", "prayed");
-  const prayedCount = new Map<string, number>();
-  const viewerPrayed = new Set<string>();
+    .in("type", SOCIAL_REACTIONS);
+  const reactionCount = new Map<string, number>();
+  const viewerReactions = new Map<string, Set<ReactionType>>();
   ((rxs ?? []) as ReactionRow[]).forEach((r) => {
-    prayedCount.set(r.content_item_id, (prayedCount.get(r.content_item_id) ?? 0) + 1);
-    if (viewer.membership && r.membership_id === viewer.membership.id) viewerPrayed.add(r.content_item_id);
+    const type = r.type as ReactionType;
+    const k = `${r.content_item_id}:${type}`;
+    reactionCount.set(k, (reactionCount.get(k) ?? 0) + 1);
+    if (viewer.membership && r.membership_id === viewer.membership.id) {
+      if (!viewerReactions.has(r.content_item_id)) viewerReactions.set(r.content_item_id, new Set());
+      viewerReactions.get(r.content_item_id)!.add(type);
+    }
   });
 
   return rows.map((r) => {
@@ -101,12 +108,19 @@ async function attachPrayerVMs(
     const authorName = r.author_membership_id
       ? (nameById.get(r.author_membership_id) ?? anonName(locale))
       : anonName(locale);
+    const active = viewerReactions.get(id);
+    const reactions = SOCIAL_REACTIONS.map((type) => ({
+      type,
+      count: reactionCount.get(`${id}:${type}`) ?? 0,
+      active: active?.has(type) ?? false,
+    }));
     return {
       item,
       authorName,
-      prayedCount: prayedCount.get(id) ?? 0,
-      viewerPrayed: viewerPrayed.has(id),
+      prayedCount: reactions.find((r) => r.type === "prayed")?.count ?? 0,
+      viewerPrayed: active?.has("prayed") ?? false,
       isMine: Boolean(viewer.membership && r.author_membership_id === viewer.membership.id),
+      reactions,
     };
   });
 }
@@ -221,7 +235,7 @@ export async function getReflections(
     .from("reactions")
     .select("content_item_id, membership_id, type")
     .in("content_item_id", ids)
-    .in("type", ["amen", "thanks"]);
+    .in("type", SOCIAL_REACTIONS);
   const count = new Map<string, number>();
   const mine = new Map<string, Set<string>>();
   ((rxs ?? []) as ReactionRow[]).forEach((r) => {
@@ -238,7 +252,7 @@ export async function getReflections(
       item: mapContent(r),
       authorName: anonName(locale),
       isMine: ownIds.has(id),
-      reactions: (["amen", "thanks"] as ReactionType[]).map((type) => ({
+      reactions: SOCIAL_REACTIONS.map((type) => ({
         type,
         count: count.get(`${id}:${type}`) ?? 0,
         active: mine.get(id)?.has(type) ?? false,
@@ -294,6 +308,8 @@ export async function getInbox(supabase: SupabaseClient, viewer: Viewer): Promis
     .select("*")
     .eq("recipient_membership_id", viewer.membership.id)
     .eq("channel", "in_app")
+    .is("archived_at", null)
+    .eq("muted_by_recipient", false)
     .order("created_at", { ascending: false });
   return (data ?? []).map(mapNotification);
 }
@@ -304,6 +320,8 @@ export async function getUnreadInboxCount(supabase: SupabaseClient, viewer: View
     .select("id", { count: "exact", head: true })
     .eq("recipient_membership_id", viewer.membership.id)
     .eq("channel", "in_app")
+    .is("archived_at", null)
+    .eq("muted_by_recipient", false)
     .eq("read", false);
   return count ?? 0;
 }

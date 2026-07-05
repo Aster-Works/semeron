@@ -8,6 +8,7 @@ import { ChurchBasicsEditor } from "@/app/components/admin/ChurchBasicsEditor";
 import { ContentLanguagesEditor } from "@/app/components/admin/ContentLanguagesEditor";
 import { InviteLinkCard } from "@/app/components/admin/InviteLinkCard";
 import { PastorAssistSettingsEditor } from "@/app/components/admin/PastorAssistSettingsEditor";
+import { RetentionPolicyEditor } from "@/app/components/admin/RetentionPolicyEditor";
 import { RoleLabelsEditor } from "@/app/components/admin/RoleLabelsEditor";
 import {
   Callout,
@@ -78,6 +79,19 @@ export default async function AdminSettingsPage({
                 canEdit={canEditSettings}
               />
             </Field>
+          </CardBody>
+        </Card>
+
+        {/* --- 保持期間ポリシー / 自動クリーンアップ --- */}
+        <Card>
+          <CardBody>
+            <RetentionPolicyEditor
+              locale={locale}
+              churchId={church.id}
+              churchSlug={church.slug}
+              initial={church.retentionPolicy}
+              canEdit={canEditSettings}
+            />
           </CardBody>
         </Card>
 

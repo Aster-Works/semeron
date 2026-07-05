@@ -71,6 +71,7 @@ export type Database = {
           name: Json
           pastor_assist_enabled: boolean
           plan: string
+          retention_policy: Json
           role_labels: Json
           slug: string
           soft_gate_mode: string
@@ -91,6 +92,7 @@ export type Database = {
           name?: Json
           pastor_assist_enabled?: boolean
           plan?: string
+          retention_policy?: Json
           role_labels?: Json
           slug: string
           soft_gate_mode?: string
@@ -111,6 +113,7 @@ export type Database = {
           name?: Json
           pastor_assist_enabled?: boolean
           plan?: string
+          retention_policy?: Json
           role_labels?: Json
           slug?: string
           soft_gate_mode?: string
@@ -545,13 +548,16 @@ export type Database = {
       }
       notifications: {
         Row: {
+          archived_at: string | null
           body: Json | null
+          category: string
           channel: string
           church_id: string
           created_at: string
           data: Json
           failure_reason: string | null
           id: string
+          muted_by_recipient: boolean
           processing_started_at: string | null
           read: boolean
           recipient_membership_id: string | null
@@ -562,13 +568,16 @@ export type Database = {
           type: string
         }
         Insert: {
+          archived_at?: string | null
           body?: Json | null
+          category?: string
           channel: string
           church_id: string
           created_at?: string
           data?: Json
           failure_reason?: string | null
           id?: string
+          muted_by_recipient?: boolean
           processing_started_at?: string | null
           read?: boolean
           recipient_membership_id?: string | null
@@ -579,13 +588,16 @@ export type Database = {
           type: string
         }
         Update: {
+          archived_at?: string | null
           body?: Json | null
+          category?: string
           channel?: string
           church_id?: string
           created_at?: string
           data?: Json
           failure_reason?: string | null
           id?: string
+          muted_by_recipient?: boolean
           processing_started_at?: string | null
           read?: boolean
           recipient_membership_id?: string | null
@@ -853,6 +865,7 @@ export type Database = {
         Args: { p_only_failed?: boolean; target_church: string }
         Returns: {
           body: Json
+          category: string
           channel: string
           church_id: string
           created_at: string
@@ -889,6 +902,7 @@ export type Database = {
           name: Json
           pastor_assist_enabled: boolean
           plan: string
+          retention_policy: Json
           role_labels: Json
           slug: string
           soft_gate_mode: string
@@ -925,6 +939,7 @@ export type Database = {
           name: Json
           pastor_assist_enabled: boolean
           plan: string
+          retention_policy: Json
           role_labels: Json
           slug: string
           soft_gate_mode: string
@@ -991,6 +1006,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      run_retention_cleanup: { Args: { target_church?: string }; Returns: Json }
       update_my_display_name: {
         Args: { p_church: string; p_display_name: string }
         Returns: undefined

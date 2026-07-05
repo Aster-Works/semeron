@@ -22,13 +22,26 @@ import {
 } from "@/app/lib/db/accountDeletion";
 import { createAdminClient } from "@/app/lib/supabase/admin";
 import { createServerSupabase } from "@/app/lib/supabase/server";
-import type { Locale, ReactionType, SoftGateMode, Visibility } from "@/app/lib/demo/types";
+import type { Locale, ReactionType, RetentionPolicy, SoftGateMode, Visibility } from "@/app/lib/demo/types";
 import { CONTENT_LANGUAGES } from "@/app/lib/i18n/languages";
 
 const CONTENT_LANGUAGE_CODES = new Set(CONTENT_LANGUAGES.map((l) => l.code));
 const INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const INVITE_CODE_TTL_DAYS = 30;
 const SOFT_GATE_MODES = new Set(["gentle", "focused", "off"]);
+const ADMIN_REVIEW_ROLES = ["owner", "pastor", "elder", "staff"];
+
+const RETENTION_RULES: Record<
+  keyof RetentionPolicy,
+  { fallback: number; min: number; max: number }
+> = {
+  reflectionVisibleDays: { fallback: 30, min: 7, max: 3650 },
+  notificationReadDays: { fallback: 30, min: 7, max: 3650 },
+  notificationUnreadDays: { fallback: 90, min: 14, max: 3650 },
+  adminNotificationDays: { fallback: 180, min: 30, max: 3650 },
+  reactionIdentityDays: { fallback: 90, min: 7, max: 3650 },
+  auditLogDays: { fallback: 730, min: 180, max: 3650 },
+};
 
 function generateInviteCode(length = 10): string {
   const bytes = randomBytes(length);
@@ -59,6 +72,26 @@ function localizedStringRecord(value: unknown): Record<string, string> {
   return Object.fromEntries(
     Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
   );
+}
+
+function jsonObjectRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
+function normalizeRetentionPolicy(value: Partial<RetentionPolicy>): RetentionPolicy | null {
+  const entries = Object.entries(RETENTION_RULES) as [
+    keyof RetentionPolicy,
+    { fallback: number; min: number; max: number },
+  ][];
+  const next = {} as RetentionPolicy;
+  for (const [key, rule] of entries) {
+    const raw = value[key];
+    const n = typeof raw === "number" ? raw : Number(raw);
+    if (!Number.isFinite(n)) return null;
+    next[key] = Math.max(rule.min, Math.min(rule.max, Math.trunc(n)));
+  }
+  return next;
 }
 
 /* ---------- Auth ---------- */
@@ -385,6 +418,7 @@ async function notifyPastorConsultRequested(input: {
         church_id: input.churchId,
         recipient_membership_id: recipientId,
         type: "prayer_request_submitted_to_moderators",
+        category: "prayer",
         channel: "in_app",
         title: {
           ja: "個別相談の希望があります",
@@ -681,6 +715,7 @@ export async function updateChurchSettings(input: {
   softGateMode?: SoftGateMode;
   pastorAssistEnabled?: boolean;
   allowPrayerAi?: boolean;
+  retentionPolicy?: Partial<RetentionPolicy>;
 }): Promise<ActionResult> {
   const supabase = await createServerSupabase();
   const me = await myMembership(supabase, input.churchId);
@@ -689,7 +724,7 @@ export async function updateChurchSettings(input: {
 
   const { data: current, error: currentError } = await supabase
     .from("churches")
-    .select("id, name, timezone, morning_notification_time, soft_gate_mode, pastor_assist_enabled, allow_prayer_ai")
+    .select("id, name, timezone, morning_notification_time, soft_gate_mode, pastor_assist_enabled, allow_prayer_ai, retention_policy")
     .eq("id", input.churchId)
     .maybeSingle();
   if (currentError) return { ok: false, error: currentError.message };
@@ -702,6 +737,7 @@ export async function updateChurchSettings(input: {
     soft_gate_mode?: SoftGateMode;
     pastor_assist_enabled?: boolean;
     allow_prayer_ai?: boolean;
+    retention_policy?: RetentionPolicy;
   } = {};
 
   if (input.churchName !== undefined) {
@@ -729,6 +765,11 @@ export async function updateChurchSettings(input: {
   }
   if (input.pastorAssistEnabled !== undefined) patch.pastor_assist_enabled = input.pastorAssistEnabled;
   if (input.allowPrayerAi !== undefined) patch.allow_prayer_ai = input.allowPrayerAi;
+  if (input.retentionPolicy !== undefined) {
+    const policy = normalizeRetentionPolicy(input.retentionPolicy);
+    if (!policy) return { ok: false, error: "invalid retention policy" };
+    patch.retention_policy = policy;
+  }
   if (Object.keys(patch).length === 0) return { ok: true };
   const { data, error } = await supabase
     .from("churches")
@@ -974,10 +1015,173 @@ export async function markAllNotificationsRead(input: {
     .from("notifications")
     .update({ read: true })
     .eq("recipient_membership_id", membershipId)
+    .is("archived_at", null)
+    .eq("muted_by_recipient", false)
     .eq("read", false);
   if (error) return { ok: false, error: error.message };
   revalidatePath(`/${input.locale}/church/${input.churchSlug}/inbox`);
   return { ok: true };
+}
+
+/** 自分宛ての通知を通知センターから隠す。 */
+export async function muteNotification(input: {
+  churchSlug: string;
+  locale: Locale;
+  notificationId: string;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const { data, error } = await supabase
+    .from("notifications")
+    .update({
+      read: true,
+      muted_by_recipient: true,
+      archived_at: new Date().toISOString(),
+    })
+    .eq("id", input.notificationId)
+    .select("id");
+  if (error) return { ok: false, error: error.message };
+  if (!data || data.length === 0) return { ok: false, error: "not found or not permitted" };
+  revalidatePath(`/${input.locale}/church/${input.churchSlug}/inbox`);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** 会員が投稿について管理者レビューを依頼する。 */
+export async function requestAdminReview(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  contentId: string;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const me = await myMembership(supabase, input.churchId);
+  if (!me) return { ok: false, error: "not a member" };
+
+  const { data: visibleContent } = await supabase
+    .from("content_feed")
+    .select("id, type, status")
+    .eq("id", input.contentId)
+    .eq("church_id", input.churchId)
+    .maybeSingle();
+  if (!visibleContent) return { ok: false, error: "not found or not permitted" };
+  if (visibleContent.status === "archived" || visibleContent.status === "rejected") {
+    return { ok: false, error: "content is not reviewable" };
+  }
+
+  const admin = createAdminClient();
+  const requestedAt = new Date().toISOString();
+  const { data: current, error: currentError } = await admin
+    .from("content_items")
+    .select("id, metadata")
+    .eq("id", input.contentId)
+    .eq("church_id", input.churchId)
+    .maybeSingle();
+  if (currentError) return { ok: false, error: currentError.message };
+  if (!current) return { ok: false, error: "content not found" };
+
+  const metadata = jsonObjectRecord(current.metadata);
+  const history = Array.isArray(metadata.admin_review_requests)
+    ? metadata.admin_review_requests.slice(-9)
+    : [];
+  const nextMetadata = {
+    ...metadata,
+    admin_review_requested: true,
+    admin_review_requested_at: requestedAt,
+    admin_review_requested_by: me.id,
+    admin_review_request_count: Number(metadata.admin_review_request_count ?? 0) + 1,
+    admin_review_requests: [...history, { at: requestedAt, by: me.id }],
+  };
+
+  const { error: updateError } = await admin
+    .from("content_items")
+    .update({ metadata: nextMetadata })
+    .eq("id", input.contentId)
+    .eq("church_id", input.churchId);
+  if (updateError) return { ok: false, error: updateError.message };
+
+  const { data: recipients, error: recipientError } = await admin
+    .from("memberships")
+    .select("id, membership_roles!inner(role)")
+    .eq("church_id", input.churchId)
+    .eq("status", "active")
+    .in("membership_roles.role", ADMIN_REVIEW_ROLES);
+  if (recipientError) return { ok: false, error: recipientError.message };
+
+  type RecipientRow = { id: string; membership_roles?: { role: string }[] | null };
+  const recipientIds = [
+    ...new Set(((recipients ?? []) as RecipientRow[]).map((r) => r.id).filter(Boolean)),
+  ];
+  const targetPath = `/${input.locale}/admin/${input.churchSlug}/prayer-requests`;
+  if (recipientIds.length > 0) {
+    const { error: insertError } = await admin.from("notifications").insert(
+      recipientIds.map((recipientId) => ({
+        church_id: input.churchId,
+        recipient_membership_id: recipientId,
+        type: "admin_review_requested",
+        category: "admin",
+        channel: "in_app",
+        title: {
+          ja: "投稿の確認依頼があります",
+          en: "A post needs admin review",
+        },
+        body: {
+          ja: "会員から投稿の確認依頼が届きました。管理画面で確認してください。",
+          en: "A member requested review for a post. Please check the admin screen.",
+        },
+        data: {
+          content_item_id: input.contentId,
+          requested_by: me.id,
+          target_path: targetPath,
+        },
+      })),
+    );
+    if (insertError) return { ok: false, error: insertError.message };
+  }
+
+  await admin.from("audit_logs").insert({
+    church_id: input.churchId,
+    actor_membership_id: me.id,
+    action: "content.review_requested",
+    target_type: "content_item",
+    target_id: input.contentId,
+    metadata: { content_type: visibleContent.type },
+  });
+
+  revalidatePath(`/${input.locale}/church/${input.churchSlug}/prayers`);
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/notifications`);
+  return { ok: true };
+}
+
+/** owner/pastor が保持期間クリーンアップを手動実行する。 */
+export async function runRetentionCleanupNow(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const me = await myMembership(supabase, input.churchId);
+  if (!me) return { ok: false, error: "not a member" };
+  if (!canManageMembers(me.roles)) return { ok: false, error: "owner/pastor role required" };
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("run_retention_cleanup", {
+    target_church: input.churchId,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  await admin.from("audit_logs").insert({
+    church_id: input.churchId,
+    actor_membership_id: me.id,
+    action: "retention.cleanup_run",
+    target_type: "church",
+    target_id: input.churchId,
+    metadata: data && typeof data === "object" ? data : {},
+  });
+
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/settings`);
+  revalidatePath(`/${input.locale}/church/${input.churchSlug}/inbox`);
+  revalidatePath("/", "layout");
+  return { ok: true, data };
 }
 
 /* ═════════════ グループ管理（管理者・RLS groups_write/group_memberships_write）═════════════ */

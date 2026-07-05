@@ -84,6 +84,9 @@ export default async function AdminNotificationsPage({
                           {t("notifications.colType")}
                         </th>
                         <th scope="col" className="px-4 py-3 font-medium">
+                          {t("notifications.colCategory")}
+                        </th>
+                        <th scope="col" className="px-4 py-3 font-medium">
                           {t("notifications.colChannel")}
                         </th>
                         <th scope="col" className="px-4 py-3 font-medium">
@@ -106,6 +109,11 @@ export default async function AdminNotificationsPage({
                               <p className="mt-0.5 text-ink text-balance-safe">
                                 {localize(n.title, locale, church.defaultLocale) || "—"}
                               </p>
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge tone="neutral">
+                                {t(`notificationCategory.${n.category}` as MessageId)}
+                              </Badge>
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-ink-soft">
                               {t(`channel.${n.channel}` as MessageId)}
@@ -150,6 +158,10 @@ export default async function AdminNotificationsPage({
                       </div>
 
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+                        <span>
+                          {t("notifications.colCategory")}:{" "}
+                          {t(`notificationCategory.${n.category}` as MessageId)}
+                        </span>
                         <span>
                           {t("notifications.colChannel")}: {t(`channel.${n.channel}` as MessageId)}
                         </span>

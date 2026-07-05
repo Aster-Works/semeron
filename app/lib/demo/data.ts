@@ -24,6 +24,7 @@ import type {
   ModerationReview,
   Reaction,
 } from "./types";
+import { DEFAULT_RETENTION_POLICY } from "./types";
 
 const L = (ja: string, en: string): Localized => ({ ja, en });
 
@@ -60,6 +61,7 @@ export const churches: Church[] = [
     inviteCode: "EIFUKU-2026",
     pastorAssistEnabled: true, // デモ: 永福南は Pastor Assist を有効化
     allowPrayerAi: false, // 祈祷本文の AI 送信は既定オフ（opt-in）
+    retentionPolicy: DEFAULT_RETENTION_POLICY,
     roleLabels: {},
   },
   {
@@ -76,7 +78,8 @@ export const churches: Church[] = [
     inviteCode: "GRACE-2026",
     pastorAssistEnabled: false,
     allowPrayerAi: false,
-  roleLabels: {},
+    retentionPolicy: DEFAULT_RETENTION_POLICY,
+    roleLabels: {},
   },
 ];
 
@@ -627,6 +630,7 @@ export const notifications: AppNotification[] = [
     churchId: "ch_eifuku",
     recipientMembershipId: "mem_e_aoi",
     type: "daily_devotion_published",
+    category: "today",
     channel: "in_app",
     title: L("今日のみことばが届きました", "Today's Word has arrived"),
     body: L("詩篇 121:1–2「山に向かって目を上げる」", "Psalm 121:1–2 'Lifting Our Eyes to the Hills'"),
@@ -634,12 +638,14 @@ export const notifications: AppNotification[] = [
     sentAt: T.todayMorning,
     createdAt: T.todayMorning,
     read: false,
+    mutedByRecipient: false,
   },
   {
     id: "nt2",
     churchId: "ch_eifuku",
     recipientMembershipId: "mem_e_taro",
     type: "prayer_request_approved",
+    category: "prayer",
     channel: "in_app",
     title: L("祈祷課題が共有されました", "Your prayer request was shared"),
     body: L("「転職の決断のために」が教会全体に共有されました。", "'For a job decision' was shared with the whole church."),
@@ -647,12 +653,14 @@ export const notifications: AppNotification[] = [
     sentAt: T.weekAgo,
     createdAt: T.weekAgo,
     read: true,
+    mutedByRecipient: false,
   },
   {
     id: "nt3",
     churchId: "ch_eifuku",
     recipientMembershipId: "mem_e_taro",
     type: "prayer_request_prayed",
+    category: "social",
     channel: "in_app",
     title: L("あなたの祈祷課題が覚えられています", "Someone is praying with you"),
     body: L("2人があなたの祈祷課題のために祈りました。", "2 people prayed for your request."),
@@ -660,6 +668,7 @@ export const notifications: AppNotification[] = [
     sentAt: T.weekAgo,
     createdAt: T.weekAgo,
     read: false,
+    mutedByRecipient: false,
   },
   // 通知失敗（管理画面 Notifications で失敗として表示する例）
   {
@@ -667,12 +676,14 @@ export const notifications: AppNotification[] = [
     churchId: "ch_eifuku",
     recipientMembershipId: "mem_e_yuki",
     type: "daily_devotion_published",
+    category: "today",
     channel: "web_push",
     title: L("今日のみことばが届きました", "Today's Word has arrived"),
     body: L("Web Push（未購読の端末）", "Web Push (device not subscribed)"),
     status: "failed",
     failureReason: "no_push_subscription",
     createdAt: T.todayMorning,
+    mutedByRecipient: false,
   },
 ];
 

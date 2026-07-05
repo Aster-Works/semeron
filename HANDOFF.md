@@ -3,6 +3,54 @@
 対象リポ: /Users/james/syncthing/semeron
 セッション開始: 2026-07-04 00:33 JST / 担当: Codex
 
+## 現在のチェックポイント — 保持期間・通知整理・リアクション・検索・レビュー依頼（2026-07-06）
+
+### 今回の依頼
+- 保持期間ポリシー、通知センターの整理、「祈っています/アーメン/感謝」のリアクション、投稿検索、「ミュート、管理者レビュー依頼」、自動クリーンアップ＋設定画面を実装する。
+- Tokenリミットに気をつけ、必ずDeployまで完了する。
+
+### 初期確認
+- 既存DBには `content_items` / `reactions` / `notifications` / `audit_logs` があり、`reactions.type` は既に `amen` / `prayed` / `thanks` / `read` を許可している。
+- `churches` には朝の通知時間などの設定編集が前回実装済みだが、保持期間ポリシーは未実装。
+- 通知は既存 `notifications` テーブルに集約されているが、カテゴリ・非表示/ミュート・保持期間クリーンアップの列は未実装。
+- 祈祷課題一覧は検索UIなし。祈祷課題カードは主に「祈っています」のみ表示。
+
+### 方針
+- 新テーブルを増やしすぎず、既存 `churches.retention_policy` と `notifications` 拡張で安全に実装する。
+- 自動クリーンアップはSupabase関数 + Vercel Cron routeで日次実行にする。
+- 管理者レビュー依頼は既存 `content_items.metadata` と管理者向け通知を使って、投稿に対する安全な通報/確認依頼として実装する。
+- UIは管理者設定、通知センター、祈祷課題一覧/カードに限定して変更する。
+
+### 進行中
+- DBマイグレーションを追加済み。
+  - `churches.retention_policy` を追加。
+  - `notifications.category` / `archived_at` / `muted_by_recipient` を追加。
+  - `public.run_retention_cleanup(target_church uuid default null)` を追加。
+  - 通知トリガにカテゴリを付与。
+- Server Actionsを追加/拡張済み。
+  - `updateChurchSettings` が保持期間ポリシーを保存可能。
+  - `muteNotification`、`requestAdminReview`、`runRetentionCleanupNow` を追加。
+- UIを追加/更新済み。
+  - 設定画面に `RetentionPolicyEditor` を追加。
+  - 通知センターにカテゴリ絞り込みと非表示操作を追加。
+  - 祈祷課題一覧に検索フォームを追加。
+  - 祈祷課題カードに「祈っています / アーメン / 感謝」と管理者確認依頼を追加。
+- Vercel Cron に `/api/retention/cleanup` を追加済み。
+
+### 次に行うこと
+- remote Supabase push とVercel production deployを完了する。
+
+### 検証状況
+- `npm run db:reset` PASS。新migration `20260705180903_retention_notification_controls.sql` 適用済み。
+- `npm run db:types` PASS。`app/lib/database.types.ts` 再生成済み。
+- `npm run typecheck` PASS。
+- `npm run lint` PASS。
+- `npm test` PASS（16 files / 67 tests）。
+- `npm run db:test` PASS（6 files / 117 tests）。
+- `npm run build` PASS。
+- `supabase db advisors --local --level error --fail-on error` PASS（No issues found）。
+- `git diff --check` PASS。
+
 ## 現在のチェックポイント — 教会設定の基本項目編集（2026-07-05 23:26 JST）
 
 ### 今回の依頼

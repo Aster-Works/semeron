@@ -82,6 +82,30 @@ export type SoftGateMode = "gentle" | "focused" | "off";
 
 export type PlanTier = "free" | "small" | "standard" | "pro";
 
+export interface RetentionPolicy {
+  /** 匿名応答を会員画面に表示し続ける日数。期限後は archived。 */
+  reflectionVisibleDays: number;
+  /** 既読通知の保持日数。 */
+  notificationReadDays: number;
+  /** 未読通知の保持日数。 */
+  notificationUnreadDays: number;
+  /** 管理・セキュリティ通知の保持日数。 */
+  adminNotificationDays: number;
+  /** リアクションの会員ID付き生データを保持する日数。 */
+  reactionIdentityDays: number;
+  /** 監査ログの保持日数。 */
+  auditLogDays: number;
+}
+
+export const DEFAULT_RETENTION_POLICY: RetentionPolicy = {
+  reflectionVisibleDays: 30,
+  notificationReadDays: 30,
+  notificationUnreadDays: 90,
+  adminNotificationDays: 180,
+  reactionIdentityDays: 90,
+  auditLogDays: 730,
+};
+
 export interface Church {
   id: string;
   slug: string;
@@ -109,6 +133,8 @@ export interface Church {
   pastorAssistEnabled: boolean;
   /** 祈祷課題の本文を AI に送ることを許可するか。要配慮情報のため既定 false。 */
   allowPrayerAi: boolean;
+  /** 教会ごとの通知・応答・リアクション・監査ログ保持設定。 */
+  retentionPolicy: RetentionPolicy;
   /**
    * 役割の「呼び方」の教会別カスタム（例: elder→執事）。権限は変わらない。
    * 形: { elder: { ja: "執事", en: "Deacon" }, ... }。未指定は標準ラベル。
@@ -221,7 +247,17 @@ export type NotificationType =
   | "prayer_request_approved"
   | "prayer_request_rejected"
   | "prayer_request_prayed"
-  | "weekly_summary_to_admins";
+  | "weekly_summary_to_admins"
+  | "admin_review_requested";
+
+export type NotificationCategory =
+  | "today"
+  | "prayer"
+  | "admin"
+  | "security"
+  | "system"
+  | "social"
+  | "general";
 
 export interface AppNotification {
   id: string;
@@ -231,12 +267,16 @@ export interface AppNotification {
   channel: "in_app" | "email" | "web_push";
   title: Localized;
   body?: Localized;
+  data?: Record<string, unknown>;
+  category: NotificationCategory;
   status: "queued" | "sent" | "failed" | "skipped";
   scheduledAt?: string;
   sentAt?: string;
   failureReason?: string;
   createdAt: string;
   read?: boolean;
+  archivedAt?: string;
+  mutedByRecipient: boolean;
 }
 
 export interface AuditLog {

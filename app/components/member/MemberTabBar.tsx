@@ -62,6 +62,8 @@ export function MemberTabBar({
       .select("id", { count: "exact", head: true })
       .eq("recipient_membership_id", membershipId)
       .eq("channel", "in_app")
+      .is("archived_at", null)
+      .eq("muted_by_recipient", false)
       .eq("read", false)
       .then(({ count: c }) => {
         if (typeof c === "number") setCount(c);

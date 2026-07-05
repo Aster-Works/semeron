@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { Church, ContentItem, Membership, Viewer } from "@/app/lib/demo/types";
+import {
+  DEFAULT_RETENTION_POLICY,
+  type Church,
+  type ContentItem,
+  type Membership,
+  type Viewer,
+} from "@/app/lib/demo/types";
 import type { PrayerVM } from "@/app/lib/db/queries";
 import { selectTodayPrayers } from "@/app/lib/prayers/today";
 
@@ -17,6 +23,7 @@ const church: Church = {
   inviteCode: "invite",
   pastorAssistEnabled: false,
   allowPrayerAi: false,
+  retentionPolicy: DEFAULT_RETENTION_POLICY,
   roleLabels: {},
 };
 

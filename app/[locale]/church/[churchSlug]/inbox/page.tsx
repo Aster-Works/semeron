@@ -25,6 +25,7 @@ export default async function InboxPage({
     body: localize(n.body, locale as "ja" | "en", church.defaultLocale),
     dateLabel: formatMonthDay(n.createdAt, locale as "ja" | "en", church.timezone),
     read: Boolean(n.read),
+    category: n.category,
   }));
 
   return (

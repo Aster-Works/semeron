@@ -17,6 +17,7 @@ import {
 } from "@/app/components/ui";
 import { ReactionBar } from "./ReactionBar";
 import { MyPrayerActions } from "./MyPrayerActions";
+import { ReviewRequestButton } from "./ReviewRequestButton";
 
 /** 祈祷課題カード（実データ VM 版）。公開範囲・作者（匿名尊重）・状態を明示。 */
 export function PrayerCard({
@@ -37,6 +38,12 @@ export function PrayerCard({
   const displayName = showSelfAnon ? t("prayer.anonSelf") : authorName;
   const titleText = localize(item.title, locale, church.defaultLocale);
   const bodyText = localize(item.body, locale, church.defaultLocale);
+  const reviewRequested = item.metadata?.admin_review_requested === true;
+  const reactions = vm.reactions ?? [
+    { type: "prayed" as const, count: vm.prayedCount, active: vm.viewerPrayed },
+    { type: "amen" as const, count: 0, active: false },
+    { type: "thanks" as const, count: 0, active: false },
+  ];
 
   return (
     <Card as="article">
@@ -80,7 +87,7 @@ export function PrayerCard({
             <ReactionBar
               churchId={church.id}
               contentId={item.id}
-              reactions={[{ type: "prayed", count: vm.prayedCount, active: vm.viewerPrayed }]}
+              reactions={reactions}
             />
           ) : (
             <span />
@@ -92,6 +99,16 @@ export function PrayerCard({
             </span>
           ) : null}
         </div>
+
+        {item.status === "published" ? (
+          <ReviewRequestButton
+            churchId={church.id}
+            churchSlug={church.slug}
+            locale={locale}
+            contentId={item.id}
+            alreadyRequested={reviewRequested}
+          />
+        ) : null}
 
         {isMine && item.status !== "rejected" && item.status !== "archived" ? (
           <MyPrayerActions

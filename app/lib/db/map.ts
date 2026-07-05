@@ -21,6 +21,15 @@ type NotificationOpsRow = Database["public"]["Functions"]["church_notification_o
 type NotificationRow = Tables<"notifications"> | NotificationOpsRow;
 type AuditLogRow = Tables<"audit_logs">;
 
+const DEFAULT_RETENTION_POLICY: Church["retentionPolicy"] = {
+  reflectionVisibleDays: 30,
+  notificationReadDays: 30,
+  notificationUnreadDays: 90,
+  adminNotificationDays: 180,
+  reactionIdentityDays: 90,
+  auditLogDays: 730,
+};
+
 const loc = (v: Json | null | undefined): Localized => {
   if (!v || typeof v !== "object" || Array.isArray(v)) return {};
   return v as Localized;
@@ -36,8 +45,62 @@ const metadata = (v: Json | null | undefined): Record<string, unknown> => {
   return v as Record<string, unknown>;
 };
 
+const positiveNumber = (
+  value: unknown,
+  fallback: number,
+  min: number,
+  max: number,
+): number => {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, Math.trunc(n)));
+};
+
+const retentionPolicy = (v: Json | null | undefined): Church["retentionPolicy"] => {
+  const raw = metadata(v);
+  return {
+    reflectionVisibleDays: positiveNumber(
+      raw.reflectionVisibleDays,
+      DEFAULT_RETENTION_POLICY.reflectionVisibleDays,
+      7,
+      3650,
+    ),
+    notificationReadDays: positiveNumber(
+      raw.notificationReadDays,
+      DEFAULT_RETENTION_POLICY.notificationReadDays,
+      7,
+      3650,
+    ),
+    notificationUnreadDays: positiveNumber(
+      raw.notificationUnreadDays,
+      DEFAULT_RETENTION_POLICY.notificationUnreadDays,
+      14,
+      3650,
+    ),
+    adminNotificationDays: positiveNumber(
+      raw.adminNotificationDays,
+      DEFAULT_RETENTION_POLICY.adminNotificationDays,
+      30,
+      3650,
+    ),
+    reactionIdentityDays: positiveNumber(
+      raw.reactionIdentityDays,
+      DEFAULT_RETENTION_POLICY.reactionIdentityDays,
+      7,
+      3650,
+    ),
+    auditLogDays: positiveNumber(
+      raw.auditLogDays,
+      DEFAULT_RETENTION_POLICY.auditLogDays,
+      180,
+      3650,
+    ),
+  };
+};
+
 export function mapChurch(r: ChurchRow): Church {
   const inviteCodeExpiresAt = r.invite_code_expires_at ?? undefined;
+  const row = r as ChurchRow & { retention_policy?: Json };
   return {
     id: r.id,
     slug: r.slug,
@@ -55,6 +118,7 @@ export function mapChurch(r: ChurchRow): Church {
     inviteCodeExpired: inviteCodeExpiresAt ? Date.parse(inviteCodeExpiresAt) <= Date.now() : false,
     pastorAssistEnabled: r.pastor_assist_enabled ?? false,
     allowPrayerAi: r.allow_prayer_ai ?? false,
+    retentionPolicy: retentionPolicy(row.retention_policy),
     roleLabels: roleLabels(r.role_labels),
   };
 }
@@ -119,6 +183,12 @@ export function mapContent(r: ContentRow): ContentItem {
 }
 
 export function mapNotification(r: NotificationRow): AppNotification {
+  const row = r as NotificationRow & {
+    data?: Json;
+    category?: string | null;
+    archived_at?: string | null;
+    muted_by_recipient?: boolean | null;
+  };
   return {
     id: r.id,
     churchId: r.church_id,
@@ -127,12 +197,16 @@ export function mapNotification(r: NotificationRow): AppNotification {
     channel: r.channel as AppNotification["channel"],
     title: loc(r.title),
     body: r.body ? loc(r.body) : undefined,
+    data: metadata(row.data),
+    category: (row.category ?? "general") as AppNotification["category"],
     status: r.status as AppNotification["status"],
     scheduledAt: r.scheduled_at ?? undefined,
     sentAt: r.sent_at ?? undefined,
     failureReason: r.failure_reason ?? undefined,
     createdAt: r.created_at,
     read: r.read ?? false,
+    archivedAt: row.archived_at ?? undefined,
+    mutedByRecipient: row.muted_by_recipient ?? false,
   };
 }
 

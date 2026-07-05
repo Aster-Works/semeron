@@ -164,6 +164,17 @@ export const messages = {
     ja: "まだ共有された祈祷課題はありません。必要があれば、{pastor}にだけ送ることもできます。",
     en: "No prayer requests have been shared yet. You can also send one to your {pastor} only.",
   },
+  "prayer.search": { ja: "祈祷課題を検索", en: "Search prayer requests" },
+  "prayer.searchPlaceholder": {
+    ja: "タイトル・本文から検索",
+    en: "Search titles and text",
+  },
+  "prayer.searchSubmit": { ja: "検索", en: "Search" },
+  "prayer.searchClear": { ja: "解除", en: "Clear" },
+  "prayer.searchEmpty": {
+    ja: "検索条件に一致する祈祷課題はありません。",
+    en: "No prayer requests match your search.",
+  },
   "prayer.prayedCount": { ja: "人が祈っています", en: "praying" },
   "prayer.pray": { ja: "覚えて祈る", en: "Pray for this" },
   "prayer.mineBadge": { ja: "あなたの投稿", en: "Your request" },
@@ -193,6 +204,12 @@ export const messages = {
   "prayer.withdrawBody": {
     ja: "この祈祷課題を削除します。祈った記録も一緒に消え、元には戻せません。",
     en: "This deletes the request and its prayer records. This cannot be undone.",
+  },
+  "prayer.requestReview": { ja: "確認を依頼", en: "Request review" },
+  "prayer.reviewRequested": { ja: "確認依頼を送りました。", en: "Review requested." },
+  "prayer.reviewRequestError": {
+    ja: "確認依頼を送れませんでした。",
+    en: "Could not request review.",
   },
   "reflection.edited": { ja: "編集済み", en: "edited" },
   "reflection.edit": { ja: "編集する", en: "Edit" },
@@ -256,6 +273,19 @@ export const messages = {
   },
   "inbox.markAllRead": { ja: "すべて既読にする", en: "Mark all as read" },
   "inbox.tapToRead": { ja: "タップで既読にする", en: "Tap to mark as read" },
+  "inbox.filter.all": { ja: "すべて", en: "All" },
+  "inbox.filter.unread": { ja: "未読", en: "Unread" },
+  "inbox.filter.today": { ja: "今日", en: "Today" },
+  "inbox.filter.prayer": { ja: "祈り", en: "Prayer" },
+  "inbox.filter.admin": { ja: "管理", en: "Admin" },
+  "inbox.filter.social": { ja: "リアクション", en: "Reactions" },
+  "inbox.mute": { ja: "非表示", en: "Hide" },
+  "inbox.muted": { ja: "非表示にしました。", en: "Hidden." },
+  "inbox.muteError": { ja: "非表示にできませんでした。", en: "Could not hide." },
+  "inbox.noneInFilter": {
+    ja: "この条件の通知はありません。",
+    en: "No notifications in this view.",
+  },
 
   // --- me ---
   "me.title": { ja: "自分", en: "Me" },
@@ -679,6 +709,7 @@ export const messages = {
   // --- notifications (admin) ---
   "notifications.title": { ja: "通知", en: "Notifications" },
   "notifications.colType": { ja: "種類", en: "Type" },
+  "notifications.colCategory": { ja: "分類", en: "Category" },
   "notifications.colChannel": { ja: "チャネル", en: "Channel" },
   "notifications.colStatus": { ja: "状態", en: "Status" },
   "notifications.colWhen": { ja: "日時", en: "When" },
@@ -690,6 +721,13 @@ export const messages = {
     ja: "Web Push が失敗しても、アプリ内通知とメールでフォローします。通知でアプリが止まることはありません。",
     en: "If Web Push fails, in-app and email follow up. Notifications never block the app.",
   },
+  "notificationCategory.today": { ja: "今日", en: "Today" },
+  "notificationCategory.prayer": { ja: "祈り", en: "Prayer" },
+  "notificationCategory.admin": { ja: "管理", en: "Admin" },
+  "notificationCategory.security": { ja: "安全", en: "Security" },
+  "notificationCategory.system": { ja: "システム", en: "System" },
+  "notificationCategory.social": { ja: "リアクション", en: "Reactions" },
+  "notificationCategory.general": { ja: "一般", en: "General" },
 
   // --- audit logs (admin) ---
   "audit.title": { ja: "監査ログ", en: "Audit logs" },
@@ -717,6 +755,7 @@ export const messages = {
   "notifType.prayer_request_rejected": { ja: "祈祷課題の却下", en: "Prayer request rejected" },
   "notifType.prayer_request_prayed": { ja: "祈りのリアクション", en: "Prayer reaction" },
   "notifType.weekly_summary_to_admins": { ja: "週次サマリー", en: "Weekly summary" },
+  "notifType.admin_review_requested": { ja: "管理者レビュー依頼", en: "Admin review requested" },
 
   // --- settings ---
   "settings.menu": { ja: "設定", en: "Settings" },
@@ -757,6 +796,44 @@ export const messages = {
   },
   "settings.plan": { ja: "プラン", en: "Plan" },
   "settings.inviteCode": { ja: "招待コード", en: "Invite code" },
+  "settings.retention.title": { ja: "保持期間ポリシー", en: "Retention policy" },
+  "settings.retention.hint": {
+    ja: "通知・応答・リアクション・監査ログを残す日数を設定します。古い祈祷課題本文は自動削除せず、応答は期限後にアーカイブされます。",
+    en: "Set how long notifications, reflections, reactions, and audit logs are kept. Old prayer request text is not auto-deleted; reflections are archived after their window.",
+  },
+  "settings.retention.reflections": { ja: "応答の表示日数", en: "Reflection visibility days" },
+  "settings.retention.reflectionsHint": {
+    ja: "期限を過ぎたデボーション応答はアーカイブされます。",
+    en: "Devotion reflections are archived after this many days.",
+  },
+  "settings.retention.readNotifications": { ja: "既読通知", en: "Read notifications" },
+  "settings.retention.readNotificationsHint": {
+    ja: "既読の会員通知を残す日数。",
+    en: "Days to keep read member notifications.",
+  },
+  "settings.retention.unreadNotifications": { ja: "未読通知", en: "Unread notifications" },
+  "settings.retention.unreadNotificationsHint": {
+    ja: "未読通知を残す日数。",
+    en: "Days to keep unread notifications.",
+  },
+  "settings.retention.adminNotifications": { ja: "管理通知", en: "Admin notifications" },
+  "settings.retention.adminNotificationsHint": {
+    ja: "管理・安全運用に関わる通知を残す日数。",
+    en: "Days to keep admin and safety notifications.",
+  },
+  "settings.retention.reactions": { ja: "リアクション履歴", en: "Reaction history" },
+  "settings.retention.reactionsHint": {
+    ja: "誰がリアクションしたかの生データを残す日数。",
+    en: "Days to keep member-linked reaction records.",
+  },
+  "settings.retention.auditLogs": { ja: "監査ログ", en: "Audit logs" },
+  "settings.retention.auditLogsHint": {
+    ja: "設定変更や削除などの監査ログを残す日数。",
+    en: "Days to keep audit logs such as settings changes and deletions.",
+  },
+  "settings.retention.cleanupNow": { ja: "今すぐクリーンアップ", en: "Clean up now" },
+  "settings.retention.cleanupDone": { ja: "クリーンアップしました:", en: "Cleanup completed:" },
+  "settings.retention.reset": { ja: "戻す", en: "Reset" },
   "settings.contentLanguages": { ja: "配信言語", en: "Content languages" },
   "settings.contentLanguagesHint": {
     ja: "この教会がデボーション等を配信する言語です。画面の日本語/英語とは別に、必要な言語（韓国語・スペイン語など）を自由に追加できます。既定は1言語。",
