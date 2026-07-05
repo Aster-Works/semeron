@@ -45,7 +45,7 @@ export function mapChurch(r: ChurchRow): Church {
     defaultLocale: r.default_locale as Church["defaultLocale"],
     contentLanguages: r.content_languages ?? [r.default_locale],
     timezone: r.timezone,
-    morningNotificationTime: r.morning_notification_time ?? "",
+    morningNotificationTime: r.morning_notification_time?.slice(0, 5) ?? "",
     status: r.status as Church["status"],
     softGateMode: r.soft_gate_mode as Church["softGateMode"],
     plan: r.plan as Church["plan"],

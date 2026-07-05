@@ -18,6 +18,17 @@ test("owner can persist content languages", async ({ page }) => {
   await expect(page.getByText("現在: 日本語 · English")).toBeVisible();
 });
 
+test("owner can update morning notification time", async ({ page }) => {
+  await login(page, "jimi@eifuku.example", "/ja/admin/eifuku-minami/settings");
+
+  await page.getByTestId("church-morning-time").fill("07:15");
+  await page.getByTestId("church-basics-save").click();
+
+  await expect(page.getByText("保存しました。")).toBeVisible();
+  await page.reload();
+  await expect(page.getByTestId("church-morning-time")).toHaveValue("07:15");
+});
+
 test("owner can rotate an invite code and see the audit log", async ({ page }) => {
   await login(page, "jimi@eifuku.example", "/ja/admin/eifuku-minami/settings");
 

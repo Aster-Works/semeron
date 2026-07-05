@@ -3,6 +3,108 @@
 対象リポ: /Users/james/syncthing/semeron
 セッション開始: 2026-07-04 00:33 JST / 担当: Codex
 
+## 現在のチェックポイント — 教会設定の基本項目編集（2026-07-05 23:26 JST）
+
+### 今回の依頼
+- 小グループ削除作業が終わったら、追加で「教会の設定」の設定も変更できるようにする。
+- 特に朝の通知時間を変更したい。
+
+### 確認済みの事実
+- `/admin/{churchSlug}/settings` の基本情報カードは、教会名・既定言語・タイムゾーン・朝の通知時刻・プランが readOnly / disabled で表示のみ。
+- `churches.morning_notification_time` は既にDBにあり、デボーションの予約公開時刻計算で `getChurchTiming` / `scheduleDateToIso` 経由で参照されている。
+- `churches_update` RLS は owner/pastor 限定。既存の Pastor Assist / 配信言語 / 役割表示名も owner/pastor に編集を絞っている。
+
+### 方針
+- 基本情報カードを owner/pastor が保存できるフォームにする。
+- まず実用上必要な項目として、朝の通知時刻・タイムゾーン・ソフトゲート・教会名を保存可能にする。
+- 既定言語とプランは影響範囲/契約要素が大きいため引き続き表示のみ。
+- Server Action 側で時刻・タイムゾーン・soft gate・教会名を検証してから保存する。
+
+### 実装済み
+- `app/lib/db/actions.ts`
+  - `updateChurchSettings` を拡張し、教会名・タイムゾーン・朝の通知時刻・ソフトゲートも保存可能にした。
+  - 実行者を active member かつ owner/pastor に限定。
+  - `morningNotificationTime` は `HH:MM` / `HH:MM:SS` のみ受け付け、DBには `HH:MM:00` で保存。
+  - `timezone` は `Intl.DateTimeFormat` で妥当性確認。
+  - 保存時に `audit_logs` へ `church.settings_updated` を記録。
+- `app/components/admin/ChurchBasicsEditor.tsx` を追加。
+  - 教会名、タイムゾーン、朝の通知時刻、ソフトゲートを編集可能。
+  - 既定言語とプランは表示のみ。
+- `app/[locale]/admin/[churchSlug]/settings/page.tsx`
+  - 基本情報カードを `ChurchBasicsEditor` に差し替え。
+  - ソフトゲートの表示専用カードは基本設定内へ統合。
+- `app/lib/db/map.ts`
+  - `morningNotificationTime` を `HH:MM` 表示に正規化。
+- `app/lib/i18n/messages.ts`
+  - 基本設定編集用の日英文言を追加。
+- `tests/unit/church-basics-editor.test.tsx`
+  - 朝の通知時刻を変更して保存できること。
+  - owner/pastor 以外は編集できないことを追加。
+- `tests/e2e/settings.spec.ts`
+  - owner が朝の通知時刻を変更し、reload後も保持されるE2Eを追加。
+
+### 検証状況
+- `git diff --check` PASS。
+- `npm run test -- tests/unit/group-admin-card.test.tsx tests/unit/church-basics-editor.test.tsx` PASS（2 files / 4 tests）。
+- `npm run typecheck` PASS。
+- `npm run lint` PASS。
+- `npm test` PASS（16 files / 67 tests）。
+- `npm run db:reset` PASS。
+- `npm run db:test` PASS（5 files / 110 tests）。
+- `npm run build` PASS。
+- `npx playwright test tests/e2e/settings.spec.ts` PASS（3 tests）。
+- `supabase db advisors --local --level error --fail-on error` PASS（No issues found）。
+
+### リリース状況
+- 未リリース。
+
+## 現在のチェックポイント — 小グループ削除機能（2026-07-05 23:13 JST）
+
+### 今回の依頼
+- 作成した小グループを、アーカイブだけでなく削除できるようにする。
+
+### 確認済みの事実
+- 管理画面の `GroupAdminCard` は現在、メンバー追加/削除、リーダー設定、アーカイブ/復元だけを提供している。
+- `content_items.group_id` は現行スキーマ上 `on delete set null` なので、そのままグループ削除を許すと小グループ祈祷課題の紐づきが外れる。
+- 前回のプライバシー修正後、`visibility='group'` かつ `group_id=null` の公開コンテンツは通常のグループ閲覧対象から外れるため、履歴を壊さない削除条件が必要。
+
+### 方針
+- 空の小グループは管理画面から削除できるようにする。
+- 祈祷課題/応答など `content_items` が紐づいている小グループは削除不可にし、アーカイブ運用を促す。
+- UIだけでなくDBトリガでも削除ガードを入れ、画面外のAPI操作でも履歴の孤立を防ぐ。
+
+### 実装済み
+- `supabase migration new group_delete_guard` で `20260705141417_group_delete_guard.sql` を作成。
+  - `private.prevent_group_delete_with_content()` を追加。
+  - `groups_prevent_delete_with_content` trigger により、`content_items.group_id` が残る小グループ削除を `23503` で拒否。
+- `app/lib/db/actions.ts`
+  - `deleteGroup` Server Action を追加。
+  - active member かつ church admin role のみ実行可。
+  - 削除不可のDBエラーを `group has content` に正規化。
+  - 削除成功時に `audit_logs` へ `group.deleted` を記録。
+- `app/components/admin/GroupAdminCard.tsx`
+  - 削除ボタンと確認モーダルを追加。
+  - 履歴ありで削除不可の場合は、アーカイブを促す具体的なエラーを表示。
+- `app/lib/i18n/messages.ts`
+  - 小グループ削除用の日英文言を追加。
+- `supabase/tests/rls_regressions.test.sql`
+  - 関連contentがある小グループは削除不可。
+  - 関連contentがない小グループは削除でき、`group_memberships` もcascade削除されることを追加。
+- `tests/unit/group-admin-card.test.tsx`
+  - 削除確認後に `deleteGroup` が呼ばれること。
+  - `group has content` で専用エラーが表示されることを追加。
+
+### 検証状況
+- `git diff --check` PASS。
+- `npm run test -- tests/unit/group-admin-card.test.tsx` PASS（1 file / 2 tests）。
+- `npm run typecheck` PASS。
+- `npm run lint` PASS。
+- `npm run db:reset` PASS。新migration `20260705141417_group_delete_guard.sql` 適用済み。
+- `npm run db:test` PASS（5 files / 110 tests）。
+
+### リリース状況
+- 未リリース。
+
 ## 現在のチェックポイント — 小グループ祈祷課題の公開範囲 + 応答匿名化（2026-07-05 23:04 JST）
 
 ### 今回の依頼

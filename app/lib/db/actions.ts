@@ -22,12 +22,13 @@ import {
 } from "@/app/lib/db/accountDeletion";
 import { createAdminClient } from "@/app/lib/supabase/admin";
 import { createServerSupabase } from "@/app/lib/supabase/server";
-import type { Locale, ReactionType, Visibility } from "@/app/lib/demo/types";
+import type { Locale, ReactionType, SoftGateMode, Visibility } from "@/app/lib/demo/types";
 import { CONTENT_LANGUAGES } from "@/app/lib/i18n/languages";
 
 const CONTENT_LANGUAGE_CODES = new Set(CONTENT_LANGUAGES.map((l) => l.code));
 const INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const INVITE_CODE_TTL_DAYS = 30;
+const SOFT_GATE_MODES = new Set(["gentle", "focused", "off"]);
 
 function generateInviteCode(length = 10): string {
   const bytes = randomBytes(length);
@@ -36,6 +37,28 @@ function generateInviteCode(length = 10): string {
 
 function inviteExpiryIso(): string {
   return new Date(Date.now() + INVITE_CODE_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function normalizeMorningNotificationTime(value: string): string | null {
+  const match = value.trim().match(/^([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/);
+  if (!match) return null;
+  return `${match[1]}:${match[2]}:00`;
+}
+
+function isValidTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value }).format(new Date());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function localizedStringRecord(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+  );
 }
 
 /* ---------- Auth ---------- */
@@ -651,15 +674,62 @@ export async function updateChurchSettings(input: {
   churchId: string;
   churchSlug: string;
   locale: Locale;
+  churchName?: string;
+  churchNameLocale?: string;
+  timezone?: string;
+  morningNotificationTime?: string;
+  softGateMode?: SoftGateMode;
   pastorAssistEnabled?: boolean;
   allowPrayerAi?: boolean;
 }): Promise<ActionResult> {
   const supabase = await createServerSupabase();
-  const patch: Record<string, boolean> = {};
+  const me = await myMembership(supabase, input.churchId);
+  if (!me) return { ok: false, error: "not a member" };
+  if (!canManageMembers(me.roles)) return { ok: false, error: "owner/pastor role required" };
+
+  const { data: current, error: currentError } = await supabase
+    .from("churches")
+    .select("id, name, timezone, morning_notification_time, soft_gate_mode, pastor_assist_enabled, allow_prayer_ai")
+    .eq("id", input.churchId)
+    .maybeSingle();
+  if (currentError) return { ok: false, error: currentError.message };
+  if (!current) return { ok: false, error: "church not found" };
+
+  const patch: {
+    name?: Record<string, string>;
+    timezone?: string;
+    morning_notification_time?: string;
+    soft_gate_mode?: SoftGateMode;
+    pastor_assist_enabled?: boolean;
+    allow_prayer_ai?: boolean;
+  } = {};
+
+  if (input.churchName !== undefined) {
+    const name = input.churchName.trim();
+    if (!name || name.length > 120) return { ok: false, error: "invalid church name" };
+    const nameLocale = (input.churchNameLocale ?? input.locale).trim().toLowerCase();
+    if (!/^[a-z]{2,8}$/i.test(nameLocale)) return { ok: false, error: "invalid church name locale" };
+    patch.name = { ...localizedStringRecord(current.name), [nameLocale]: name };
+  }
+  if (input.timezone !== undefined) {
+    const timezone = input.timezone.trim();
+    if (!timezone || timezone.length > 64 || !isValidTimeZone(timezone)) {
+      return { ok: false, error: "invalid timezone" };
+    }
+    patch.timezone = timezone;
+  }
+  if (input.morningNotificationTime !== undefined) {
+    const time = normalizeMorningNotificationTime(input.morningNotificationTime);
+    if (!time) return { ok: false, error: "invalid morning notification time" };
+    patch.morning_notification_time = time;
+  }
+  if (input.softGateMode !== undefined) {
+    if (!SOFT_GATE_MODES.has(input.softGateMode)) return { ok: false, error: "invalid soft gate mode" };
+    patch.soft_gate_mode = input.softGateMode;
+  }
   if (input.pastorAssistEnabled !== undefined) patch.pastor_assist_enabled = input.pastorAssistEnabled;
   if (input.allowPrayerAi !== undefined) patch.allow_prayer_ai = input.allowPrayerAi;
   if (Object.keys(patch).length === 0) return { ok: true };
-  // RLS(churches_update) が owner/pastor に限定。非権限者は 0 行更新（エラーにならない）。
   const { data, error } = await supabase
     .from("churches")
     .update(patch)
@@ -667,7 +737,18 @@ export async function updateChurchSettings(input: {
     .select("id");
   if (error) return { ok: false, error: error.message };
   if (!data || data.length === 0) return { ok: false, error: "not permitted" };
+
+  await supabase.from("audit_logs").insert({
+    church_id: input.churchId,
+    actor_membership_id: me.id,
+    action: "church.settings_updated",
+    target_type: "church",
+    target_id: input.churchId,
+    metadata: { changed: Object.keys(patch), patch },
+  });
+
   revalidatePath(`/${input.locale}/admin/${input.churchSlug}/settings`);
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 
@@ -1074,6 +1155,52 @@ export async function setGroupArchived(input: {
     .eq("id", input.groupId);
   if (error) return { ok: false, error: error.message };
   revalidatePath(`/${input.locale}/admin/${input.churchSlug}/groups`);
+  return { ok: true };
+}
+
+export async function deleteGroup(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  groupId: string;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const me = await myMembership(supabase, input.churchId);
+  if (!me) return { ok: false, error: "not a member" };
+  if (!isChurchAdminRole(me.roles)) return { ok: false, error: "admin role required" };
+
+  const { data: group, error: groupError } = await supabase
+    .from("groups")
+    .select("id, name, status")
+    .eq("id", input.groupId)
+    .eq("church_id", input.churchId)
+    .maybeSingle();
+  if (groupError) return { ok: false, error: groupError.message };
+  if (!group) return { ok: false, error: "group not found" };
+
+  const { error } = await supabase
+    .from("groups")
+    .delete()
+    .eq("id", input.groupId)
+    .eq("church_id", input.churchId);
+  if (error) {
+    if (error.code === "23503" || error.message.includes("group has content items")) {
+      return { ok: false, error: "group has content" };
+    }
+    return { ok: false, error: error.message };
+  }
+
+  await supabase.from("audit_logs").insert({
+    church_id: input.churchId,
+    actor_membership_id: me.id,
+    action: "group.deleted",
+    target_type: "group",
+    target_id: input.groupId,
+    metadata: { name: group.name, previous_status: group.status },
+  });
+
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/groups`);
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 

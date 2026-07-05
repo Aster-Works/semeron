@@ -4,7 +4,7 @@
 -- ║ restricted devotion notifications, duplicate published devotion.      ║
 -- ╚══════════════════════════════════════════════════════════════════════╝
 begin;
-select plan(15);
+select plan(18);
 
 create function pg_temp.login(uid uuid) returns void language plpgsql as $$
 begin
@@ -137,6 +137,35 @@ select pg_temp.login('a0000000-0000-0000-0000-0000000000e1'); -- jimi: Eifuku ow
 select is(
   (select count(*)::int from public.groups where id = 'd1000000-0000-0000-0000-000000000001'),
   1, '管理者は管理画面用に小グループメタデータを読める');
+select throws_ok(
+  $$ delete from public.groups
+      where id = 'd1000000-0000-0000-0000-000000000001' $$,
+  '23503', null, '関連contentがある小グループは削除できない');
+
+select pg_temp.as_postgres();
+insert into public.groups (id, church_id, name, description)
+values (
+  'd1000000-0000-0000-0000-000000000099',
+  '11111111-1111-1111-1111-111111111111',
+  '{"ja":"削除テスト"}'::jsonb,
+  null
+);
+insert into public.group_memberships (group_id, membership_id, role)
+values (
+  'd1000000-0000-0000-0000-000000000099',
+  'c1000000-0000-0000-0000-0000000000e7',
+  'member'
+);
+select pg_temp.login('a0000000-0000-0000-0000-0000000000e1');
+select lives_ok(
+  $$ delete from public.groups
+      where id = 'd1000000-0000-0000-0000-000000000099' $$,
+  '関連contentがない小グループは管理者が削除できる');
+select pg_temp.as_postgres();
+select is(
+  (select count(*)::int from public.group_memberships
+   where group_id = 'd1000000-0000-0000-0000-000000000099'),
+  0, '小グループ削除時にgroup_membershipsも削除される');
 
 -- group_memberships / leader_membership_id は同一教会メンバーだけ許可する。
 select throws_ok(
