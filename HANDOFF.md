@@ -56,7 +56,17 @@
 - `supabase db advisors --local --level error --fail-on error` PASS（No issues found）。
 
 ### リリース状況
-- 未リリース。
+- 修正コミット: `578250f Add group deletion and editable church settings`。
+- `git push origin main` PASS。`origin/main` は `1870520..578250f` へ更新。
+- remote Supabase migration適用済み。
+  - `supabase db push --yes` は `20260705141417_group_delete_guard.sql` を適用し `Finished supabase db push.` で完了。
+  - pg-delta catalog cache 警告は出たが、`supabase migration list --linked` で remote `20260705141417` を確認。
+  - `supabase db query --linked` で `supabase_migrations.schema_migrations` の `20260705141417` が `applied=1` であることを確認。
+  - `supabase db advisors --linked --level error --fail-on error` PASS（No issues found）。
+- GitHub連携Vercel Production deployment成功。
+  - commit `578250f` の `context=Vercel` / `state=success` / `description=Deployment has completed` を確認。
+  - Vercel status target: `https://vercel.com/asterworks/semeron/BPwX8TABZqQUuCFJyht9gan61EAt`。
+- `curl -I -L https://semeron-app.vercel.app/ja/login` で production が `HTTP/2 200` / `server: Vercel` を返すことを確認。
 
 ## 現在のチェックポイント — 小グループ削除機能（2026-07-05 23:13 JST）
 
@@ -103,7 +113,17 @@
 - `npm run db:test` PASS（5 files / 110 tests）。
 
 ### リリース状況
-- 未リリース。
+- 修正コミット: `578250f Add group deletion and editable church settings`。
+- `git push origin main` PASS。`origin/main` は `1870520..578250f` へ更新。
+- remote Supabase migration適用済み。
+  - `supabase db push --yes` は `20260705141417_group_delete_guard.sql` を適用し `Finished supabase db push.` で完了。
+  - pg-delta catalog cache 警告は出たが、`supabase migration list --linked` で remote `20260705141417` を確認。
+  - `supabase db query --linked` で `supabase_migrations.schema_migrations` の `20260705141417` が `applied=1` であることを確認。
+  - `supabase db advisors --linked --level error --fail-on error` PASS（No issues found）。
+- GitHub連携Vercel Production deployment成功。
+  - commit `578250f` の `context=Vercel` / `state=success` / `description=Deployment has completed` を確認。
+  - Vercel status target: `https://vercel.com/asterworks/semeron/BPwX8TABZqQUuCFJyht9gan61EAt`。
+- `curl -I -L https://semeron-app.vercel.app/ja/login` で production が `HTTP/2 200` / `server: Vercel` を返すことを確認。
 
 ## 現在のチェックポイント — 小グループ祈祷課題の公開範囲 + 応答匿名化（2026-07-05 23:04 JST）
 
