@@ -37,8 +37,16 @@
 - `npm test` PASS（13 files / 59 tests）。
 - `npm run build` PASS。
 
+### リリース状況
+- 修正コミット: `c61cdfa Stabilize Today daily animation gate`。
+- `git push origin main` PASS。`origin/main` は `fe7ac95..c61cdfa` へ更新。
+- GitHub連携Vercel Production deployment成功。
+  - commit `c61cdfa213971172d81213f7c99f733e4658e36b` の `context=Vercel` / `state=success` / `description=Deployment has completed` を確認。
+  - Vercel status target: `https://vercel.com/asterworks/semeron/7GkSwhqrL6dyvy1fjYZfBZqN1Pym`。
+- `curl -I -L https://semeron-app.vercel.app/ja/login` で production が `HTTP/2 200` / `server: Vercel` を返すことを確認。
+
 ### 未完了
-- コミット/プッシュ/デプロイは未実施。
+- なし。
 
 ## 現在のチェックポイント — 招待リンク失効/再生成 + 監査ログ閲覧（2026-07-05）
 
