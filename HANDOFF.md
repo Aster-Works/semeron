@@ -3,6 +3,43 @@
 対象リポ: /Users/james/syncthing/semeron
 セッション開始: 2026-07-04 00:33 JST / 担当: Codex
 
+## 現在のチェックポイント — Todayアニメーション日次判定の安定化（2026-07-05 22:38 JST）
+
+### 今回の依頼
+- 「アニメーションが一日に一回流れるようにしたはずなのに、毎回流れるようになってる」不具合の修正。
+
+### 確認済みの事実
+- `app/[locale]/church/[churchSlug]/today/page.tsx` は通常URLでは `animationReplayKey` を渡していない。
+- `?replayTodayAnimation=1` または `?pwaAnimationFix=...` が付いたURLだけ、検証用として毎回再生する仕様。
+- `TodayDevotionFlow` は `localStorage` の `semeron:today-flow-opened:<churchId>:<todayKey>` だけで日次表示済み判定をしていた。
+- そのためPWA/実機ブラウザ等で `localStorage` 読み書きが失敗・消失すると、同日でも毎回「未表示」と判定されうる。
+
+### 方針
+- 通常URLの1日1回制限を維持する。
+- 検証用URLの明示リプレイ機能は維持する。
+- `localStorage` が使えない環境でも同日再訪を静的表示にできるよう、短期cookieを補助保存先にする。
+- cookieには `churchId` や日付を直接入れず、日次キーから作った短いハッシュ名だけを保存する。
+
+### 実装済み
+- `app/components/member/TodayDevotionFlow.tsx`
+  - 日次判定の読み取りを `localStorage` → cookie fallback に変更。
+  - 日次判定の書き込みを `localStorage` と3日有効の `SameSite=Lax` cookie の二重保存に変更。
+  - `animationReplayKey` がある場合は、従来通り日次フラグを無視して明示リプレイする。
+- `tests/unit/today-devotion-flow.test.tsx`
+  - 初回通常表示後、同日remountで静的表示になる回帰テストを追加。
+  - `localStorage` が読み書きで例外を投げる場合でもcookie fallbackにより同日2回目が静的表示になる回帰テストを追加。
+
+### 検証結果
+- `git diff --check` PASS。
+- `npm run test -- tests/unit/today-devotion-flow.test.tsx` PASS（1 file / 6 tests）。
+- `npm run typecheck` PASS。
+- `npm run lint` PASS。
+- `npm test` PASS（13 files / 59 tests）。
+- `npm run build` PASS。
+
+### 未完了
+- コミット/プッシュ/デプロイは未実施。
+
 ## 現在のチェックポイント — 招待リンク失効/再生成 + 監査ログ閲覧（2026-07-05）
 
 ### 今回の依頼

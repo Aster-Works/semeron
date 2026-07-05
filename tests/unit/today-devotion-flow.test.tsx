@@ -49,22 +49,38 @@ const devotion: ContentItem = {
 const dailyOpenKey = "semeron:today-flow-opened:church_1:2026-07-04";
 let scrollIntoViewMock: ReturnType<typeof vi.fn>;
 
-function installLocalStorage() {
+function installLocalStorage({ throwOnReadWrite = false }: { throwOnReadWrite?: boolean } = {}) {
   const store = new Map<string, string>();
   const storage = {
     get length() {
       return store.size;
     },
     clear: vi.fn(() => store.clear()),
-    getItem: vi.fn((key: string) => store.get(key) ?? null),
+    getItem: vi.fn((key: string) => {
+      if (throwOnReadWrite) throw new Error("localStorage unavailable");
+      return store.get(key) ?? null;
+    }),
     key: vi.fn((index: number) => Array.from(store.keys())[index] ?? null),
     removeItem: vi.fn((key: string) => store.delete(key)),
-    setItem: vi.fn((key: string, value: string) => store.set(key, value)),
+    setItem: vi.fn((key: string, value: string) => {
+      if (throwOnReadWrite) throw new Error("localStorage unavailable");
+      store.set(key, value);
+    }),
   } satisfies Storage;
 
   Object.defineProperty(window, "localStorage", {
     configurable: true,
     value: storage,
+  });
+
+  return storage;
+}
+
+function clearDocumentCookies() {
+  document.cookie.split(";").forEach((cookie) => {
+    const name = cookie.split("=")[0]?.trim();
+    if (!name) return;
+    document.cookie = `${name}=; Max-Age=0; Path=/; SameSite=Lax`;
   });
 }
 
@@ -160,6 +176,7 @@ describe("TodayDevotionFlow daily animation replay", () => {
     vi.useFakeTimers();
     installLocalStorage();
     window.localStorage.clear();
+    clearDocumentCookies();
     window.requestAnimationFrame = vi.fn((callback: FrameRequestCallback) =>
       window.setTimeout(() => callback(window.performance.now()), 0),
     );
@@ -186,11 +203,48 @@ describe("TodayDevotionFlow daily animation replay", () => {
     vi.restoreAllMocks();
     vi.useRealTimers();
     window.localStorage.clear();
+    clearDocumentCookies();
+  });
+
+  it("marks the first normal open and keeps the same-day remount static", async () => {
+    const firstRender = renderFlow();
+    await finishInitialTimers();
+
+    expect(screen.getByTestId("today-flow")).toHaveAttribute("data-animate-flow", "true");
+    expect(window.localStorage.getItem(dailyOpenKey)).toBe("true");
+
+    firstRender.unmount();
+    renderFlow();
+    await finishInitialTimers();
+
+    const flow = screen.getByTestId("today-flow");
+    expect(flow).toHaveAttribute("data-animate-flow", "false");
+    expect(flow).toHaveAttribute("data-animation-replay", "false");
+    expect(screen.queryByTestId("today-scroll-cue")).not.toBeInTheDocument();
   });
 
   it("keeps the normal same-day revisit static after the daily open flag exists", async () => {
     window.localStorage.setItem(dailyOpenKey, "true");
 
+    renderFlow();
+    await finishInitialTimers();
+
+    const flow = screen.getByTestId("today-flow");
+    expect(flow).toHaveAttribute("data-animate-flow", "false");
+    expect(flow).toHaveAttribute("data-animation-replay", "false");
+    expect(screen.queryByTestId("today-scroll-cue")).not.toBeInTheDocument();
+  });
+
+  it("falls back to a daily cookie when localStorage is unavailable", async () => {
+    installLocalStorage({ throwOnReadWrite: true });
+
+    const firstRender = renderFlow();
+    await finishInitialTimers();
+
+    expect(screen.getByTestId("today-flow")).toHaveAttribute("data-animate-flow", "true");
+    expect(document.cookie).toMatch(/semeron_today_flow_[a-z0-9]+=true/);
+
+    firstRender.unmount();
     renderFlow();
     await finishInitialTimers();
 
