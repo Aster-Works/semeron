@@ -40,6 +40,15 @@
 - `git diff --check` PASS。
 - `npm run db:test` PASS（6 files / 117 tests）。
 
+### リリース状況
+- 修正コミット: `6a74a5d Scope Today reflections to devotion`。
+- `git push origin main` PASS。`origin/main` は `ce4c073..6a74a5d` へ更新。
+- DB schema migrationは不要（既存 `content_items.metadata` 利用のみ）。
+- GitHub連携Vercel Production deployment成功。
+  - commit `6a74a5d` の `context=Vercel` / `state=success` / `description=Deployment has completed` を確認。
+  - Vercel status target: `https://vercel.com/asterworks/semeron/CgZicdRRb8fBrykYcW5X2QvX4iae`。
+- `curl -I -L https://semeron-app.vercel.app/ja/login` で production が `HTTP/2 200` / `server: Vercel` を返すことを確認。
+
 ## 現在のチェックポイント — 保持期間・通知整理・リアクション・検索・レビュー依頼（2026-07-06）
 
 ### 今回の依頼
