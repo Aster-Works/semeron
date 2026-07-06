@@ -39,7 +39,14 @@
 - `git diff --check` PASS。
 
 ### リリース状況
-- 未コミット。次にcommit/pushし、GitHub連携Vercel Production deploymentを確認する。
+- 修正コミット: `018115c Fix stale service worker cache for Today navigation`。
+- `git push origin main` PASS。`origin/main` は `dff17ba..018115c` へ更新。
+- DB schema migrationは不要（Service Worker / E2E testのみ）。
+- GitHub連携Vercel Production deployment成功。
+  - commit `018115c` の `context=Vercel` / `state=success` / `description=Deployment has completed` を確認。
+  - Vercel status target: `https://vercel.com/asterworks/semeron/8KLYwHaQf2kVXN4LuYXU8ad5rMNr`。
+- `curl -I -L https://semeron-app.vercel.app/ja/login` で production が `HTTP/2 200` / `server: Vercel` を返すことを確認。
+- `curl https://semeron-app.vercel.app/sw.js` で production のService Workerが `semeron-static-v3` かつ `/_next/static/` 非キャッシュで配信されていることを確認。
 
 ## 現在のチェックポイント — Today応答のデボーション紐づけ + リアクション整理（2026-07-06）
 
