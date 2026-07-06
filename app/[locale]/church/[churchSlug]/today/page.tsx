@@ -54,7 +54,7 @@ export default async function TodayPage({
     devotionP,
     devotionP.then((d) => (d ? getViewerCompletion(supabase, d.id) : null)),
     getTodayPrayerSet(supabase, viewer, locale as "ja" | "en"),
-    getReflections(supabase, viewer, locale as "ja" | "en", 3),
+    devotionP.then((d) => (d ? getReflections(supabase, viewer, locale as "ja" | "en", 3, d.id) : [])),
   ]);
   const prayers = prayersAll;
   const todayKey = toDateKey(new Date(), church.timezone);

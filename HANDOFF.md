@@ -3,6 +3,43 @@
 対象リポ: /Users/james/syncthing/semeron
 セッション開始: 2026-07-04 00:33 JST / 担当: Codex
 
+## 現在のチェックポイント — Today応答のデボーション紐づけ + リアクション整理（2026-07-06）
+
+### 今回の依頼
+- Todayに表示する応答は、その日のデボーションに対する応答だけにする。
+- 応答には「祈りました」ボタンを出さない。
+- 「祈り」には「アーメン」と「感謝」ボタンを出さない。
+
+### 確認済み
+- 既存の `getReflections` は教会全体の最新 `reflection` を取得しており、現在表示中のデボーションIDで絞っていない。
+- `postReflection` は `content_items.metadata` にデボーションIDを保存していない。
+- 前回のリアクション追加で、応答にも祈祷課題にも `prayed/amen/thanks` が表示される状態になっている。
+
+### 方針
+- 新しいDB列は追加せず、既存 `content_items.metadata.devotion_content_id` に投稿元デボーションIDを保存する。
+- Todayでは現在の `devotion.id` に一致する応答だけを取得する。
+- 応答の表示リアクションは `amen/thanks` のみにする。
+- 祈祷課題の表示リアクションは `prayed` のみに戻す。
+
+### 実装済み
+- `postReflection` が投稿元の公開デボーションを確認し、`metadata.devotion_content_id` / `metadata.devotion_date` を保存するよう変更。
+- `ReflectionComposer` / `TodayDevotionFlow` が現在の `devotion.id` を渡すよう変更。
+- Todayページの `getReflections` 呼び出しを、現在のデボーションIDで絞り込むよう変更。
+- `getReflections` は `metadata->>devotion_content_id` でフィルタ可能になり、応答リアクションは `amen/thanks` のみ取得。
+- 祈祷課題リアクションは `prayed` のみ取得・表示。
+- `tests/unit/reaction-scope.test.tsx` を追加し、応答/祈りの表示リアクション種別を固定。
+
+### 検証状況
+- Supabase changelog確認: 今回の既存 `metadata` 利用・Data APIフィルタに直接影響するbreaking changeなし。
+- `npm run typecheck` PASS。
+- `npm test` PASS（17 files / 69 tests）。
+- `npm run lint` PASS。
+- `npm run build` PASS。
+- ローカルDBで `metadata->>'devotion_content_id'` の一致検索が1件になることを一時行で確認し、削除済み。
+- `supabase db advisors --local --level error --fail-on error` PASS（No issues found）。
+- `git diff --check` PASS。
+- `npm run db:test` PASS（6 files / 117 tests）。
+
 ## 現在のチェックポイント — 保持期間・通知整理・リアクション・検索・レビュー依頼（2026-07-06）
 
 ### 今回の依頼

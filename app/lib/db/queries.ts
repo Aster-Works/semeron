@@ -34,7 +34,8 @@ type GroupMembershipWithMember = {
 };
 
 const isString = (value: unknown): value is string => typeof value === "string" && value.length > 0;
-const SOCIAL_REACTIONS: ReactionType[] = ["prayed", "amen", "thanks"];
+const PRAYER_REACTIONS: ReactionType[] = ["prayed"];
+const REFLECTION_REACTIONS: ReactionType[] = ["amen", "thanks"];
 
 export interface PrayerVM {
   item: ContentItem;
@@ -89,7 +90,7 @@ async function attachPrayerVMs(
     .from("reactions")
     .select("content_item_id, membership_id, type")
     .in("content_item_id", ids)
-    .in("type", SOCIAL_REACTIONS);
+    .in("type", PRAYER_REACTIONS);
   const reactionCount = new Map<string, number>();
   const viewerReactions = new Map<string, Set<ReactionType>>();
   ((rxs ?? []) as ReactionRow[]).forEach((r) => {
@@ -109,7 +110,7 @@ async function attachPrayerVMs(
       ? (nameById.get(r.author_membership_id) ?? anonName(locale))
       : anonName(locale);
     const active = viewerReactions.get(id);
-    const reactions = SOCIAL_REACTIONS.map((type) => ({
+    const reactions = PRAYER_REACTIONS.map((type) => ({
       type,
       count: reactionCount.get(`${id}:${type}`) ?? 0,
       active: active?.has(type) ?? false,
@@ -209,15 +210,18 @@ export async function getReflections(
   viewer: Viewer,
   locale: Locale,
   limit = 10,
+  devotionContentId?: string,
 ): Promise<ReflectionVM[]> {
-  const { data } = await supabase
+  let query = supabase
     .from("content_feed")
     .select("*")
     .eq("church_id", viewer.church.id)
     .eq("type", "reflection")
-    .eq("status", "published")
-    .order("published_at", { ascending: false })
-    .limit(limit);
+    .eq("status", "published");
+  if (devotionContentId) {
+    query = query.eq("metadata->>devotion_content_id", devotionContentId);
+  }
+  const { data } = await query.order("published_at", { ascending: false }).limit(limit);
   const rows = (data ?? []) as ContentFeedRow[];
   if (rows.length === 0) return [];
 
@@ -235,7 +239,7 @@ export async function getReflections(
     .from("reactions")
     .select("content_item_id, membership_id, type")
     .in("content_item_id", ids)
-    .in("type", SOCIAL_REACTIONS);
+    .in("type", REFLECTION_REACTIONS);
   const count = new Map<string, number>();
   const mine = new Map<string, Set<string>>();
   ((rxs ?? []) as ReactionRow[]).forEach((r) => {
@@ -252,7 +256,7 @@ export async function getReflections(
       item: mapContent(r),
       authorName: anonName(locale),
       isMine: ownIds.has(id),
-      reactions: SOCIAL_REACTIONS.map((type) => ({
+      reactions: REFLECTION_REACTIONS.map((type) => ({
         type,
         count: count.get(`${id}:${type}`) ?? 0,
         active: mine.get(id)?.has(type) ?? false,

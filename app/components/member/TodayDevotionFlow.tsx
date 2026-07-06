@@ -446,7 +446,12 @@ export function TodayDevotionFlow({
         ? reveal(
             <section ref={reflectionSectionRef} className="space-y-3" data-testid="today-reflection-section">
               <SectionHeading title={t("today.yourReflection")} />
-              <ReflectionComposer churchId={church.id} churchSlug={church.slug} onPosted={onReflectionPosted} />
+              <ReflectionComposer
+                churchId={church.id}
+                churchSlug={church.slug}
+                devotionContentId={devotion.id}
+                onPosted={onReflectionPosted}
+              />
             </section>,
             80,
           )

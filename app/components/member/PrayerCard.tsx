@@ -41,8 +41,6 @@ export function PrayerCard({
   const reviewRequested = item.metadata?.admin_review_requested === true;
   const reactions = vm.reactions ?? [
     { type: "prayed" as const, count: vm.prayedCount, active: vm.viewerPrayed },
-    { type: "amen" as const, count: 0, active: false },
-    { type: "thanks" as const, count: 0, active: false },
   ];
 
   return (

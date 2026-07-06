@@ -247,10 +247,22 @@ export async function postReflection(
   churchSlug: string,
   locale: Locale,
   body: string,
+  devotionContentId: string,
 ): Promise<ActionResult> {
   const supabase = await createServerSupabase();
   const membershipId = await myMembershipId(supabase, churchId);
   if (!membershipId) return { ok: false, error: "not a member" };
+
+  const { data: devotion } = await supabase
+    .from("content_feed")
+    .select("id, devotion_date")
+    .eq("id", devotionContentId)
+    .eq("church_id", churchId)
+    .eq("type", "devotion")
+    .eq("status", "published")
+    .maybeSingle();
+  if (!devotion) return { ok: false, error: "devotion not found or not permitted" };
+
   const { error } = await supabase.from("content_items").insert({
     church_id: churchId,
     author_membership_id: membershipId,
@@ -260,6 +272,10 @@ export async function postReflection(
     anonymous: true,
     title: {},
     body: { [locale]: body },
+    metadata: {
+      devotion_content_id: devotion.id,
+      devotion_date: devotion.devotion_date,
+    },
     published_at: new Date().toISOString(),
   });
   if (error) return { ok: false, error: error.message };
