@@ -3,6 +3,44 @@
 対象リポ: /Users/james/syncthing/semeron
 セッション開始: 2026-07-04 00:33 JST / 担当: Codex
 
+## 現在のチェックポイント — Todayからのタブ遷移がスケルトンで止まる不具合（2026-07-06）
+
+### 今回の依頼
+- Todayから他のページへ移動しようとすると、スケルトン状態で止まって移動できない。
+
+### 確認済み
+- ローカルseed環境では Today → 祈り の通常遷移は再現しなかった。
+- 会員ルートには `loading.tsx` があり、タブ遷移中は本文領域だけ `PageSkeleton` を表示する設計。
+- Service Worker はHTML/APIをキャッシュしないが、`/_next/static/` のNextビルドチャンクを独自に stale-while-revalidate キャッシュしている。
+- `STATIC_CACHE` が `semeron-static-v2` のままなので、デプロイ後も古い `_next/static/` チャンクが同じSWキャッシュ内に残り続ける可能性がある。
+
+### 方針
+- NextのビルドチャンクはVercel/ブラウザのハッシュ付きキャッシュに任せ、SemeronのService Workerではキャッシュしない。
+- SWキャッシュ名を更新し、既存の `semeron-static-v2` をactivate時に削除させる。
+- Todayから各会員タブへ移動してスケルトンで止まらないことをE2Eで固定する。
+
+### 実装済み
+- `public/sw.js`
+  - `/_next/static/` をSemeron Service Workerのキャッシュ対象から除外。
+  - キャッシュ対象を manifest / icons のみに限定。
+  - `STATIC_CACHE` を `semeron-static-v3` に更新し、activate時に旧 `semeron-static-v2` を削除するようにした。
+- `tests/unit/service-worker-cache.test.ts`
+  - Service WorkerがNextビルドチャンクをキャッシュしないことを固定。
+- `tests/e2e/today-navigation.spec.ts`
+  - 会員がTodayから祈り/小グループ/通知/マイページへ移動してもスケルトンで止まらないことを固定。
+
+### 検証状況
+- `npm run test -- tests/unit/service-worker-cache.test.ts` PASS。
+- `npx playwright test tests/e2e/today-navigation.spec.ts` PASS。
+- `npm run lint` PASS。
+- `npm run typecheck` PASS。
+- `npm test` PASS（17 files / 69 tests）。
+- `npm run build` PASS。
+- `git diff --check` PASS。
+
+### リリース状況
+- 未コミット。次にcommit/pushし、GitHub連携Vercel Production deploymentを確認する。
+
 ## 現在のチェックポイント — Today応答のデボーション紐づけ + リアクション整理（2026-07-06）
 
 ### 今回の依頼

@@ -13,10 +13,11 @@ describe("service worker privacy cache policy", () => {
     expect(source).not.toContain('"/en"');
   });
 
-  it("keeps cache scope to static assets and supports explicit purge", () => {
+  it("keeps cache scope to app-owned assets and supports explicit purge", () => {
     expect(source).toContain("SEMERON_PURGE_CACHES");
-    expect(source).toContain('"/_next/static/"');
+    expect(source).not.toContain('"/_next/static/"');
     expect(source).toContain('"/icons/"');
     expect(source).toContain('"/manifest.webmanifest"');
+    expect(source).toContain("semeron-static-v3");
   });
 });

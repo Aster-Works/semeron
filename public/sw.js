@@ -2,12 +2,14 @@
  *
  * Privacy-first PWA policy:
  *  - HTML navigations and authenticated pages are never cached.
- *  - Only safe static assets are cached.
+ *  - Only app manifest/icon assets are cached.
+ *  - Next.js build chunks are not cached here; Vercel/browser immutable caching
+ *    handles them more safely across deploys.
  *  - Sign-out / church leave / account deletion can explicitly purge caches.
  */
-const STATIC_CACHE = "semeron-static-v2";
+const STATIC_CACHE = "semeron-static-v3";
 const PRECACHE_URLS = ["/manifest.webmanifest", "/icons/icon.svg", "/icons/icon-maskable.svg"];
-const STATIC_PREFIXES = ["/_next/static/", "/icons/"];
+const STATIC_PREFIXES = ["/icons/"];
 
 function isStaticAsset(url) {
   return (
@@ -64,7 +66,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (!isStaticAsset(url)) return;
 
-  // 静的アセットのみ stale-while-revalidate。HTML/API/認証済みページは保存しない。
+  // Manifest/icons のみ stale-while-revalidate。HTML/API/RSC/Next chunks は保存しない。
   event.respondWith(
     caches.open(STATIC_CACHE).then((cache) => cache.match(req).then((cached) => {
       const network = fetch(req)
