@@ -38,13 +38,13 @@ from auth.users au
 where au.email like '%@eifuku.example' or au.email like '%@grace.example';
 
 -- ── churches ───────────────────────────────────────────────────────────
-insert into public.churches (id, slug, name, default_locale, content_languages, timezone, morning_notification_time, soft_gate_mode, plan, invite_code) values
+insert into public.churches (id, slug, name, default_locale, content_languages, timezone, morning_notification_time, plan, invite_code) values
   ('11111111-1111-1111-1111-111111111111','eifuku-minami',
     '{"ja":"永福南キリスト教会","en":"Eifuku Minami Christ Church"}', 'ja', array['ja'],
-    'Asia/Tokyo','06:30','gentle','standard','EIFUKU-2026'),
+    'Asia/Tokyo','06:30','standard','EIFUKU-2026'),
   ('22222222-2222-2222-2222-222222222222','grace-community',
     '{"ja":"グレース・コミュニティ教会","en":"Grace Community Church"}', 'en', array['en','es'],
-    'America/Los_Angeles','07:00','gentle','pro','GRACE-2026');
+    'America/Los_Angeles','07:00','pro','GRACE-2026');
 
 -- ── memberships ────────────────────────────────────────────────────────
 insert into public.memberships (id, church_id, user_id, display_name, email, status, joined_at) values

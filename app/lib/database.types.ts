@@ -75,7 +75,6 @@ export type Database = {
           retention_policy: Json
           role_labels: Json
           slug: string
-          soft_gate_mode: string
           status: string
           timezone: string
           updated_at: string
@@ -97,7 +96,6 @@ export type Database = {
           retention_policy?: Json
           role_labels?: Json
           slug: string
-          soft_gate_mode?: string
           status?: string
           timezone?: string
           updated_at?: string
@@ -119,7 +117,6 @@ export type Database = {
           retention_policy?: Json
           role_labels?: Json
           slug?: string
-          soft_gate_mode?: string
           status?: string
           timezone?: string
           updated_at?: string
@@ -908,7 +905,6 @@ export type Database = {
           retention_policy: Json
           role_labels: Json
           slug: string
-          soft_gate_mode: string
           status: string
           timezone: string
           updated_at: string
@@ -945,7 +941,6 @@ export type Database = {
           retention_policy: Json
           role_labels: Json
           slug: string
-          soft_gate_mode: string
           status: string
           timezone: string
           updated_at: string

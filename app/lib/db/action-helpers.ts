@@ -120,6 +120,12 @@ export function expiryDateToIso(dateKey: string | null, timeZone: string): strin
   return zonedDateTimeToUtcIso(dateKey, { hour: 23, minute: 59, second: 59, ms: 999 }, timeZone);
 }
 
+/** dateKey（"YYYY-MM-DD"）の当該タイムゾーンでの 00:00:00 を UTC ISO で返す。 */
+export function startOfDayIso(dateKey: string | null, timeZone: string): string | null {
+  if (!dateKey) return null;
+  return zonedDateTimeToUtcIso(dateKey, { hour: 0, minute: 0 }, timeZone);
+}
+
 export function scheduleDateToIso(dateKey: string | null, timeZone: string, morningTime: string | null): string | null {
   if (!dateKey) return null;
   return zonedDateTimeToUtcIso(dateKey, parseMorningTime(morningTime), timeZone);

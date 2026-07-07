@@ -37,6 +37,11 @@
 - **課金前の運用**: 支払い教会にはSQL/dashboardで `update churches set ai_addon_enabled=true`（service_role）。将来Stripeがこのフラグを立てる。
 - 検証: typecheck/lint/build緑・**test 69/69**・DB不変条件（[A]オーナー自己付与→f/f/f、[B]課金付与後オーナー有効化→t/t/f）・ブラウザ（未購入=upsell+ロック、購入=解除）。
 
+## 通知の当日既読表示＋ソフトゲート削除（2026-07-07 追加）
+- **通知**: `getInbox` を「未読は常に表示＋既読は当日分(教会TZ)のみ表示継続」に変更（`.or("read.eq.false,created_at.gte.<今日0時ISO>")`）。`startOfDayIso`(action-helpers)追加。翌日で既読は消える・未読は残る。badge(getUnreadInboxCount)は未読数のまま。ブラウザ検証: 当日既読=残る、過去既読=消える、を実測。
+- **ソフトゲート削除**: 実質デッド設定（保存されるだけで挙動不変・Today仕切りは固定文言）を全撤去。types(SoftGateMode/softGateMode)/map/actions(input/patch/select/SOFT_GATE_MODES)/ChurchBasicsEditor(選択UI)/settings page/TodayDevotionFlow(仕切り)/i18n(settings.softGate*・today.softGate.gentle)/demo data/database.types(5箇所)/tests(5 fixture)/seed から削除。migration `20260707160000_drop_soft_gate` で列drop。**DROPのためデプロイはapp先行→migration後行**。
+- 検証: typecheck/lint/build緑・test 69/69・ローカルでdrop適用済。
+
 ## デプロイ（完了 2026-07-07）
 - コミット: 399dd97（7課題）→ 181dbe9（テスト更新+.nvmrc）→ 5b0f083（anon EXECUTE剥奪）。main へ push 済み。
 - 本番Supabase(Semeron nlbowtgpchzkmzyligic): migration `20260707120000` 適用済み。SQL実体確認=関数存在・security definer・ACL={authenticated,service_role}のみ（anon無し）。security advisor ERROR **0**。pg-delta証明書warningは無害。

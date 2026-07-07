@@ -16,6 +16,7 @@ import type {
   Viewer,
 } from "@/app/lib/demo/types";
 import { toDateKey } from "@/app/lib/demo/selectors";
+import { startOfDayIso } from "@/app/lib/db/action-helpers";
 import { selectTodayPrayers } from "@/app/lib/prayers/today";
 import { mapAuditLog, mapContent, mapGroup, mapMembership, mapNotification } from "./map";
 
@@ -319,7 +320,10 @@ export async function getGroupPrayers(
 /* ---------- Inbox ---------- */
 export async function getInbox(supabase: SupabaseClient, viewer: Viewer): Promise<AppNotification[]> {
   if (!viewer.membership) return [];
-  // 既読の通知は表示しない（通知センターは未読=対応待ちだけを静かに出す）。
+  // 未読は常に表示。既読は「当日分（教会TZの今日つくられたもの）」だけ表示し続ける。
+  // ＝翌日以降は既読のものが静かに消える。未読は日付に関わらず残る。
+  const tz = viewer.church.timezone;
+  const todayStart = startOfDayIso(toDateKey(new Date(), tz), tz);
   const { data } = await supabase
     .from("notifications")
     .select("*")
@@ -327,7 +331,7 @@ export async function getInbox(supabase: SupabaseClient, viewer: Viewer): Promis
     .eq("channel", "in_app")
     .is("archived_at", null)
     .eq("muted_by_recipient", false)
-    .eq("read", false)
+    .or(`read.eq.false,created_at.gte.${todayStart}`)
     .order("created_at", { ascending: false });
   return (data ?? []).map(mapNotification);
 }

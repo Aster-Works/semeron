@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Save } from "lucide-react";
-import type { Locale, Localized, PlanTier, SoftGateMode } from "@/app/lib/demo/types";
+import type { Locale, Localized, PlanTier } from "@/app/lib/demo/types";
 import { updateChurchSettings } from "@/app/lib/db/actions";
 import { localize } from "@/app/lib/i18n";
 import { useLocale } from "@/app/lib/i18n/LocaleProvider";
@@ -23,8 +23,6 @@ const TIMEZONE_OPTIONS = [
   "Asia/Singapore",
   "Australia/Sydney",
 ];
-
-const SOFT_GATE_MODES: SoftGateMode[] = ["gentle", "focused", "off"];
 
 function timeForInput(value: string): string {
   return value.match(/^\d{2}:\d{2}/)?.[0] ?? "06:30";
@@ -50,7 +48,6 @@ export function ChurchBasicsEditor({
     defaultLocale: Locale;
     timezone: string;
     morningNotificationTime: string;
-    softGateMode: SoftGateMode;
     plan: PlanTier;
   };
   canEdit: boolean;
@@ -62,7 +59,6 @@ export function ChurchBasicsEditor({
   const [name, setName] = useState(initialName);
   const [timezone, setTimezone] = useState(initial.timezone);
   const [morningTime, setMorningTime] = useState(timeForInput(initial.morningNotificationTime));
-  const [softGateMode, setSoftGateMode] = useState<SoftGateMode>(initial.softGateMode);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -74,8 +70,7 @@ export function ChurchBasicsEditor({
   const dirty =
     name.trim() !== initialName ||
     timezone !== initial.timezone ||
-    morningTime !== timeForInput(initial.morningNotificationTime) ||
-    softGateMode !== initial.softGateMode;
+    morningTime !== timeForInput(initial.morningNotificationTime);
 
   const save = () => {
     setSaved(false);
@@ -89,7 +84,6 @@ export function ChurchBasicsEditor({
         churchNameLocale: initial.defaultLocale,
         timezone,
         morningNotificationTime: morningTime,
-        softGateMode,
       });
       if (!res.ok) {
         setError(true);
@@ -156,21 +150,6 @@ export function ChurchBasicsEditor({
           <Input value={initial.plan} readOnly disabled className="uppercase" />
         </Field>
       </div>
-
-      <Field label={t("settings.softGate")} hint={t("settings.softGateHint")} htmlFor="church-soft-gate">
-        <Select
-          id="church-soft-gate"
-          value={softGateMode}
-          disabled={!canEdit || pending}
-          onChange={(e) => { setSoftGateMode(e.target.value as SoftGateMode); setSaved(false); setError(false); }}
-        >
-          {SOFT_GATE_MODES.map((mode) => (
-            <option key={mode} value={mode}>
-              {t(`settings.softGate.${mode}`)}
-            </option>
-          ))}
-        </Select>
-      </Field>
 
       {canEdit ? (
         <div className="flex flex-wrap items-center gap-2">

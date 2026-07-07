@@ -25,7 +25,6 @@ const baseProps = {
     defaultLocale: "ja" as const,
     timezone: "Asia/Tokyo",
     morningNotificationTime: "06:30",
-    softGateMode: "gentle" as const,
     plan: "standard" as const,
   },
 };
@@ -51,7 +50,6 @@ describe("ChurchBasicsEditor", () => {
         churchNameLocale: "ja",
         timezone: "Asia/Tokyo",
         morningNotificationTime: "07:15",
-        softGateMode: "gentle",
       });
       expect(mocks.refresh).toHaveBeenCalled();
     });

@@ -110,7 +110,6 @@ export function mapChurch(r: ChurchRow): Church {
     timezone: r.timezone,
     morningNotificationTime: r.morning_notification_time?.slice(0, 5) ?? "",
     status: r.status as Church["status"],
-    softGateMode: r.soft_gate_mode as Church["softGateMode"],
     plan: r.plan as Church["plan"],
     inviteCode: r.invite_code,
     inviteCodeExpiresAt,

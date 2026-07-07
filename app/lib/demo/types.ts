@@ -78,8 +78,6 @@ export type SensitiveFlag =
   | "self_harm_or_immediate_danger"
   | "other";
 
-export type SoftGateMode = "gentle" | "focused" | "off";
-
 export type PlanTier = "free" | "small" | "standard" | "pro";
 
 export interface RetentionPolicy {
@@ -121,7 +119,6 @@ export interface Church {
   /** 朝のデボーション通知時刻（"HH:MM"）。 */
   morningNotificationTime: string;
   status: "active" | "suspended";
-  softGateMode: SoftGateMode;
   plan: PlanTier;
   inviteCode: string;
   /** 招待コードの期限。期限切れなら join_church は拒否する。 */

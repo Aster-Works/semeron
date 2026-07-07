@@ -107,10 +107,6 @@ export const messages = {
   "today.pastorNote": { ja: "デボーション", en: "Devotion" },
   "today.shareRequest": { ja: "祈祷課題を送る", en: "Share a prayer request" },
   "today.talkToPastor": { ja: "{pastor}に相談する", en: "Talk to a {pastor}" },
-  "today.softGate.gentle": {
-    ja: "まずは今日のみことばに耳を傾けましょう。",
-    en: "Begin with today's Scripture and prayer.",
-  },
   "today.completedQuiet": {
     ja: "今日の分を受け取りました。よい一日を。",
     en: "You've received today's word. Go in peace.",
@@ -804,14 +800,6 @@ export const messages = {
   "settings.basicsAdminOnly": {
     ja: "この設定は owner / pastor が変更できます。",
     en: "Only owner / pastor can change these settings.",
-  },
-  "settings.softGate": { ja: "ソフトゲート", en: "Soft gate" },
-  "settings.softGate.gentle": { ja: "やさしく（既定）", en: "Gentle (default)" },
-  "settings.softGate.focused": { ja: "集中", en: "Focused" },
-  "settings.softGate.off": { ja: "オフ", en: "Off" },
-  "settings.softGateHint": {
-    ja: "アプリを開くと今日のみことばを最初に表示します。ハードロックはしません。緊急連絡・相談・祈祷課題投稿は常に開けます。",
-    en: "The app opens to today's Scripture first. It never hard-locks. Emergency contact, pastoral help, and submitting a request are always available.",
   },
   "settings.plan": { ja: "プラン", en: "Plan" },
   "settings.inviteCode": { ja: "招待コード", en: "Invite code" },

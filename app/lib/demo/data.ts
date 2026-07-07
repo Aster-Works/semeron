@@ -56,7 +56,6 @@ export const churches: Church[] = [
     timezone: "Asia/Tokyo",
     morningNotificationTime: "06:30",
     status: "active",
-    softGateMode: "gentle",
     plan: "standard",
     inviteCode: "EIFUKU-2026",
     aiAddonEnabled: true, // デモ: 永福南は AI アドオン購入済み
@@ -74,7 +73,6 @@ export const churches: Church[] = [
     timezone: "America/Los_Angeles",
     morningNotificationTime: "07:00",
     status: "active",
-    softGateMode: "gentle",
     plan: "pro",
     inviteCode: "GRACE-2026",
     aiAddonEnabled: false,

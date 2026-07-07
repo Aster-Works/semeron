@@ -61,7 +61,6 @@ export default async function AdminSettingsPage({
                 defaultLocale: church.defaultLocale,
                 timezone: church.timezone,
                 morningNotificationTime: church.morningNotificationTime,
-                softGateMode: church.softGateMode,
                 plan: church.plan,
               }}
               canEdit={canEditSettings}

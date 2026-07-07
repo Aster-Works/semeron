@@ -22,13 +22,12 @@ import {
 } from "@/app/lib/db/accountDeletion";
 import { createAdminClient } from "@/app/lib/supabase/admin";
 import { createServerSupabase } from "@/app/lib/supabase/server";
-import type { Locale, ReactionType, RetentionPolicy, SoftGateMode, Visibility } from "@/app/lib/demo/types";
+import type { Locale, ReactionType, RetentionPolicy, Visibility } from "@/app/lib/demo/types";
 import { CONTENT_LANGUAGES } from "@/app/lib/i18n/languages";
 
 const CONTENT_LANGUAGE_CODES = new Set(CONTENT_LANGUAGES.map((l) => l.code));
 const INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const INVITE_CODE_TTL_DAYS = 30;
-const SOFT_GATE_MODES = new Set(["gentle", "focused", "off"]);
 const ADMIN_REVIEW_ROLES = ["owner", "pastor", "elder", "staff"];
 
 const RETENTION_RULES: Record<
@@ -771,7 +770,6 @@ export async function updateChurchSettings(input: {
   churchNameLocale?: string;
   timezone?: string;
   morningNotificationTime?: string;
-  softGateMode?: SoftGateMode;
   pastorAssistEnabled?: boolean;
   allowPrayerAi?: boolean;
   retentionPolicy?: Partial<RetentionPolicy>;
@@ -783,7 +781,7 @@ export async function updateChurchSettings(input: {
 
   const { data: current, error: currentError } = await supabase
     .from("churches")
-    .select("id, name, timezone, morning_notification_time, soft_gate_mode, ai_addon_enabled, pastor_assist_enabled, allow_prayer_ai, retention_policy")
+    .select("id, name, timezone, morning_notification_time, ai_addon_enabled, pastor_assist_enabled, allow_prayer_ai, retention_policy")
     .eq("id", input.churchId)
     .maybeSingle();
   if (currentError) return { ok: false, error: currentError.message };
@@ -793,7 +791,6 @@ export async function updateChurchSettings(input: {
     name?: Record<string, string>;
     timezone?: string;
     morning_notification_time?: string;
-    soft_gate_mode?: SoftGateMode;
     pastor_assist_enabled?: boolean;
     allow_prayer_ai?: boolean;
     retention_policy?: RetentionPolicy;
@@ -817,10 +814,6 @@ export async function updateChurchSettings(input: {
     const time = normalizeMorningNotificationTime(input.morningNotificationTime);
     if (!time) return { ok: false, error: "invalid morning notification time" };
     patch.morning_notification_time = time;
-  }
-  if (input.softGateMode !== undefined) {
-    if (!SOFT_GATE_MODES.has(input.softGateMode)) return { ok: false, error: "invalid soft gate mode" };
-    patch.soft_gate_mode = input.softGateMode;
   }
   // AIサポートは課金アドオン。未購入教会では有効化を拒否する（DBトリガでも二重に強制）。
   const aiEntitled = current.ai_addon_enabled === true;

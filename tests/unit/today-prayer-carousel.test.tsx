@@ -17,7 +17,6 @@ const church: Church = {
   timezone: "Asia/Tokyo",
   morningNotificationTime: "06:30",
   status: "active",
-  softGateMode: "gentle",
   plan: "small",
   inviteCode: "invite",
   aiAddonEnabled: false,
