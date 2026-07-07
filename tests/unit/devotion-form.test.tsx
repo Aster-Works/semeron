@@ -42,23 +42,30 @@ describe("DevotionForm scheduling", () => {
     expect(screen.getByLabelText("Todayに表示する日")).toBeInTheDocument();
     expect(screen.getByText("この日付のTodayに会員へ表示されます。")).toBeInTheDocument();
     expect(screen.getByLabelText("公開予約日")).toBeInTheDocument();
-    expect(screen.getByText("予約する場合は明日以降を選んでください。公開時刻は教会の朝の配信時刻です。")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "今日以降の日付を選べます。公開時刻は教会の朝の配信時刻です（配信時刻を過ぎた当日ぶんはすぐに公開されます）。",
+      ),
+    ).toBeInTheDocument();
   });
 
-  it("only enables scheduled publishing for tomorrow or later", async () => {
+  it("enables scheduled publishing for today or later", async () => {
     renderForm();
 
     const scheduleInput = screen.getByLabelText("公開予約日") as HTMLInputElement;
     const scheduleButton = screen.getByRole("button", { name: "予約する" });
 
-    expect(scheduleInput.min).toBe("2026-07-05");
+    // 最小日は今日（Asia/Tokyo）。当日ぶんの予約も許可する。
+    expect(scheduleInput.min).toBe("2026-07-04");
+    expect(scheduleButton).toBeDisabled(); // 未入力のうちは無効
+
+    // 過去日は不可（早すぎるエラー）。
+    fireEvent.input(scheduleInput, { target: { value: "2026-07-03" } });
+    expect(screen.getByText("予約配信は今日以降の日付を選んでください。")).toBeInTheDocument();
     expect(scheduleButton).toBeDisabled();
 
+    // 当日は許可する。
     fireEvent.input(scheduleInput, { target: { value: "2026-07-04" } });
-    expect(screen.getByText("予約配信は明日以降の日付を選んでください。")).toBeInTheDocument();
-    expect(scheduleButton).toBeDisabled();
-
-    fireEvent.input(scheduleInput, { target: { value: "2026-07-05" } });
     expect(scheduleButton).toBeEnabled();
 
     fireEvent.click(scheduleButton);
@@ -67,7 +74,7 @@ describe("DevotionForm scheduling", () => {
       expect(saveDevotion).toHaveBeenCalledWith(
         expect.objectContaining({
           status: "scheduled",
-          scheduledAt: "2026-07-05",
+          scheduledAt: "2026-07-04",
         }),
       );
     });
