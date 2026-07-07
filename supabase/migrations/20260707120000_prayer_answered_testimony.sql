@@ -63,4 +63,7 @@ begin
 end;
 $$;
 
+-- 新規 public 関数は cloud 既定で PUBLIC(=anon 含む) に EXECUTE が付く。
+-- 剥がして authenticated のみに限定する（security advisor を汚さない・匿名実行を封じる）。
+revoke execute on function public.mark_prayer_answered(uuid, text, jsonb) from public, anon;
 grant execute on function public.mark_prayer_answered(uuid, text, jsonb) to authenticated;
