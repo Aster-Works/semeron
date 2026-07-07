@@ -1,9 +1,9 @@
-import { CalendarClock } from "lucide-react";
-import type { Church, Locale } from "@/app/lib/demo/types";
+import { CalendarClock, Sparkles } from "lucide-react";
+import type { Church, Locale, Localized } from "@/app/lib/demo/types";
 import type { PrayerVM } from "@/app/lib/db/queries";
 import { localize, createT } from "@/app/lib/i18n";
 import { resolveRoleLabels, visibilityLabel } from "@/app/lib/roleLabels";
-import { formatMonthDay } from "@/app/lib/utils";
+import { cn, formatMonthDay } from "@/app/lib/utils";
 import {
   Avatar,
   Badge,
@@ -42,6 +42,10 @@ export function PrayerCard({
   const reactions = vm.reactions ?? [
     { type: "prayed" as const, count: vm.prayedCount, active: vm.viewerPrayed },
   ];
+  const outcome = item.prayerOutcome ?? "open";
+  const isAnswered = outcome !== "open";
+  const answeredNote = item.metadata?.answered_note as Localized | undefined;
+  const answeredText = answeredNote ? localize(answeredNote, locale, church.defaultLocale) : "";
 
   return (
     <Card as="article">
@@ -71,6 +75,30 @@ export function PrayerCard({
             {bodyText}
           </p>
         </div>
+
+        {/* 答えられた祈りの証し（投稿者のコメント）。作者名は出さない＝匿名維持。 */}
+        {isAnswered && answeredText ? (
+          <div
+            className={cn(
+              "rounded-xl border p-3.5",
+              outcome === "thanksgiving" ? "border-gold/30 bg-gold-soft/40" : "border-sage/35 bg-sage-soft/50",
+            )}
+          >
+            <p
+              className={cn(
+                "flex items-center gap-1.5 text-xs font-medium",
+                outcome === "thanksgiving" ? "text-gold-ink" : "text-sage-ink",
+              )}
+            >
+              <Sparkles className="h-3.5 w-3.5" aria-hidden />
+              {t(`outcome.${outcome}`)}
+            </p>
+            <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-ink text-balance-safe">
+              {answeredText}
+            </p>
+            <p className="mt-2 text-xs text-muted">{t("prayer.testimonyThanks")}</p>
+          </div>
+        ) : null}
 
         {item.sensitiveFlags && item.sensitiveFlags.length > 0 ? (
           <SensitiveFlags flags={item.sensitiveFlags} locale={locale} />
@@ -117,6 +145,8 @@ export function PrayerCard({
             initialBody={bodyText}
             isAnonymous={isAnon}
             isPublished={item.status === "published"}
+            initialOutcome={outcome}
+            initialNote={answeredText}
           />
         ) : null}
       </CardBody>

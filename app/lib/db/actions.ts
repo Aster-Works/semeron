@@ -561,6 +561,39 @@ export async function withdrawPrayerRequest(input: {
   return { ok: true };
 }
 
+/**
+ * 投稿者が自分の祈祷課題に「答えられました／感謝の報告」を記録する。
+ * - 対象は投稿者本人の published な prayer_request のみ（definer 関数側で担保）。
+ * - 証し本文は当該ロケールで metadata.answered_note に保存。
+ * - outcome='open' で取り消し（証しを消して祈り続ける状態へ）。
+ */
+export async function markPrayerAnswered(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  contentId: string;
+  outcome: "open" | "answered" | "thanksgiving";
+  note?: string;
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const membershipId = await myMembershipId(supabase, input.churchId);
+  if (!membershipId) return { ok: false, error: "not a member" };
+
+  const note = input.note?.trim();
+  if (input.outcome !== "open" && !note) return { ok: false, error: "empty" };
+
+  const { error } = await supabase.rpc("mark_prayer_answered", {
+    p_content: input.contentId,
+    p_outcome: input.outcome,
+    p_note: input.outcome === "open" || !note ? null : { [input.locale]: note },
+  });
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/${input.locale}/church/${input.churchSlug}/prayers`);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 export async function moderatePrayer(input: {
   churchSlug: string;
   locale: Locale;
@@ -618,20 +651,29 @@ export async function saveDevotion(input: {
     input.status === "scheduled"
       ? scheduleDateToIso(scheduledDate, timing.timezone, timing.morningTime)
       : null;
+  // 当日予約に対応する。予約公開の昇格 cron は日次のため、配信時刻を既に過ぎた
+  // 当日ぶんは cron を待たず「即時公開」へフォールバックする（当日中に届く）。
+  // まだ未来の予約時刻（今日の朝より前、または将来日）は従来どおり予約のまま。
+  let effectiveStatus = input.status;
+  let scheduledAtForRow = scheduledAtIso;
   if (input.status === "scheduled") {
     const scheduledAtMs = scheduledAtIso ? Date.parse(scheduledAtIso) : Number.NaN;
-    if (!Number.isFinite(scheduledAtMs) || scheduledAtMs <= Date.now()) {
-      return { ok: false, error: "schedule date must be in the future" };
+    if (!Number.isFinite(scheduledAtMs)) {
+      return { ok: false, error: "schedule date required" };
+    }
+    if (scheduledAtMs <= Date.now()) {
+      effectiveStatus = "published";
+      scheduledAtForRow = null;
     }
   }
 
   const row = {
     group_id: null,
-    status: input.status,
+    status: effectiveStatus,
     visibility: input.visibility,
     devotion_date: devotionDate,
-    scheduled_at: scheduledAtIso,
-    published_at: input.status === "published" ? new Date().toISOString() : null,
+    scheduled_at: scheduledAtForRow,
+    published_at: effectiveStatus === "published" ? new Date().toISOString() : null,
     scripture_reference: input.scriptureReference || null,
     scripture_translation: input.scriptureTranslation || null,
     scripture_quote: input.scriptureQuote ?? {},
@@ -672,7 +714,8 @@ export async function saveDevotion(input: {
   }
 
   revalidatePath(`/${input.locale}/admin/${input.churchSlug}/devotions`);
-  return { ok: true };
+  // effectiveStatus は当日予約が即時公開へ倒れた場合に "published" になる。
+  return { ok: true, data: { status: effectiveStatus } };
 }
 
 /* ---------- Web Push 購読（Phase 4）---------- */

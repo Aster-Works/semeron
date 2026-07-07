@@ -43,7 +43,7 @@ export const messages = {
   "nav.today": { ja: "今日", en: "Today" },
   "nav.prayer": { ja: "祈り", en: "Prayer" },
   "nav.groups": { ja: "グループ", en: "Groups" },
-  "nav.inbox": { ja: "受信", en: "Inbox" },
+  "nav.inbox": { ja: "通知", en: "Notifications" },
   "nav.me": { ja: "自分", en: "Me" },
 
   // --- admin nav ---
@@ -211,6 +211,25 @@ export const messages = {
     ja: "確認依頼を送れませんでした。",
     en: "Could not request review.",
   },
+  "prayer.markAnswered": { ja: "祈りが答えられた", en: "Mark as answered" },
+  "prayer.editAnswered": { ja: "報告を編集", en: "Edit report" },
+  "prayer.answeredModalTitle": { ja: "答えられた祈りを報告", en: "Report an answered prayer" },
+  "prayer.answeredOutcomeLabel": { ja: "どちらで報告しますか", en: "How would you like to report it?" },
+  "prayer.answeredNoteLabel": {
+    ja: "どのように答えられましたか（証し）",
+    en: "How was it answered? (a short testimony)",
+  },
+  "prayer.answeredNotePlaceholder": {
+    ja: "例：家族の健康が守られました。お祈りに感謝します。",
+    en: "e.g. My family's health was protected. Thank you for your prayers.",
+  },
+  "prayer.answeredNoteHint": {
+    ja: "この報告は祈祷課題の下にコメントとして表示されます。あなたの名前は表示されません（匿名で投稿した場合）。",
+    en: "This appears as a comment under the request. Your name stays hidden if you posted anonymously.",
+  },
+  "prayer.answeredSave": { ja: "報告する", en: "Share report" },
+  "prayer.reopen": { ja: "祈り続けるに戻す", en: "Reopen (keep praying)" },
+  "prayer.testimonyThanks": { ja: "お祈りありがとうございました。", en: "Thank you for praying." },
   "reflection.edited": { ja: "編集済み", en: "edited" },
   "reflection.edit": { ja: "編集する", en: "Edit" },
 
@@ -265,7 +284,7 @@ export const messages = {
   "groups.noGroupPrayers": { ja: "このグループの祈祷課題はまだありません。", en: "No prayer requests in this group yet." },
 
   // --- inbox ---
-  "inbox.title": { ja: "受信", en: "Inbox" },
+  "inbox.title": { ja: "通知", en: "Notifications" },
   "inbox.empty": { ja: "新しいお知らせはありません。", en: "No new notifications." },
   "inbox.quietNote": {
     ja: "ここは静かな祈りのリマインダーです。",
@@ -411,12 +430,12 @@ export const messages = {
   "editor.visibility": { ja: "公開範囲", en: "Visibility" },
   "editor.scheduleAt": { ja: "公開予約日", en: "Scheduled publish date" },
   "editor.scheduleAtHint": {
-    ja: "予約する場合は明日以降を選んでください。公開時刻は教会の朝の配信時刻です。",
-    en: "For scheduled publishing, choose tomorrow or later. It will publish at the church's morning delivery time.",
+    ja: "今日以降の日付を選べます。公開時刻は教会の朝の配信時刻です（配信時刻を過ぎた当日ぶんはすぐに公開されます）。",
+    en: "Choose today or later. It publishes at the church's morning delivery time (same-day past that time publishes right away).",
   },
   "editor.scheduleFutureError": {
-    ja: "予約配信は明日以降の日付を選んでください。",
-    en: "Choose tomorrow or later for scheduled publishing.",
+    ja: "予約配信は今日以降の日付を選んでください。",
+    en: "Choose today or later for scheduled publishing.",
   },
   "editor.schedulePastError": {
     ja: "予約配信日時は現在より未来にしてください。",

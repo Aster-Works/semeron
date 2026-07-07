@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useOptimistic, useTransition } from "react";
 import {
   BadgeCheck,
   BookOpenCheck,
@@ -60,23 +60,27 @@ function ReactionButton({
   spec: ReactionSpec;
 }) {
   const { t } = useLocale();
-  const [active, setActive] = useState(spec.active);
-  const [count, setCount] = useState(spec.count);
+  // サーバー真値(spec)を権威とし、useOptimistic で即時反映する。
+  // revalidate 後にサーバーが再描画されると overlay は自動でサーバー値へ戻るため、
+  // 「一度押したら記憶される」（＝再訪でも押した状態が残る）。
+  const [state, setOptimistic] = useOptimistic(
+    { active: spec.active, count: spec.count },
+    (_prev, next: { active: boolean; count: number }) => next,
+  );
   const [pending, startTransition] = useTransition();
+  const { active, count } = state;
   const meta = META[spec.type];
   const Icon = meta.icon;
 
   const toggle = () => {
-    const next = !active;
-    setActive(next);
-    setCount((c) => c + (next ? 1 : -1));
+    const next = {
+      active: !active,
+      count: Math.max(0, count + (!active ? 1 : -1)),
+    };
     startTransition(async () => {
-      const res = await toggleReaction(churchId, contentId, spec.type);
-      if (!res.ok) {
-        // 失敗時は元に戻す
-        setActive(!next);
-        setCount((c) => c + (next ? -1 : 1));
-      }
+      setOptimistic(next);
+      await toggleReaction(churchId, contentId, spec.type);
+      // 成否に関わらず、server action の revalidate によりサーバー真値へ収束する。
     });
   };
 

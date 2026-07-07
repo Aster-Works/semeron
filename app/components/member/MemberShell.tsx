@@ -28,7 +28,7 @@ export async function MemberShell({
   return (
     <div className="min-h-dvh bg-paper">
       <header className="border-b border-line bg-surface/80">
-        <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-ink">
               {localize(church.name, locale, church.defaultLocale)}
@@ -46,7 +46,7 @@ export async function MemberShell({
         </div>
       </header>
 
-      <main id="main" className="mx-auto max-w-2xl px-4 pb-28 pt-4">{children}</main>
+      <main id="main" className="mx-auto max-w-3xl px-4 pb-28 pt-4">{children}</main>
 
       <MemberTabBar
         locale={locale}

@@ -35,6 +35,15 @@ type GroupMembershipWithMember = {
 
 const isString = (value: unknown): value is string => typeof value === "string" && value.length > 0;
 const PRAYER_REACTIONS: ReactionType[] = ["prayed"];
+
+/**
+ * 祈祷フィードで「表示期限を過ぎていない」行だけに絞る PostgREST 条件。
+ * 期限なし / 期限が未来 / 既に答えられた(証しは残す) の3条件のいずれか。
+ * ※期限切れの open な課題がフィードに残り続けるバグの修正。
+ */
+function notExpiredOr(nowIso: string): string {
+  return `expires_at.is.null,expires_at.gt.${nowIso},prayer_outcome.in.(answered,thanksgiving)`;
+}
 const REFLECTION_REACTIONS: ReactionType[] = ["amen", "thanks"];
 
 export interface PrayerVM {
@@ -166,13 +175,15 @@ export async function getPrayerFeed(
   viewer: Viewer,
   locale: Locale,
 ): Promise<PrayerVM[]> {
-  // content_feed（RLS + 匿名マスク）から published の祈祷課題を取得
+  // content_feed（RLS + 匿名マスク）から published の祈祷課題を取得。
+  // 表示期限を過ぎた open な課題は除外する（答えられた課題の証しは残す）。
   const { data } = await supabase
     .from("content_feed")
     .select("*")
     .eq("church_id", viewer.church.id)
     .eq("type", "prayer_request")
     .eq("status", "published")
+    .or(notExpiredOr(new Date().toISOString()))
     .order("published_at", { ascending: false });
   const rows = ((data ?? []) as ContentFeedRow[]).filter((row) => canIncludeGroupScopedRow(row, viewer));
   return attachPrayerVMs(supabase, rows, viewer, locale);
@@ -299,6 +310,7 @@ export async function getGroupPrayers(
     .eq("type", "prayer_request")
     .eq("status", "published")
     .eq("group_id", groupId)
+    .or(notExpiredOr(new Date().toISOString()))
     .order("published_at", { ascending: false });
   const rows = ((data ?? []) as ContentFeedRow[]).filter((row) => canIncludeGroupScopedRow(row, viewer));
   return attachPrayerVMs(supabase, rows, viewer, locale);
@@ -307,6 +319,7 @@ export async function getGroupPrayers(
 /* ---------- Inbox ---------- */
 export async function getInbox(supabase: SupabaseClient, viewer: Viewer): Promise<AppNotification[]> {
   if (!viewer.membership) return [];
+  // 既読の通知は表示しない（通知センターは未読=対応待ちだけを静かに出す）。
   const { data } = await supabase
     .from("notifications")
     .select("*")
@@ -314,6 +327,7 @@ export async function getInbox(supabase: SupabaseClient, viewer: Viewer): Promis
     .eq("channel", "in_app")
     .is("archived_at", null)
     .eq("muted_by_recipient", false)
+    .eq("read", false)
     .order("created_at", { ascending: false });
   return (data ?? []).map(mapNotification);
 }

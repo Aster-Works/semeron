@@ -17,9 +17,10 @@ export interface InboxItemVM {
   category: NotificationCategory;
 }
 
-type InboxFilter = "all" | "unread" | "today" | "prayer" | "admin" | "social";
+type InboxFilter = "all" | "today" | "prayer" | "admin" | "social";
 
-const FILTERS: InboxFilter[] = ["all", "unread", "today", "prayer", "admin", "social"];
+// 既読は非表示のため「未読」フィルタは廃止（すべて未読なので冗長）。
+const FILTERS: InboxFilter[] = ["all", "today", "prayer", "admin", "social"];
 
 /**
  * 受信箱の一覧。タップで1件を既読、「すべて既読にする」で全既読（本人のみ）。
@@ -48,7 +49,6 @@ export function InboxList({
   const visibleItems = items.filter((it) => !hiddenIds.has(it.id));
   const filteredItems = visibleItems.filter((it) => {
     if (filter === "all") return true;
-    if (filter === "unread") return !isRead(it);
     return it.category === filter;
   });
   const anyUnread = visibleItems.some((it) => !isRead(it));

@@ -112,7 +112,9 @@ export function DevotionForm({
   const [refl, setRefl] = useState<Localized>(initial?.reflectionQuestion ?? {});
   const [prayer, setPrayer] = useState<Localized>(initial?.prayerGuide ?? {});
   const [quote, setQuote] = useState<Localized>(initial?.scriptureQuote ?? {});
-  const minScheduleDate = useMemo(() => futureDateKey(churchTimezone, 1), [churchTimezone]);
+  // 当日ぶんの予約も許可（今日以降）。当日で配信時刻を過ぎている場合は
+  // サーバー側(saveDevotion)が即時公開へフォールバックする。
+  const minScheduleDate = useMemo(() => futureDateKey(churchTimezone, 0), [churchTimezone]);
   const scheduleTooEarly = Boolean(scheduleAt && scheduleAt < minScheduleDate);
   const visibleError = useMemo(() => {
     if (!error) return null;
@@ -161,8 +163,11 @@ export function DevotionForm({
         reflectionQuestion: clean(refl),
         prayerGuide: clean(prayer),
       });
-      if (res.ok) setSaved(status);
-      else setError(res.error);
+      // 当日予約が即時公開へ倒れた場合は実効ステータス(published)を反映。
+      if (res.ok) {
+        const effective = (res.data as { status?: typeof status } | undefined)?.status;
+        setSaved(effective ?? status);
+      } else setError(res.error);
     });
   };
 

@@ -32,7 +32,9 @@ export function Field({
 }
 
 const controlBase =
-  "w-full rounded-xl border border-line-strong bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted/70 focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/30";
+  // min-w-0: iOS Safari の input[type=date] が intrinsic min幅で w-full を無視し
+  // 親からはみ出すのを防ぐ（全 input/select/textarea に効かせる）。
+  "w-full min-w-0 rounded-xl border border-line-strong bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted/70 focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/30";
 
 export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(controlBase, className)} {...props} />;

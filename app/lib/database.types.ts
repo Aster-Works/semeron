@@ -974,6 +974,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      mark_prayer_answered: {
+        Args: {
+          p_content: string
+          p_outcome: string
+          p_note?: Json
+        }
+        Returns: undefined
+      }
       moderate_prayer: {
         Args: {
           p_content: string
