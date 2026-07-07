@@ -28,8 +28,21 @@
 - [ ] vitest は **既存の環境問題**で起動不可（vite8.1.3が要求するNode≥20.19に対しstd-env ESM/CJS不整合）。テスト設定・依存は未変更＝私の変更が原因ではない。
 - 未ブラウザ検証: #3当日予約（DBロジック＝build/型で担保）、#7期限フィルタ（seedに期限切れが無いため。標準PostgREST `.or()` 構文・buildで担保）。真のiOS Safari実機での#2は要実機。
 
-## デプロイ時の注意
-- 新migration `20260707120000_prayer_answered_testimony.sql` を本番Supabaseへ適用が必要（[[supabase-project-ops]]）。適用前は markPrayerAnswered が RPC 未定義で失敗する。ローカルは適用済み。
+## AIサポートを課金アドオン化（2026-07-07 追加）
+「AIは有料オプション・無料では使えない」対応。
+- migration `20260707140000_ai_addon_entitlement.sql`: churches に `ai_addon_enabled boolean default false`。invokerトリガ `private.enforce_ai_entitlement`= (1)会員(authenticated/anon)は自己付与不可・変更できるのは service_role(課金)/postgres のみ、(2)アドオン未購入なら pastor_assist_enabled/allow_prayer_ai を常にfalse。既存教会backfill。
+- `Church.aiAddonEnabled`（types/map/database.types）。
+- server: pastor-assist の3アクションに `not_entitled` ゲート追加。`updateChurchSettings` はアドオン未購入でのAI有効化を拒否（"ai add-on required"）。
+- UI: `PastorAssistSettingsEditor` に `entitled` prop。未購入=「有料オプション」バッジ＋upsell callout＋トグルロック。settings page が `entitled={church.aiAddonEnabled}` を渡す。i18n `settings.aiAddon*` 追加。
+- **課金前の運用**: 支払い教会にはSQL/dashboardで `update churches set ai_addon_enabled=true`（service_role）。将来Stripeがこのフラグを立てる。
+- 検証: typecheck/lint/build緑・**test 69/69**・DB不変条件（[A]オーナー自己付与→f/f/f、[B]課金付与後オーナー有効化→t/t/f）・ブラウザ（未購入=upsell+ロック、購入=解除）。
+
+## デプロイ（完了 2026-07-07）
+- コミット: 399dd97（7課題）→ 181dbe9（テスト更新+.nvmrc）→ 5b0f083（anon EXECUTE剥奪）。main へ push 済み。
+- 本番Supabase(Semeron nlbowtgpchzkmzyligic): migration `20260707120000` 適用済み。SQL実体確認=関数存在・security definer・ACL={authenticated,service_role}のみ（anon無し）。security advisor ERROR **0**。pg-delta証明書warningは無害。
+- Vercel: dpl_E6uHc8Jw…（commit 5b0f083, production）**READY**、`semeron-app.vercel.app` login/manifest **200**。ビルド~40s。
+- 安全順序を遵守: **DB migration先行 → app push**（RPC未定義で機能が壊れる窓を作らない）。
+- テスト環境: Node **22.23.1**（nvm）で `npm run test` = **69/69 green**。ローカル既定node 20.18は不足（.nvmrcで固定）。
 
 ## 変更ファイル
 - `app/components/member/MemberShell.tsx`（#1 max-w-3xl）

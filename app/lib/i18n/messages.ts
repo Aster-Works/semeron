@@ -889,6 +889,15 @@ export const messages = {
     ja: "サーバーにAIキーが未設定のため、有効にしても実際の生成は行われません（設定は保存できます）。",
     en: "No AI key is configured on the server, so enabling this won't generate yet (the setting still saves).",
   },
+  "settings.aiAddonBadge": { ja: "有料オプション", en: "Paid add-on" },
+  "settings.aiAddonUpsellTitle": {
+    ja: "AIサポートは有料オプションです",
+    en: "AI support is a paid add-on",
+  },
+  "settings.aiAddonUpsell": {
+    ja: "Pastor Assist（AI補助）は追加のお申し込みで利用できます。導入をご希望の場合はお問い合わせください。",
+    en: "Pastor Assist (AI) is available as a separate paid add-on. Contact us to enable it for your church.",
+  },
 
   // --- login / join ---
   "login.title": { ja: "Semeron にログイン", en: "Log in to Semeron" },

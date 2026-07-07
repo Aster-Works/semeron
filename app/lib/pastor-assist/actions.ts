@@ -40,6 +40,7 @@ import type {
 
 export type AssistErrorCode =
   | "not_configured"
+  | "not_entitled"
   | "not_allowed"
   | "forbidden"
   | "parse_error"
@@ -123,6 +124,8 @@ export async function assistDevotionDraft(
 
   // 権限: デボーション補助は管理者限定（サーバー側で再確認）
   if (!isChurchAdmin(viewer)) return fail("forbidden", "admin role required");
+  // 課金アドオン: AI サポートは有料オプション。未購入教会は使えない。
+  if (!viewer.church.aiAddonEnabled) return fail("not_entitled", "AI add-on is required for this church");
   // 教会設定で有効化されていること
   if (!viewer.church.pastorAssistEnabled) return fail("not_allowed", "pastor assist is not enabled for this church");
   // モデル未設定
@@ -254,6 +257,8 @@ export async function runPrayerAssist(
 
   // 権限: 祈祷確認はモデレータ以上（サーバー側で再確認）
   if (!canModerate(viewer)) return fail("forbidden", "moderator role required");
+  // 課金アドオン: AI サポートは有料オプション。未購入教会は使えない。
+  if (!viewer.church.aiAddonEnabled) return fail("not_entitled", "AI add-on is required for this church");
   // 教会設定: Pastor Assist が有効、かつ「祈祷本文を AI に送る」ことが許可されていること
   if (!viewer.church.pastorAssistEnabled) return fail("not_allowed", "pastor assist is not enabled");
   if (!viewer.church.allowPrayerAi) return fail("not_allowed", "sending prayer text to AI is not allowed for this church");
@@ -354,6 +359,8 @@ export async function assistWeeklyPrayerList(
   const { supabase, viewer } = ctx;
 
   if (!canModerate(viewer)) return fail("forbidden", "moderator role required");
+  // 課金アドオン: AI サポートは有料オプション。未購入教会は使えない。
+  if (!viewer.church.aiAddonEnabled) return fail("not_entitled", "AI add-on is required for this church");
   if (!viewer.church.pastorAssistEnabled) return fail("not_allowed", "pastor assist is not enabled");
   if (!viewer.church.allowPrayerAi) return fail("not_allowed", "sending prayer text to AI is not allowed for this church");
   if (input.confirmed !== true) return fail("forbidden", "confirmation required");

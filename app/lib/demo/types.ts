@@ -129,7 +129,9 @@ export interface Church {
   /** 招待コードを最後に発行/再生成した時刻。 */
   inviteCodeRotatedAt?: string;
   inviteCodeExpired?: boolean;
-  /** Pastor Assist（管理者限定AI補助）を有効にするか。既定 false（opt-in）。 */
+  /** AIサポート（Pastor Assist）の課金アドオン。true の教会だけが AI を有効化できる。既定 false（無料では不可）。 */
+  aiAddonEnabled: boolean;
+  /** Pastor Assist（管理者限定AI補助）を有効にするか。既定 false（opt-in）。アドオン未購入なら常に false。 */
   pastorAssistEnabled: boolean;
   /** 祈祷課題の本文を AI に送ることを許可するか。要配慮情報のため既定 false。 */
   allowPrayerAi: boolean;

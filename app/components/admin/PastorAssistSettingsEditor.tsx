@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Sparkles } from "lucide-react";
+import { Lock, Sparkles } from "lucide-react";
 import type { Locale } from "@/app/lib/demo/types";
 import { useLocale } from "@/app/lib/i18n/LocaleProvider";
 import { Toggle, Callout } from "@/app/components/ui";
@@ -19,6 +19,7 @@ export function PastorAssistSettingsEditor({
   initial,
   canEdit,
   assistConfigured,
+  entitled,
 }: {
   churchId: string;
   churchSlug: string;
@@ -26,6 +27,8 @@ export function PastorAssistSettingsEditor({
   initial: { pastorAssistEnabled: boolean; allowPrayerAi: boolean };
   canEdit: boolean;
   assistConfigured: boolean;
+  /** AIサポートの課金アドオンが有効か。false のときはトグルを操作させず案内を出す。 */
+  entitled: boolean;
 }) {
   const { t } = useLocale();
   const [enabled, setEnabled] = useState(initial.pastorAssistEnabled);
@@ -66,27 +69,39 @@ export function PastorAssistSettingsEditor({
         <span className="rounded-full border border-sage/40 bg-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sage-ink">
           AI
         </span>
+        <span className="rounded-full border border-gold/40 bg-gold-soft/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gold-ink">
+          {t("settings.aiAddonBadge")}
+        </span>
       </div>
 
-      <Toggle
-        id="pastor-assist-enabled"
-        checked={enabled}
-        onChange={canEdit ? onToggleEnabled : () => {}}
-        label={t("settings.pastorAssist")}
-        description={t("settings.pastorAssistHint")}
-      />
+      {/* 課金アドオン未購入: トグルは操作させず、案内だけ出す（無料では使えない）。 */}
+      {!entitled ? (
+        <Callout tone="gold" icon={Lock} title={t("settings.aiAddonUpsellTitle")}>
+          {t("settings.aiAddonUpsell")}
+        </Callout>
+      ) : null}
 
-      <div className={enabled ? "" : "pointer-events-none opacity-50"} aria-disabled={!enabled}>
+      <div className={entitled ? "" : "pointer-events-none opacity-50"} aria-disabled={!entitled}>
         <Toggle
-          id="allow-prayer-ai"
-          checked={allowPrayer}
-          onChange={canEdit && enabled ? onTogglePrayer : () => {}}
-          label={t("settings.allowPrayerAi")}
-          description={t("settings.allowPrayerAiHint")}
+          id="pastor-assist-enabled"
+          checked={enabled}
+          onChange={canEdit && entitled ? onToggleEnabled : () => {}}
+          label={t("settings.pastorAssist")}
+          description={t("settings.pastorAssistHint")}
         />
+
+        <div className={enabled && entitled ? "mt-3" : "mt-3 pointer-events-none opacity-50"} aria-disabled={!enabled || !entitled}>
+          <Toggle
+            id="allow-prayer-ai"
+            checked={allowPrayer}
+            onChange={canEdit && enabled && entitled ? onTogglePrayer : () => {}}
+            label={t("settings.allowPrayerAi")}
+            description={t("settings.allowPrayerAiHint")}
+          />
+        </div>
       </div>
 
-      {enabled && !assistConfigured ? (
+      {entitled && enabled && !assistConfigured ? (
         <Callout tone="neutral">{t("settings.assistNotConfigured")}</Callout>
       ) : null}
 

@@ -20,6 +20,7 @@ const church: Church = {
   softGateMode: "gentle",
   plan: "small",
   inviteCode: "invite",
+  aiAddonEnabled: false,
   pastorAssistEnabled: false,
   allowPrayerAi: false,
   retentionPolicy: DEFAULT_RETENTION_POLICY,

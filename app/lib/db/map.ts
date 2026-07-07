@@ -116,6 +116,7 @@ export function mapChurch(r: ChurchRow): Church {
     inviteCodeExpiresAt,
     inviteCodeRotatedAt: r.invite_code_rotated_at ?? undefined,
     inviteCodeExpired: inviteCodeExpiresAt ? Date.parse(inviteCodeExpiresAt) <= Date.now() : false,
+    aiAddonEnabled: r.ai_addon_enabled ?? false,
     pastorAssistEnabled: r.pastor_assist_enabled ?? false,
     allowPrayerAi: r.allow_prayer_ai ?? false,
     retentionPolicy: retentionPolicy(row.retention_policy),

@@ -783,7 +783,7 @@ export async function updateChurchSettings(input: {
 
   const { data: current, error: currentError } = await supabase
     .from("churches")
-    .select("id, name, timezone, morning_notification_time, soft_gate_mode, pastor_assist_enabled, allow_prayer_ai, retention_policy")
+    .select("id, name, timezone, morning_notification_time, soft_gate_mode, ai_addon_enabled, pastor_assist_enabled, allow_prayer_ai, retention_policy")
     .eq("id", input.churchId)
     .maybeSingle();
   if (currentError) return { ok: false, error: currentError.message };
@@ -822,6 +822,10 @@ export async function updateChurchSettings(input: {
     if (!SOFT_GATE_MODES.has(input.softGateMode)) return { ok: false, error: "invalid soft gate mode" };
     patch.soft_gate_mode = input.softGateMode;
   }
+  // AIサポートは課金アドオン。未購入教会では有効化を拒否する（DBトリガでも二重に強制）。
+  const aiEntitled = current.ai_addon_enabled === true;
+  if (input.pastorAssistEnabled === true && !aiEntitled) return { ok: false, error: "ai add-on required" };
+  if (input.allowPrayerAi === true && !aiEntitled) return { ok: false, error: "ai add-on required" };
   if (input.pastorAssistEnabled !== undefined) patch.pastor_assist_enabled = input.pastorAssistEnabled;
   if (input.allowPrayerAi !== undefined) patch.allow_prayer_ai = input.allowPrayerAi;
   if (input.retentionPolicy !== undefined) {

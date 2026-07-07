@@ -137,6 +137,7 @@ export default async function AdminSettingsPage({
               }}
               canEdit={canEditSettings}
               assistConfigured={assistConfigured}
+              entitled={church.aiAddonEnabled}
             />
           </CardBody>
         </Card>

@@ -59,6 +59,7 @@ export type Database = {
       }
       churches: {
         Row: {
+          ai_addon_enabled: boolean
           allow_prayer_ai: boolean
           content_languages: string[]
           created_at: string
@@ -80,6 +81,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_addon_enabled?: boolean
           allow_prayer_ai?: boolean
           content_languages?: string[]
           created_at?: string
@@ -101,6 +103,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_addon_enabled?: boolean
           allow_prayer_ai?: boolean
           content_languages?: string[]
           created_at?: string

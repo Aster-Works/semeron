@@ -59,6 +59,7 @@ export const churches: Church[] = [
     softGateMode: "gentle",
     plan: "standard",
     inviteCode: "EIFUKU-2026",
+    aiAddonEnabled: true, // デモ: 永福南は AI アドオン購入済み
     pastorAssistEnabled: true, // デモ: 永福南は Pastor Assist を有効化
     allowPrayerAi: false, // 祈祷本文の AI 送信は既定オフ（opt-in）
     retentionPolicy: DEFAULT_RETENTION_POLICY,
@@ -76,6 +77,7 @@ export const churches: Church[] = [
     softGateMode: "gentle",
     plan: "pro",
     inviteCode: "GRACE-2026",
+    aiAddonEnabled: false,
     pastorAssistEnabled: false,
     allowPrayerAi: false,
     retentionPolicy: DEFAULT_RETENTION_POLICY,
