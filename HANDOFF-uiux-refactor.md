@@ -50,6 +50,12 @@
 5. **ポリッシュ** — buttonStyles base に `active:scale-[0.98]`（motion-reduce無効化）。
 検証: typecheck/lint/test 69/69/build 緑。ブラウザ実測=LP要素全表示（デスクトップ2カラム/モバイル375px overflowなし）、member/adminヘッダーリンク動作、スワイプ右（transform 104px・sage背景・既読・badge減）/左（mist背景・非表示・badge消）、管理画面 空カード0件・週間6stats・console error 0。通知テストデータは復元済み。
 
+## バグ修正: 「確認を依頼」が管理画面に出ない（2026-07-08）
+**根本原因**: requestAdminReview は公開済み課題に metadata.admin_review_requested を立てるだけだが、管理の承認画面は pending_review しか表示しない→依頼がどこにも出ない。
+**修正**: ①`getReviewRequestedPrayers`（content_feed・published・flag=true・匿名マスク維持・`attachAuthorNames`共通化）②`resolveAdminReview` action（resolve=公開のままフラグ解除／reReview=`moderate_prayer(needs_revision)`で承認待ちへ差し戻し+フラグ解除。モデレーター明示ゲート=RLSのauthor分岐対策）③`ReviewRequestedCard`＋管理ページに「会員からの確認依頼」セクション ④i18n `moderation.requested.*`。
+**敵対的レビュー(Workflow 3レンズ)の反映**: 依頼者/対応者の membership id を member可読 metadata に書くのを止め audit_logs（管理者のみ）に一本化＋migration `20260708090000_strip_review_request_identities` で既存行から剥離／作成者の自己解決を役割ゲートで阻止／「上の承認キュー」→「下の」。races 2件は ponytail 注記で受容（再実行で収束・実害なし）。※Workflow の verify エージェント7本はセッション上限で死亡=未検証だったため、7指摘は全て自分で精査した（誤検証扱いにしていない）。
+**E2E**: 依頼→管理画面表示（匿名維持）→問題なし完了（公開維持・フラグ解除）→再依頼→再審査差し戻し（pending化・承認キューに匿名で出現・監査2行）を実測。ハードニング後も依頼フロー再実測（metadataに身元キー無し・auditに行為者あり）。seed復元済み。
+
 ## デプロイ（完了 2026-07-07）
 - コミット: 399dd97（7課題）→ 181dbe9（テスト更新+.nvmrc）→ 5b0f083（anon EXECUTE剥奪）。main へ push 済み。
 - 本番Supabase(Semeron nlbowtgpchzkmzyligic): migration `20260707120000` 適用済み。SQL実体確認=関数存在・security definer・ACL={authenticated,service_role}のみ（anon無し）。security advisor ERROR **0**。pg-delta証明書warningは無害。

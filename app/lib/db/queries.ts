@@ -363,7 +363,36 @@ export async function getModerationQueue(
     .eq("type", "prayer_request")
     .eq("status", "pending_review")
     .order("created_at", { ascending: false });
-  const rows = (data ?? []) as ContentFeedRow[];
+  return attachAuthorNames(supabase, (data ?? []) as ContentFeedRow[], locale);
+}
+
+/**
+ * 会員から「確認を依頼」された公開中の祈祷課題。
+ * requestAdminReview が metadata.admin_review_requested を立てるが、公開済みは
+ * 承認待ちキュー（pending_review）に出ないため、この一覧で管理者に見せる。
+ */
+export async function getReviewRequestedPrayers(
+  supabase: SupabaseClient,
+  viewer: Viewer,
+  locale: Locale,
+): Promise<{ item: ContentItem; authorName: string }[]> {
+  const { data } = await supabase
+    .from("content_feed")
+    .select("*")
+    .eq("church_id", viewer.church.id)
+    .eq("type", "prayer_request")
+    .eq("status", "published")
+    .eq("metadata->>admin_review_requested", "true")
+    .order("created_at", { ascending: false });
+  return attachAuthorNames(supabase, (data ?? []) as ContentFeedRow[], locale);
+}
+
+/** content_feed 行（匿名は author が null にマスク済み）に作者名を付ける。 */
+async function attachAuthorNames(
+  supabase: SupabaseClient,
+  rows: ContentFeedRow[],
+  locale: Locale,
+): Promise<{ item: ContentItem; authorName: string }[]> {
   const authorIds = [...new Set(rows.map((r) => r.author_membership_id).filter(isString))];
   const nameById = new Map<string, string>();
   if (authorIds.length > 0) {

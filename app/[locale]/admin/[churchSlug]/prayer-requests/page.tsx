@@ -1,8 +1,10 @@
 import { FileUp, HeartHandshake, ListChecks } from "lucide-react";
 import { requireChurchContext } from "@/app/lib/db/context";
-import { getModerationQueue } from "@/app/lib/db/queries";
+import { getModerationQueue, getReviewRequestedPrayers } from "@/app/lib/db/queries";
 import { createT } from "@/app/lib/i18n";
+import { formatMonthDay } from "@/app/lib/utils";
 import { ModerationCard } from "@/app/components/admin/ModerationCard";
+import { ReviewRequestedCard } from "@/app/components/admin/ReviewRequestedCard";
 import { ButtonLink, EmptyState, SectionHeading } from "@/app/components/ui";
 import { resolveVisibilityLabels } from "@/app/lib/roleLabels";
 
@@ -17,7 +19,10 @@ export default async function PrayerModerationPage({
   const t = createT(locale as "ja" | "en");
   const visLabels = resolveVisibilityLabels(viewer.church, locale as "ja" | "en");
 
-  const queue = await getModerationQueue(supabase, viewer, locale as "ja" | "en");
+  const [queue, requested] = await Promise.all([
+    getModerationQueue(supabase, viewer, locale as "ja" | "en"),
+    getReviewRequestedPrayers(supabase, viewer, locale as "ja" | "en"),
+  ]);
 
   return (
     <>
@@ -53,10 +58,46 @@ export default async function PrayerModerationPage({
           }
         />
 
+        {/* 会員からの確認依頼（公開中の投稿）。承認待ちキューには出ないためここで扱う。 */}
+        {requested.length > 0 ? (
+          <section className="space-y-4">
+            <SectionHeading
+              title={t("moderation.requested.heading")}
+              description={t("moderation.requested.note")}
+            />
+            {requested.map((q) => (
+              <ReviewRequestedCard
+                key={q.item.id}
+                item={q.item}
+                authorName={q.authorName}
+                churchId={church.id}
+                churchSlug={church.slug}
+                locale={locale as "ja" | "en"}
+                churchDefaultLocale={church.defaultLocale}
+                visLabel={visLabels[q.item.visibility]}
+                requestedAtLabel={
+                  typeof q.item.metadata?.admin_review_requested_at === "string"
+                    ? formatMonthDay(
+                        q.item.metadata.admin_review_requested_at,
+                        locale as "ja" | "en",
+                        church.timezone,
+                      )
+                    : undefined
+                }
+              />
+            ))}
+          </section>
+        ) : null}
+
         {queue.length === 0 ? (
-          <EmptyState icon={HeartHandshake} title={t("moderation.empty")} />
+          requested.length === 0 ? (
+            <EmptyState icon={HeartHandshake} title={t("moderation.empty")} />
+          ) : null
         ) : (
-          <div className="space-y-4">
+          <section className="space-y-4">
+            {requested.length > 0 ? (
+              <SectionHeading title={t("moderation.pendingHeading")} />
+            ) : null}
             {queue.map((q) => (
               <ModerationCard
                 visLabels={visLabels}
@@ -70,7 +111,7 @@ export default async function PrayerModerationPage({
                 allowPrayerAi={church.allowPrayerAi}
               />
             ))}
-          </div>
+          </section>
         )}
       </div>
     </>

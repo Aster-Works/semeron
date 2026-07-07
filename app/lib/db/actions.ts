@@ -1135,18 +1135,19 @@ export async function requestAdminReview(input: {
   if (currentError) return { ok: false, error: currentError.message };
   if (!current) return { ok: false, error: "content not found" };
 
+  // metadata は content_feed 経由で全閲覧会員に見える。依頼者の身元（誰が通報したか）を
+  // 投稿者に晒さないため、membership id は metadata に書かない。誰が依頼したかの
+  // 耐久記録は audit_logs（管理者のみ閲覧可）が持つ。
   const metadata = jsonObjectRecord(current.metadata);
-  const history = Array.isArray(metadata.admin_review_requests)
-    ? metadata.admin_review_requests.slice(-9)
-    : [];
-  const nextMetadata = {
+  const nextMetadata: Record<string, unknown> = {
     ...metadata,
     admin_review_requested: true,
     admin_review_requested_at: requestedAt,
-    admin_review_requested_by: me.id,
     admin_review_request_count: Number(metadata.admin_review_request_count ?? 0) + 1,
-    admin_review_requests: [...history, { at: requestedAt, by: me.id }],
   };
+  // 旧実装が書いた身元キーが残っていれば剥がす（本番データは migration でも除去）。
+  delete nextMetadata.admin_review_requested_by;
+  delete nextMetadata.admin_review_requests;
 
   const { error: updateError } = await admin
     .from("content_items")
@@ -1205,6 +1206,94 @@ export async function requestAdminReview(input: {
 
   revalidatePath(`/${input.locale}/church/${input.churchSlug}/prayers`);
   revalidatePath(`/${input.locale}/admin/${input.churchSlug}/notifications`);
+  return { ok: true };
+}
+
+/** private.can_moderate と同じ役割セット（+管理者ロール）。 */
+const MODERATOR_ROLES = new Set(["owner", "pastor", "elder", "prayer_team"]);
+
+/**
+ * 管理者が「確認依頼」に対応する。
+ *  - resolve: 問題なしとしてフラグを下ろす（公開は維持）。
+ *  - reReview: moderate_prayer(needs_revision) で承認待ちへ差し戻し（公開を一旦停止）、
+ *    フラグも下ろす（再承認後に依頼一覧へ再出現しないように）。
+ * 権限は RLS が第一の砦だが、RLS content_update には「作成者は自分の pending_review を
+ * 更新できる」分岐があるため、作成者が自分の依頼フラグを操作できないよう
+ * サーバー側でもモデレーター以上を明示的に要求する（二重ゲート）。
+ */
+export async function resolveAdminReview(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  contentId: string;
+  action: "resolve" | "reReview";
+}): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const me = await myMembership(supabase, input.churchId);
+  if (!me) return { ok: false, error: "not a member" };
+  const canModerate =
+    me.roles.some((role) => MODERATOR_ROLES.has(role)) || isChurchAdminRole(me.roles);
+  if (!canModerate) return { ok: false, error: "moderator role required" };
+
+  const { data: cur, error: curError } = await supabase
+    .from("content_items")
+    .select("id, metadata")
+    .eq("id", input.contentId)
+    .eq("church_id", input.churchId)
+    .eq("type", "prayer_request")
+    .maybeSingle();
+  if (curError) return { ok: false, error: curError.message };
+  if (!cur) return { ok: false, error: "not found or not permitted" };
+
+  if (input.action === "reReview") {
+    // ponytail: RPC成功後のフラグ解除が失敗しても、エラー返却→管理者の再実行で収束する
+    // （needs_revision は pending_review にも冪等に効き、その後フラグ解除が走る）。
+    const { error } = await supabase.rpc("moderate_prayer", {
+      p_content: input.contentId,
+      p_decision: "needs_revision",
+      p_visibility: null,
+      p_public_title: null,
+      p_public_body: null,
+      p_note: null,
+    });
+    if (error) return { ok: false, error: error.message };
+  }
+
+  // metadata は全閲覧会員に見えるため、対応者の membership id は書かない
+  // （誰が対応したかは audit_logs=管理者のみ閲覧可、が持つ）。
+  // ponytail: read-modify-write のため、この数秒の間に届いた新しい依頼を上書きで
+  // 消しうるが、管理者がまさに今その内容を確認した直後なので実害なしと判断。
+  const metadata = jsonObjectRecord(cur.metadata);
+  const nextMetadata: Record<string, unknown> = {
+    ...metadata,
+    admin_review_requested: false,
+    admin_review_resolved_at: new Date().toISOString(),
+    admin_review_resolution: input.action,
+  };
+  delete nextMetadata.admin_review_requested_by;
+  delete nextMetadata.admin_review_requests;
+  const { data, error } = await supabase
+    .from("content_items")
+    .update({ metadata: nextMetadata })
+    .eq("id", input.contentId)
+    .eq("church_id", input.churchId)
+    .eq("type", "prayer_request")
+    .select("id");
+  if (error) return { ok: false, error: error.message };
+  if (!data || data.length === 0) return { ok: false, error: "not found or not permitted" };
+
+  await supabase.from("audit_logs").insert({
+    church_id: input.churchId,
+    actor_membership_id: me.id,
+    action: "content.review_resolved",
+    target_type: "content_item",
+    target_id: input.contentId,
+    metadata: { resolution: input.action },
+  });
+
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/prayer-requests`);
+  revalidatePath(`/${input.locale}/church/${input.churchSlug}/prayers`);
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 

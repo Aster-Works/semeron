@@ -568,6 +568,27 @@ export const messages = {
   // --- moderation ---
   "moderation.title": { ja: "祈祷課題の確認", en: "Prayer moderation" },
   "moderation.empty": { ja: "承認待ちの祈祷課題はありません。", en: "No prayer requests are waiting for review." },
+  "moderation.pendingHeading": { ja: "承認待ち", en: "Waiting for review" },
+  "moderation.requested.heading": { ja: "会員からの確認依頼", en: "Member review requests" },
+  "moderation.requested.note": {
+    ja: "公開中の投稿について、会員から確認の依頼が届いています。内容を見て、公開のままにするか、承認待ちへ差し戻すかを選んでください。",
+    en: "Members asked you to review these published posts. Read each one and either keep it published or send it back for review.",
+  },
+  "moderation.requested.badge": { ja: "確認依頼", en: "Review requested" },
+  "moderation.requested.reReview": { ja: "再審査に回す", en: "Send back for review" },
+  "moderation.requested.reReviewHint": {
+    ja: "「再審査に回す」は公開を一旦止めて承認待ちに戻します。「問題なし」は公開のまま依頼を完了します。",
+    en: "\"Send back for review\" unpublishes it and returns it to the queue. \"No issues\" keeps it published and closes the request.",
+  },
+  "moderation.requested.resolve": { ja: "問題なしとして完了", en: "No issues — done" },
+  "moderation.requested.resolvedMsg": {
+    ja: "確認依頼を完了しました（公開は維持されます）。",
+    en: "Review request closed (the post stays published).",
+  },
+  "moderation.requested.reReviewedMsg": {
+    ja: "承認待ちに戻しました。下の承認キューで確認できます。",
+    en: "Sent back to the review queue below.",
+  },
   "moderation.author": { ja: "投稿者", en: "Author" },
   "moderation.requestedVisibility": { ja: "希望の公開範囲", en: "Requested visibility" },
   "moderation.recommendedVisibility": { ja: "推奨の公開範囲", en: "Recommended visibility" },
