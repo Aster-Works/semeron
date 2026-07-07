@@ -42,6 +42,14 @@
 - **ソフトゲート削除**: 実質デッド設定（保存されるだけで挙動不変・Today仕切りは固定文言）を全撤去。types(SoftGateMode/softGateMode)/map/actions(input/patch/select/SOFT_GATE_MODES)/ChurchBasicsEditor(選択UI)/settings page/TodayDevotionFlow(仕切り)/i18n(settings.softGate*・today.softGate.gentle)/demo data/database.types(5箇所)/tests(5 fixture)/seed から削除。migration `20260707160000_drop_soft_gate` で列drop。**DROPのためデプロイはapp先行→migration後行**。
 - 検証: typecheck/lint/build緑・test 69/69・ローカルでdrop適用済。
 
+## UI/UX第2弾: SNS級ポリッシュ5課題（2026-07-07 追加）
+1. **ヘッダー教会名→Today** — MemberShell/AdminShell の教会名を Link 化（hover/focus-visible あり）。
+2. **通知スワイプ**（InboxList 全面改修・`SwipeRow`）— 右=既読/左=非表示。方向ロック(10px)＋`touch-pan-y`で縦スクロール非干渉、閾値88px＋ゴム減速、閾値越えで `navigator.vibrate(10)`、既読不可の右は1/4抵抗、左確定はスライドアウト、reduced-motion即時、スワイプ直後のclick抑止、ボタンは残置（a11y）。i18n `inbox.swipeRead`/`inbox.swipeHint`。
+3. **ログイン=ミニLP** — max-w-5xl・デスクトップ2カラム（左=eyebrow+tagline+リード+3特徴+静けさの約束、右=フォーム）、モバイルは タイトル→フォーム→特徴 の順。i18n `login.lp.*` 8キー。
+4. **管理ダッシュボード無駄削ぎ** — 常設Callout→見出しdescription化、週間8→6 stats（承認済み/待ちの重複削除・grid 2×3）、公開範囲別/通知失敗セクションは**非空時のみ表示**（空カード常設廃止）。
+5. **ポリッシュ** — buttonStyles base に `active:scale-[0.98]`（motion-reduce無効化）。
+検証: typecheck/lint/test 69/69/build 緑。ブラウザ実測=LP要素全表示（デスクトップ2カラム/モバイル375px overflowなし）、member/adminヘッダーリンク動作、スワイプ右（transform 104px・sage背景・既読・badge減）/左（mist背景・非表示・badge消）、管理画面 空カード0件・週間6stats・console error 0。通知テストデータは復元済み。
+
 ## デプロイ（完了 2026-07-07）
 - コミット: 399dd97（7課題）→ 181dbe9（テスト更新+.nvmrc）→ 5b0f083（anon EXECUTE剥奪）。main へ push 済み。
 - 本番Supabase(Semeron nlbowtgpchzkmzyligic): migration `20260707120000` 適用済み。SQL実体確認=関数存在・security definer・ACL={authenticated,service_role}のみ（anon無し）。security advisor ERROR **0**。pg-delta証明書warningは無害。

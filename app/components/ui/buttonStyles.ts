@@ -10,7 +10,8 @@ export type ButtonVariant =
 export type ButtonSize = "sm" | "md" | "lg";
 
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 select-none";
+  // active:scale = SNS的な押下フィードバック（reduced-motionでは無効化）
+  "inline-flex items-center justify-center gap-2 rounded-xl font-medium transition active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 select-none";
 
 const variants: Record<ButtonVariant, string> = {
   primary: "bg-sage-strong text-white hover:bg-sage-ink focus-visible:outline-sage-ink",

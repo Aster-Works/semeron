@@ -295,6 +295,11 @@ export const messages = {
   "inbox.filter.admin": { ja: "管理", en: "Admin" },
   "inbox.filter.social": { ja: "リアクション", en: "Reactions" },
   "inbox.mute": { ja: "非表示", en: "Hide" },
+  "inbox.swipeRead": { ja: "既読", en: "Read" },
+  "inbox.swipeHint": {
+    ja: "カードを右にスワイプで既読、左にスワイプで非表示にできます。",
+    en: "Swipe a card right to mark it read, left to hide it.",
+  },
   "inbox.muted": { ja: "非表示にしました。", en: "Hidden." },
   "inbox.muteError": { ja: "非表示にできませんでした。", en: "Could not hide." },
   "inbox.noneInFilter": {
@@ -888,6 +893,33 @@ export const messages = {
   },
 
   // --- login / join ---
+  "login.lp.eyebrow": {
+    ja: "教会のためのデボーションアプリ",
+    en: "A devotion app for your church",
+  },
+  "login.lp.lead": {
+    ja: "毎朝とどく今日のみことばから、教会の祈り、静かな応答まで。Semeron は教会の一日のリズムをそっと支えます。",
+    en: "From today's Scripture each morning to your church's prayers and quiet reflections — Semeron gently carries your church's daily rhythm.",
+  },
+  "login.lp.f1t": { ja: "今日のみことば", en: "Today's Word" },
+  "login.lp.f1d": {
+    ja: "毎朝、牧師からのデボーションが届きます。聖書のことばと導き、黙想の問いまで。",
+    en: "A devotion from your pastor arrives each morning — Scripture, guidance, and a question to sit with.",
+  },
+  "login.lp.f2t": { ja: "共に祈る", en: "Pray together" },
+  "login.lp.f2d": {
+    ja: "教会の祈祷課題を覚えて「祈りました」を送る。匿名でも安心して分かち合えます。",
+    en: "Hold your church's prayer requests and let others know you prayed. Share anonymously with confidence.",
+  },
+  "login.lp.f3t": { ja: "静かな応答", en: "Quiet reflections" },
+  "login.lp.f3d": {
+    ja: "受け取ったみことばへの応答を短く記します。比べない・競わない、静けさの設計です。",
+    en: "Write a short response to the Word you received. No comparing, no competing — designed for quiet.",
+  },
+  "login.lp.quiet": {
+    ja: "ランキングも連続記録もありません。Semeron は教会の静かな習慣のためのアプリです。",
+    en: "No streaks, no leaderboards. Semeron exists for your church's quiet daily habit.",
+  },
   "login.title": { ja: "Semeron にログイン", en: "Log in to Semeron" },
   "login.subtitle": {
     ja: "メールアドレスとパスワードでログインします。",

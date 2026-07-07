@@ -54,9 +54,15 @@ export function AdminShell({
     <div className="min-h-dvh bg-paper">
       <header className="border-b border-line bg-surface/80">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5">
-          <p className="truncate text-sm font-medium text-ink">
-            {localize(church.name, locale, church.defaultLocale)}
-          </p>
+          {/* 教会名タップでTodayへ（会員画面のホーム）。 */}
+          <Link
+            href={`/${locale}/church/${church.slug}/today`}
+            className="min-w-0 rounded-lg px-1 py-0.5 -mx-1 transition-colors hover:bg-mist/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage/40"
+          >
+            <p className="truncate text-sm font-medium text-ink hover:text-sage-ink">
+              {localize(church.name, locale, church.defaultLocale)}
+            </p>
+          </Link>
           <HeaderSettingsMenu locale={locale} churchSlug={church.slug} section="admin" canAdmin />
         </div>
       </header>

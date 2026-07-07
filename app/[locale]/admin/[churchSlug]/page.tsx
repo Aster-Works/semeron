@@ -17,7 +17,6 @@ import { resolveVisibilityLabels } from "@/app/lib/roleLabels";
 import {
   Badge,
   ButtonLink,
-  Callout,
   Card,
   CardBody,
   EmptyState,
@@ -106,8 +105,8 @@ function WeeklyFallback({ locale }: { locale: Loc }) {
   return (
     <section className="space-y-3" aria-busy>
       <SectionHeading title={t("admin.weekly.title")} description={t("admin.weekly.subtitle")} />
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {Array.from({ length: 8 }, (_, i) => (
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        {Array.from({ length: 6 }, (_, i) => (
           <StatSkeleton key={i} />
         ))}
       </div>
@@ -196,10 +195,8 @@ async function TodaySection({ locale, churchSlug }: { locale: Loc; churchSlug: s
       </section>
 
       <section className="space-y-3">
-        <SectionHeading title={t("admin.weekAggregate")} />
-        <Callout tone="sage" icon={ShieldCheck}>
-          {t("admin.noIndividualNote")}
-        </Callout>
+        {/* プライバシー注記は常設Calloutではなく見出しの説明文に（毎回の視覚ノイズを削減） */}
+        <SectionHeading title={t("admin.weekAggregate")} description={t("admin.noIndividualNote")} />
         {stats ? (
           <div className="grid gap-4 sm:grid-cols-3">
             <Stat label={t("admin.readCount")} value={stats.readCount} icon={BookOpenText} />
@@ -234,7 +231,7 @@ async function WeeklySection({ locale, churchSlug }: { locale: Loc; churchSlug: 
   return (
     <section className="space-y-3">
       <SectionHeading title={t("admin.weekly.title")} description={t("admin.weekly.subtitle")} />
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <Stat
           label={t("admin.weekly.devotions")}
           value={weekly.devotionsPublished}
@@ -252,8 +249,7 @@ async function WeeklySection({ locale, churchSlug }: { locale: Loc; churchSlug: 
           value={weekly.prayersSubmitted}
           icon={HeartHandshake}
         />
-        <Stat label={t("admin.weekly.approved")} value={weekly.prayersApproved} icon={ShieldCheck} />
-        <Stat label={t("admin.weekly.pending")} value={weekly.prayersPending} icon={CalendarClock} />
+        {/* 承認済み/承認待ちは「承認待ちの祈祷課題」カードと重複するため週間からは省く */}
         <Stat label={t("admin.weekly.newMembers")} value={weekly.newMembers} icon={ShieldCheck} />
       </div>
     </section>
@@ -335,19 +331,12 @@ async function OpsSection({ locale, churchSlug }: { locale: Loc; churchSlug: str
         </Card>
       </section>
 
-      {/* (5) 公開範囲別の祈祷課題 */}
-      <section className="space-y-3">
-        <SectionHeading title={t("admin.visibilityBreakdown")} />
-        <Card>
-          <CardBody className="p-0">
-            {d.visibilityBreakdown.length === 0 ? (
-              <div className="p-5 sm:p-6">
-                <EmptyState
-                  icon={ShieldCheck}
-                  title={jaMode ? "公開中の祈祷課題はありません。" : "No published prayer requests."}
-                />
-              </div>
-            ) : (
+      {/* (5) 公開範囲別の祈祷課題 — 公開中が1件以上あるときだけ出す（空カードの常設をやめる） */}
+      {d.visibilityBreakdown.length > 0 ? (
+        <section className="space-y-3">
+          <SectionHeading title={t("admin.visibilityBreakdown")} />
+          <Card>
+            <CardBody className="p-0">
               <ul className="divide-y divide-line">
                 {d.visibilityBreakdown.map((row) => (
                   <li
@@ -359,24 +348,17 @@ async function OpsSection({ locale, churchSlug }: { locale: Loc; churchSlug: str
                   </li>
                 ))}
               </ul>
-            )}
-          </CardBody>
-        </Card>
-      </section>
+            </CardBody>
+          </Card>
+        </section>
+      ) : null}
 
-      {/* (6) 通知の失敗 */}
-      <section className="space-y-3">
-        <SectionHeading title={t("admin.notificationFailures")} />
-        <Card>
-          <CardBody className="p-0">
-            {d.failedNotifications.length === 0 ? (
-              <div className="p-5 sm:p-6">
-                <EmptyState
-                  icon={BellOff}
-                  title={jaMode ? "失敗した通知はありません。" : "No failed notifications."}
-                />
-              </div>
-            ) : (
+      {/* (6) 通知の失敗 — アラートなので失敗があるときだけ出す */}
+      {d.failedNotifications.length > 0 ? (
+        <section className="space-y-3">
+          <SectionHeading title={t("admin.notificationFailures")} />
+          <Card>
+            <CardBody className="p-0">
               <ul className="divide-y divide-line">
                 {d.failedNotifications.map((n) => (
                   <li key={n.id} className="space-y-1 px-5 py-3.5 sm:px-6">
@@ -394,10 +376,10 @@ async function OpsSection({ locale, churchSlug }: { locale: Loc; churchSlug: str
                   </li>
                 ))}
               </ul>
-            )}
-          </CardBody>
-        </Card>
-      </section>
+            </CardBody>
+          </Card>
+        </section>
+      ) : null}
     </div>
   );
 }

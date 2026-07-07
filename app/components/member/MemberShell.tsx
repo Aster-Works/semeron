@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Church, Locale, Viewer } from "@/app/lib/demo/types";
 import { isChurchAdmin } from "@/app/lib/demo/visibility";
 import { localize } from "@/app/lib/i18n";
@@ -29,14 +30,18 @@ export async function MemberShell({
     <div className="min-h-dvh bg-paper">
       <header className="border-b border-line bg-surface/80">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-ink">
+          {/* 教会名はホームへの導線（タップでTodayへ）。SNSアプリのロゴタップと同じ作法。 */}
+          <Link
+            href={`/${locale}/church/${church.slug}/today`}
+            className="group min-w-0 rounded-lg px-1 py-0.5 -mx-1 transition-colors hover:bg-mist/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage/40"
+          >
+            <p className="truncate text-sm font-medium text-ink group-hover:text-sage-ink">
               {localize(church.name, locale, church.defaultLocale)}
             </p>
             {viewer.membership ? (
               <p className="truncate text-xs text-muted">{viewer.membership.displayName}</p>
             ) : null}
-          </div>
+          </Link>
           <HeaderSettingsMenu
             locale={locale}
             churchSlug={church.slug}
