@@ -17,6 +17,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/app/lib/db/actions", () => ({
   requestAdminReview: vi.fn(async () => ({ ok: true })),
   toggleReaction: vi.fn(async () => ({ ok: true })),
+  logPrayer: vi.fn(async () => ({ ok: true })),
 }));
 
 const church: Church = {
@@ -76,6 +77,7 @@ describe("reaction scope", () => {
       authorName: "Member",
       prayedCount: 1,
       viewerPrayed: false,
+      prayedToday: false,
       isMine: false,
       reactions: [{ type: "prayed", count: 1, active: false }],
     };

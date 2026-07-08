@@ -96,7 +96,7 @@ export function TodayDevotionFlow({
   const dailyOpenDecisionKey = animationReplayKey
     ? `${dailyOpenKey}:replay:${animationReplayKey}`
     : dailyOpenKey;
-  const initialPrayerDone = prayers.length === 0 || prayers.every((vm) => vm.viewerPrayed);
+  const initialPrayerDone = prayers.length === 0 || prayers.every((vm) => vm.prayedToday);
   const [ready, setReady] = useState(false);
   const [stage, setStage] = useState<FlowStage>(0);
   const [animateFlow, setAnimateFlow] = useState<boolean | null>(null);

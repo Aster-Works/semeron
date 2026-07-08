@@ -56,6 +56,15 @@
 **敵対的レビュー(Workflow 3レンズ)の反映**: 依頼者/対応者の membership id を member可読 metadata に書くのを止め audit_logs（管理者のみ）に一本化＋migration `20260708090000_strip_review_request_identities` で既存行から剥離／作成者の自己解決を役割ゲートで阻止／「上の承認キュー」→「下の」。races 2件は ponytail 注記で受容（再実行で収束・実害なし）。※Workflow の verify エージェント7本はセッション上限で死亡=未検証だったため、7指摘は全て自分で精査した（誤検証扱いにしていない）。
 **E2E**: 依頼→管理画面表示（匿名維持）→問題なし完了（公開維持・フラグ解除）→再依頼→再審査差し戻し（pending化・承認キューに匿名で出現・監査2行）を実測。ハードニング後も依頼フロー再実測（metadataに身元キー無し・auditに行為者あり）。seed復元済み。
 
+## 祈祷ログ（いつ祈ったか）＋当日「済」表示（2026-07-08）
+- migration `20260708100000_prayer_logs`: `prayer_logs(church_id, content_item_id, membership_id, prayed_at, prayed_date)`・`unique(content_item_id, membership_id, prayed_date)` で教会ローカル日付1日1件。RLS=本人のみselect / insertは本人かつ can_view_content。`enforce_child_church` トリガ再利用。anon revoke。
+- `logPrayer(churchId, contentId)` action（toggleReaction とは別）: prayer_logs を当日分upsert(ignoreDuplicates)＋reactions(prayed)を初回のみupsert。**「祈りました」は取り消し操作ではない**ためトグルしない。
+- `PrayerVM.prayedToday` を追加（当日の prayer_logs 有無）。ReactionBar は prayed のみ日次: `doneToday` で「済」表示・aria-pressed=true・再クリック無反応。他リアクション(amen/thanks)は従来トグルのまま。
+- TodayPrayerCarousel: `prayed` を prayedToday 起点に。集計カウントは `everPrayed`(=viewerPrayed)で判定し**日跨ぎ再祈祷で二重加算しない**。ボタンは当日済なら「✓ 済」(secondary)。
+- `selectTodayPrayers` の「まだ祈っていない」枠は viewerPrayed→prayedToday に変更（毎日新しく選ばれる）。
+- 検証: typecheck/lint/build緑・**test 73/73**。DB: RLS 6ケース（自分insert可/他人のmembership_id拒否/同日重複はunique違反&upsertで冪等/他会員は他人のログを見えない/church_id不一致はトリガ拒否/日跨ぎで2行）。ブラウザE2E: 初回押下→「済2」・リロード保持・再クリックで二重加算なし(logs=1, reactions=2)・prayed_dateを昨日に戻すと「祈りました」へ復帰→再押下で「済2」のまま(logs=2行, reactions=2)。Todayカルーセルも「✓ 済」表示。seed復元済み。
+- ※途中でディスク満杯によりTurbopackキャッシュ破損→ハイドレーション停止。`.next`削除＋dev再起動で復旧（プロダクトのバグではない）。
+
 ## デプロイ（完了 2026-07-07）
 - コミット: 399dd97（7課題）→ 181dbe9（テスト更新+.nvmrc）→ 5b0f083（anon EXECUTE剥奪）。main へ push 済み。
 - 本番Supabase(Semeron nlbowtgpchzkmzyligic): migration `20260707120000` 適用済み。SQL実体確認=関数存在・security definer・ACL={authenticated,service_role}のみ（anon無し）。security advisor ERROR **0**。pg-delta証明書warningは無害。

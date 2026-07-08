@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition, type CSSProperties
 import { CalendarClock, Check, HeartHandshake, RotateCcw } from "lucide-react";
 import type { Church, Locale } from "@/app/lib/demo/types";
 import type { PrayerVM } from "@/app/lib/db/queries";
-import { toggleReaction } from "@/app/lib/db/actions";
+import { logPrayer } from "@/app/lib/db/actions";
 import { createT, localize } from "@/app/lib/i18n";
 import { resolveRoleLabels, visibilityLabel } from "@/app/lib/roleLabels";
 import { cn, formatMonthDay } from "@/app/lib/utils";
@@ -66,7 +66,12 @@ export function TodayPrayerCarousel({
   const [pending, startTransition] = useTransition();
   const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const completionNotified = useRef(false);
+  // prayed = 今日すでに祈ったか（日次リセット）。everPrayed = 一度でも祈ったか
+  // （集計カウントを二重加算しないための判定用。表示には使わない）。
   const [prayedById, setPrayedById] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(prayers.map((vm) => [vm.item.id, vm.prayedToday])),
+  );
+  const [everPrayedById, setEverPrayedById] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(prayers.map((vm) => [vm.item.id, vm.viewerPrayed])),
   );
   const [countById, setCountById] = useState<Record<string, number>>(() =>
@@ -92,7 +97,7 @@ export function TodayPrayerCarousel({
   const isAnon = item.anonymous || item.visibility === "anonymous_church";
   const showSelfAnon = active.isMine && isAnon;
   const displayName = showSelfAnon ? t("prayer.anonSelf") : active.authorName;
-  const prayed = prayedById[item.id] ?? active.viewerPrayed;
+  const prayed = prayedById[item.id] ?? active.prayedToday;
   const prayedCount = countById[item.id] ?? active.prayedCount;
   const showComplete = sessionComplete && !isRepeating;
   const progressCurrent = showComplete ? prayers.length : Math.min(index + 1, prayers.length);
@@ -160,14 +165,19 @@ export function TodayPrayerCarousel({
     }
 
     startTransition(async () => {
-      const res = await toggleReaction(church.id, item.id, "prayed");
+      const res = await logPrayer(church.id, item.id);
       if (!res.ok) {
         setError(t("todayPrayer.error"));
         return;
       }
 
       setPrayedById((current) => ({ ...current, [item.id]: true }));
-      setCountById((current) => ({ ...current, [item.id]: Math.max(0, (current[item.id] ?? active.prayedCount) + 1) }));
+      // 集計カウントは「一度でも祈った」人数のぶんだけ（日をまたいだ再訪では増やさない）。
+      const isFirstEver = !(everPrayedById[item.id] ?? active.viewerPrayed);
+      if (isFirstEver) {
+        setEverPrayedById((current) => ({ ...current, [item.id]: true }));
+        setCountById((current) => ({ ...current, [item.id]: Math.max(0, (current[item.id] ?? active.prayedCount) + 1) }));
+      }
       if (index < prayers.length - 1) {
         advance();
       } else {
@@ -276,9 +286,16 @@ export function TodayPrayerCarousel({
             </div>
 
             <div className="pt-1">
-              <Button type="button" onClick={markPrayed} disabled={pending || isChanging} variant="primary" fullWidth>
-                <HeartHandshake className="h-4 w-4" aria-hidden />
-                {t("common.iPrayed")}
+              {/* 今日すでに祈っていれば「済」。押すと次の課題へ進むだけで再記録しない。 */}
+              <Button
+                type="button"
+                onClick={markPrayed}
+                disabled={pending || isChanging}
+                variant={prayed ? "secondary" : "primary"}
+                fullWidth
+              >
+                {prayed ? <Check className="h-4 w-4" aria-hidden /> : <HeartHandshake className="h-4 w-4" aria-hidden />}
+                {prayed ? t("common.doneToday") : t("common.iPrayed")}
               </Button>
             </div>
 

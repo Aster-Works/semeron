@@ -19,6 +19,7 @@ export const messages = {
   "common.read": { ja: "読みました", en: "Read" },
   "common.iPrayed": { ja: "祈りました", en: "I prayed" },
   "common.prayed": { ja: "祈りました", en: "Prayed" },
+  "common.doneToday": { ja: "済", en: "Done" },
   "common.pray": { ja: "祈る", en: "Pray" },
   "common.amen": { ja: "アーメン", en: "Amen" },
   "common.thanks": { ja: "感謝", en: "Thanks" },

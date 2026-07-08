@@ -624,6 +624,62 @@ export type Database = {
           },
         ]
       }
+      prayer_logs: {
+        Row: {
+          church_id: string
+          content_item_id: string
+          id: string
+          membership_id: string
+          prayed_at: string
+          prayed_date: string
+        }
+        Insert: {
+          church_id: string
+          content_item_id: string
+          id?: string
+          membership_id: string
+          prayed_at?: string
+          prayed_date: string
+        }
+        Update: {
+          church_id?: string
+          content_item_id?: string
+          id?: string
+          membership_id?: string
+          prayed_at?: string
+          prayed_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prayer_logs_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prayer_logs_content_item_id_fkey"
+            columns: ["content_item_id"]
+            isOneToOne: false
+            referencedRelation: "content_feed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prayer_logs_content_item_id_fkey"
+            columns: ["content_item_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prayer_logs_membership_id_fkey"
+            columns: ["membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string

@@ -40,7 +40,7 @@ export function PrayerCard({
   const bodyText = localize(item.body, locale, church.defaultLocale);
   const reviewRequested = item.metadata?.admin_review_requested === true;
   const reactions = vm.reactions ?? [
-    { type: "prayed" as const, count: vm.prayedCount, active: vm.viewerPrayed },
+    { type: "prayed" as const, count: vm.prayedCount, active: vm.viewerPrayed, doneToday: vm.prayedToday },
   ];
   const outcome = item.prayerOutcome ?? "open";
   const isAnswered = outcome !== "open";

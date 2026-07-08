@@ -23,6 +23,7 @@ import {
 import { createAdminClient } from "@/app/lib/supabase/admin";
 import { createServerSupabase } from "@/app/lib/supabase/server";
 import type { Locale, ReactionType, RetentionPolicy, Visibility } from "@/app/lib/demo/types";
+import { toDateKey } from "@/app/lib/demo/selectors";
 import { CONTENT_LANGUAGES } from "@/app/lib/i18n/languages";
 
 const CONTENT_LANGUAGE_CODES = new Set(CONTENT_LANGUAGES.map((l) => l.code));
@@ -239,6 +240,39 @@ export async function toggleReaction(
   if (error) return { ok: false, error: error.message };
   revalidatePath("/", "layout");
   return { ok: true, data: { active: true } };
+}
+
+/**
+ * 祈祷課題を「祈った」ことを記録する。教会ローカル日付で1日1件（何度押しても増えない）。
+ * 「祈っています」の集計は reactions(type=prayed) を初回だけ立てて維持し（この関数が上書き）、
+ * 個人の「いつ祈ったか」の履歴は prayer_logs に積む（当日分の有無が「済」表示のもと）。
+ */
+export async function logPrayer(churchId: string, contentId: string): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const membershipId = await myMembershipId(supabase, churchId);
+  if (!membershipId) return { ok: false, error: "not a member" };
+
+  const { timezone } = await getChurchTiming(supabase, churchId);
+  const prayedDate = toDateKey(new Date(), timezone);
+
+  const { error: logError } = await supabase
+    .from("prayer_logs")
+    .upsert(
+      { church_id: churchId, content_item_id: contentId, membership_id: membershipId, prayed_date: prayedDate },
+      { onConflict: "content_item_id,membership_id,prayed_date", ignoreDuplicates: true },
+    );
+  if (logError) return { ok: false, error: logError.message };
+
+  // 集計用リアクションは初回のみ（存在すればそのまま・重複エラーは無視）。
+  await supabase
+    .from("reactions")
+    .upsert(
+      { church_id: churchId, content_item_id: contentId, membership_id: membershipId, type: "prayed" },
+      { onConflict: "content_item_id,membership_id,type", ignoreDuplicates: true },
+    );
+
+  revalidatePath("/", "layout");
+  return { ok: true, data: { prayedDate } };
 }
 
 export async function postReflection(

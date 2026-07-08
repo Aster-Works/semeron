@@ -7,7 +7,7 @@ import { TodayDevotionFlow } from "@/app/components/member/TodayDevotionFlow";
 vi.mock("@/app/lib/db/actions", () => ({
   postReflection: vi.fn(async () => ({ ok: true })),
   setCompletion: vi.fn(async () => ({ ok: true })),
-  toggleReaction: vi.fn(async () => ({ ok: true })),
+  logPrayer: vi.fn(async () => ({ ok: true })),
 }));
 
 const church: Church = {
@@ -103,6 +103,7 @@ function prayerVm(id: string, viewerPrayed = false): PrayerVM {
     authorName: "Member",
     prayedCount: viewerPrayed ? 1 : 0,
     viewerPrayed,
+    prayedToday: viewerPrayed,
     isMine: false,
   };
 }

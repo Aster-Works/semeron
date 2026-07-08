@@ -11,7 +11,7 @@ import {
 import type { ReactionType } from "@/app/lib/demo/types";
 import { useLocale } from "@/app/lib/i18n/LocaleProvider";
 import type { MessageId } from "@/app/lib/i18n";
-import { toggleReaction } from "@/app/lib/db/actions";
+import { logPrayer, toggleReaction } from "@/app/lib/db/actions";
 import { cn } from "@/app/lib/utils";
 
 const META: Record<ReactionType, { icon: LucideIcon; label: MessageId }> = {
@@ -25,6 +25,8 @@ export interface ReactionSpec {
   type: ReactionType;
   count: number;
   active: boolean;
+  /** 'prayed' のみ意味を持つ: 今日すでに祈ったか。true なら「済」表示・取り消し不可。 */
+  doneToday?: boolean;
 }
 
 /**
@@ -64,18 +66,32 @@ function ReactionButton({
   // revalidate 後にサーバーが再描画されると overlay は自動でサーバー値へ戻るため、
   // 「一度押したら記憶される」（＝再訪でも押した状態が残る）。
   const [state, setOptimistic] = useOptimistic(
-    { active: spec.active, count: spec.count },
-    (_prev, next: { active: boolean; count: number }) => next,
+    { active: spec.active, count: spec.count, doneToday: Boolean(spec.doneToday) },
+    (_prev, next: { active: boolean; count: number; doneToday: boolean }) => next,
   );
   const [pending, startTransition] = useTransition();
-  const { active, count } = state;
+  const { active, count, doneToday } = state;
   const meta = META[spec.type];
   const Icon = meta.icon;
+  // 'prayed' は日次リセット: 「済」は今日祈ったかで決め、取り消しはできない
+  // （「祈りました」は他のリアクションと違い、押し直しで取り下げる操作ではない）。
+  const isPrayed = spec.type === "prayed";
+  const displayActive = isPrayed ? doneToday : active;
 
   const toggle = () => {
+    if (isPrayed) {
+      if (doneToday) return; // 今日はもう「済」。押しても何もしない。
+      const next = { active: true, count: active ? count : count + 1, doneToday: true };
+      startTransition(async () => {
+        setOptimistic(next);
+        await logPrayer(churchId, contentId);
+      });
+      return;
+    }
     const next = {
       active: !active,
       count: Math.max(0, count + (!active ? 1 : -1)),
+      doneToday,
     };
     startTransition(async () => {
       setOptimistic(next);
@@ -88,17 +104,17 @@ function ReactionButton({
     <button
       type="button"
       onClick={toggle}
-      aria-pressed={active}
+      aria-pressed={displayActive}
       disabled={pending}
       className={cn(
         "inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors disabled:opacity-60",
-        active
+        displayActive
           ? "border-sage/50 bg-sage-soft text-sage-ink"
           : "border-line-strong bg-surface text-muted hover:text-ink",
       )}
     >
       <Icon className="h-4 w-4" aria-hidden />
-      <span>{t(meta.label)}</span>
+      <span>{isPrayed && doneToday ? t("common.doneToday") : t(meta.label)}</span>
       {count > 0 ? <span className="tabular-nums text-xs">{count}</span> : null}
     </button>
   );

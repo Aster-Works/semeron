@@ -52,14 +52,16 @@ export interface PrayerVM {
   authorName: string;
   prayedCount: number;
   viewerPrayed: boolean;
+  /** 今日すでに祈ったか（教会ローカル日付基準）。true なら「済」表示。 */
+  prayedToday: boolean;
   isMine: boolean;
-  reactions?: { type: ReactionType; count: number; active: boolean }[];
+  reactions?: { type: ReactionType; count: number; active: boolean; doneToday?: boolean }[];
 }
 export interface ReflectionVM {
   item: ContentItem;
   authorName: string;
   isMine: boolean;
-  reactions: { type: ReactionType; count: number; active: boolean }[];
+  reactions: { type: ReactionType; count: number; active: boolean; doneToday?: boolean }[];
 }
 export interface AuditLogVM {
   log: AuditLog;
@@ -113,6 +115,19 @@ async function attachPrayerVMs(
     }
   });
 
+  // 「今日すでに祈ったか」＝本人の prayer_logs に当日分があるか（教会ローカル日付）。
+  const prayedTodayIds = new Set<string>();
+  if (viewer.membership) {
+    const todayKey = toDateKey(new Date(), viewer.church.timezone);
+    const { data: logs } = await supabase
+      .from("prayer_logs")
+      .select("content_item_id")
+      .eq("membership_id", viewer.membership.id)
+      .eq("prayed_date", todayKey)
+      .in("content_item_id", ids);
+    (logs ?? []).forEach((l: { content_item_id: string }) => prayedTodayIds.add(l.content_item_id));
+  }
+
   return rows.map((r) => {
     const id = r.id ?? "";
     const item = mapContent(r);
@@ -120,16 +135,19 @@ async function attachPrayerVMs(
       ? (nameById.get(r.author_membership_id) ?? anonName(locale))
       : anonName(locale);
     const active = viewerReactions.get(id);
+    const prayedToday = prayedTodayIds.has(id);
     const reactions = PRAYER_REACTIONS.map((type) => ({
       type,
       count: reactionCount.get(`${id}:${type}`) ?? 0,
       active: active?.has(type) ?? false,
+      doneToday: type === "prayed" ? prayedToday : undefined,
     }));
     return {
       item,
       authorName,
       prayedCount: reactions.find((r) => r.type === "prayed")?.count ?? 0,
       viewerPrayed: active?.has("prayed") ?? false,
+      prayedToday,
       isMine: Boolean(viewer.membership && r.author_membership_id === viewer.membership.id),
       reactions,
     };

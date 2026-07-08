@@ -64,6 +64,7 @@ function vm(
     authorName: "Member",
     prayedCount: prayedCount ?? 3,
     viewerPrayed: viewerPrayed ?? false,
+    prayedToday: viewerPrayed ?? false,
     isMine: isMine ?? false,
   };
 }

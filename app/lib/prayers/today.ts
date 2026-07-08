@@ -124,7 +124,7 @@ export function selectTodayPrayers(
   );
   addOne(
     active
-      .filter((vm) => !vm.viewerPrayed)
+      .filter((vm) => !vm.prayedToday)
       .sort((a, b) => a.prayedCount - b.prayedCount || byOwnLast(a, b) || rotationSort(a, b)),
   );
   addOne(active.sort(rotationSort));
