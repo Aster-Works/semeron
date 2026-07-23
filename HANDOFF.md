@@ -37,14 +37,34 @@
   docs/security とレポートに「Pro化時に有効化」として記録する（実装対象から除外）。
 - node_modules がディスク満杯事故で破損していた → `npm ci` で復旧済み（再発時も同じ）。
 
-### 未完了
-- docs/security 8文書＋バックアップスクリプト（次工程）
-- `npm run build`、本番migration適用（supabase db push）、git commit/push（自動デプロイ）、
-  本番ヘッダ・advisors確認、§22形式の最終報告
+### docs/security＋バックアップ（完了）
+- `docs/security/` 9ファイル（README＋8文書: tenant-isolation / rls-policies / anonymity /
+  headers-csp / rate-limiting-validation / egress-cost / auth / incident-response）。
+  各文書は末尾に検証コマンド付き・実DBのポリシー実体と照合して記述。
+- `scripts/backup-db.sh`（supabase db dump schema+data・14世代保持・パスワードは env/Keychain）。
+  **構文チェックのみ（bash -n）。本番実走はDBパスワードが必要なため未実施**。`backups/` は .gitignore 済み。
+
+### リリース状況（2026-07-24 完了）
+- コミット `1ab61a9 Harden security and egress: anon revokes, rate limits, CSP, security docs`
+- `git push origin main` PASS（`18d6f8e..1ab61a9`）。
+- 本番migration適用済み: `supabase db push` → **SQLで実体確認**
+  （schema_migrations に 20260709090000=applied、anon の content_feed/content_items/
+  prayer_logs/owns_content 権限が全て false、authenticated の content_feed SELECT は true）。
+- `supabase db advisors --linked --level error --fail-on error` PASS（No issues found）。
+- GitHub commit status `Vercel` = success（Deployment has completed）。
+- 本番実測: `/ja/login` HTTP 200。CSPヘッダは厳格版（unsafe-eval・127.0.0.1 なし）＋
+  HSTS/X-Frame-Options/nosniff/Referrer-Policy/Permissions-Policy 全て配信。
+  ブラウザ実機でコンソールエラー0件・ページ完全表示・Googleボタン表示（Supabase接続もCSP通過）。
+
+### 残課題（Jimi判断）
+- HIBP（漏洩パスワード保護）= Supabase Pro限定。Pro化時に Dashboard で1クリック有効化（docs/security/auth.md 記載）。
+- `scripts/backup-db.sh` の本番初回実走（DBパスワードを Keychain "Semeron DB" に入れると無人化可）。
+- CSP の nonce+strict-dynamic 化（将来課題として headers-csp.md に記録）。
 
 ### 変更してはいけない確定事項
 - 匿名の不変条件（作者列revoke・feed_author経由・通知逆引き封じ）
 - 「祈りました」は取り消し不可・reactions と prayer_logs の分離
+- 一覧クエリの LIMIT 必須・anon への GRANT 禁止（docs/security/ 参照）
 
 ## 現在のチェックポイント — Todayからのタブ遷移がスケルトンで止まる不具合（2026-07-06）
 
