@@ -3,6 +3,36 @@
 対象リポ: /Users/james/syncthing/semeron
 セッション開始: 2026-07-04 00:33 JST / 担当: Codex
 
+## 現在のチェックポイント — 証しの1日表示＋教会公式の祈祷課題（2026-07-24 出荷）
+
+### 今回の依頼
+- 証しコメント付きで期限を過ぎた祈祷課題は「1日だけ表示して消える」ようにする。
+- 教会の祈祷課題を、会員個人のものとは別枠でオーナーが入力できるようにする。
+
+### 実装（HEAD=0bfeef3・本番反映済み）
+- **証しの1日猶予（2層で一致）**: RLS `private.can_view_content` に「期限切れでも
+  answered/thanksgiving かつ metadata.answered_at から1日以内なら会員にも見せる」猶予を追加
+  （migration `20260724100000`）。アプリ層のフィード条件は `app/lib/prayers/feedFilters.ts` の
+  `notExpiredOr`（純粋関数・単体テスト付き）で同じ1日窓。従来はRLSが期限切れを即座に隠すため
+  会員は証しを見られず、管理者には無期限に残っていた——両者とも「1日」に統一。
+- **教会公式の祈祷課題**: `submitChurchPrayerRequest`（owner/pastor のみ・教会設定と同じゲート・
+  即時公開・`metadata.church_official=true` が唯一の印）。入力UI=管理>祈祷課題ページ上部の
+  `ChurchPrayerForm`。会員の祈りページでは「教会の祈り」セクションに別枠表示・作者は教会名義・
+  「教会」バッジ付き（PrayerCard/attachPrayerVMs/mapContent/ContentItem.churchOfficial）。
+  migration不要（RLSは is_church_admin の published 直接作成を既に許可）。
+
+### 検証証拠
+- pgTAP **129件全緑**（新規 `answered_grace.test.sql` 4件: open非表示/証し1日以内表示/2日後非表示/管理者従来通り）
+- PostgREST実証: 会員トークン＋アプリと同一orフィルタで、証し直後=1件・2日前=0件を実測
+- vitest 75件（新規 `prayer-feed-expiry.test.ts`）・typecheck・lint・build 全PASS
+- Playwright **9本全緑**（新規 `church-prayers.spec.ts`: オーナー投稿→会員の別枠表示・教会名義）
+- 本番: `db push` 後にSQLで実体確認（migration記録=1・関数定義に猶予節あり）・advisors No issues・
+  Vercel deploy success・/ja/login 200
+
+### 注意（変更してはいけない）
+- 可視性の判定は **RLS(can_view_content) とアプリ(feedFilters.notExpiredOr) の2層**。
+  片方だけ変えると会員と管理者で見え方がズレる。変えるときは必ず両方＋pgTAP/unitを更新。
+
 ## 現在のチェックポイント — セキュリティ監査 Phase 0-3 実装（2026-07-24）
 
 ### 今回の依頼
