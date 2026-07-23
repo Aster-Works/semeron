@@ -170,6 +170,7 @@ export function mapContent(r: ContentRow): ContentItem {
     anonymous: r.anonymous ?? false,
     includesThirdParty: r.includes_third_party ?? false,
     pastorConsultRequested: meta.pastor_consult_requested === true,
+    churchOfficial: meta.church_official === true,
     sensitiveFlags: (r.sensitive_flags ?? []) as ContentItem["sensitiveFlags"],
     prayerOutcome: (r.prayer_outcome ?? undefined) as ContentItem["prayerOutcome"],
     metadata: meta,

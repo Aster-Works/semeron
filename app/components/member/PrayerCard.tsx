@@ -56,6 +56,7 @@ export function PrayerCard({
             <p className="truncate text-sm font-medium text-ink">{displayName}</p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-1.5">
+            {item.churchOfficial ? <Badge tone="sage">{t("prayer.churchBadge")}</Badge> : null}
             {isMine ? <Badge tone="slate">{t("prayer.mineBadge")}</Badge> : null}
             {item.status !== "published" ? <StatusPill status={item.status} locale={locale} /> : null}
             {item.prayerOutcome && item.prayerOutcome !== "open" ? (

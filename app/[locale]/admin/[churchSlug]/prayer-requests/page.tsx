@@ -3,6 +3,7 @@ import { requireChurchContext } from "@/app/lib/db/context";
 import { getModerationQueue, getReviewRequestedPrayers } from "@/app/lib/db/queries";
 import { createT } from "@/app/lib/i18n";
 import { formatMonthDay } from "@/app/lib/utils";
+import { ChurchPrayerForm } from "@/app/components/admin/ChurchPrayerForm";
 import { ModerationCard } from "@/app/components/admin/ModerationCard";
 import { ReviewRequestedCard } from "@/app/components/admin/ReviewRequestedCard";
 import { ButtonLink, EmptyState, SectionHeading } from "@/app/components/ui";
@@ -57,6 +58,15 @@ export default async function PrayerModerationPage({
             </div>
           }
         />
+
+        {/* 教会公式の祈祷課題（教会名義・即時公開）。owner/pastor のみ入力可。 */}
+        {viewer.membership?.roles.some((role) => role === "owner" || role === "pastor") ? (
+          <ChurchPrayerForm
+            locale={locale as "ja" | "en"}
+            churchId={church.id}
+            churchSlug={church.slug}
+          />
+        ) : null}
 
         {/* 会員からの確認依頼（公開中の投稿）。承認待ちキューには出ないためここで扱う。 */}
         {requested.length > 0 ? (

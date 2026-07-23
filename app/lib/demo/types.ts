@@ -195,6 +195,8 @@ export interface ContentItem {
   anonymous?: boolean;
   includesThirdParty?: boolean;
   pastorConsultRequested?: boolean;
+  /** 教会公式の祈祷課題（オーナー/牧師が入力。個人の課題と別枠で表示）。 */
+  churchOfficial?: boolean;
   sensitiveFlags?: SensitiveFlag[];
   /** 祈祷課題の状態（回答済み/感謝報告） */
   prayerOutcome?: "open" | "answered" | "thanksgiving";

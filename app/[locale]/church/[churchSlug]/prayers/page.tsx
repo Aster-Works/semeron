@@ -48,6 +48,9 @@ export default async function PrayersPage({
   const filteredFeed = feed.filter((vm) =>
     matchesPrayer(vm, query, locale as "ja" | "en", church.defaultLocale),
   );
+  // 教会公式の課題は個人の課題と混ぜず「教会の祈り」として別枠で先に出す。
+  const churchFeed = filteredFeed.filter((vm) => vm.item.churchOfficial);
+  const memberFeed = filteredFeed.filter((vm) => !vm.item.churchOfficial);
   const hasAnyPrayers = feed.length > 0 || myPending.length > 0;
 
   return (
@@ -114,11 +117,21 @@ export default async function PrayersPage({
         ) : hasQuery && filteredFeed.length === 0 && filteredPending.length === 0 ? (
           <EmptyState icon={Search} title={t("prayer.searchEmpty")} />
         ) : (
-          <div className="space-y-3">
-            {filteredFeed.map((vm) => (
-              <PrayerCard key={vm.item.id} vm={vm} church={church} locale={locale as "ja" | "en"} />
-            ))}
-          </div>
+          <>
+            {churchFeed.length > 0 ? (
+              <div className="space-y-3">
+                <SectionHeading title={t("prayer.churchSection")} />
+                {churchFeed.map((vm) => (
+                  <PrayerCard key={vm.item.id} vm={vm} church={church} locale={locale as "ja" | "en"} />
+                ))}
+              </div>
+            ) : null}
+            <div className="space-y-3">
+              {memberFeed.map((vm) => (
+                <PrayerCard key={vm.item.id} vm={vm} church={church} locale={locale as "ja" | "en"} />
+              ))}
+            </div>
+          </>
         )}
       </div>
     </>

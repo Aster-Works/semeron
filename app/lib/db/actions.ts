@@ -459,6 +459,60 @@ export async function submitPrayerRequest(input: {
   return { ok: true };
 }
 
+/**
+ * 教会公式の祈祷課題（オーナー/牧師が入力。会員の個人課題とは別枠で表示）。
+ * RLS(content_insert)は is_church_admin の published 直接作成を許すため、
+ * モデレーションを経ずに即時公開する（入力者自身がモデレーターであるため）。
+ * metadata.church_official=true が公式課題の唯一の印（表示側はこれで分岐）。
+ */
+export async function submitChurchPrayerRequest(input: {
+  churchId: string;
+  churchSlug: string;
+  locale: Locale;
+  title: string;
+  body: string;
+  expiresAt?: string | null;
+}): Promise<ActionResult> {
+  const title = input.title.trim();
+  const body = input.body.trim();
+  if (!title || !body) return { ok: false, error: "empty" };
+  if (title.length > MAX_TITLE_LEN || body.length > MAX_BODY_LEN) {
+    return { ok: false, error: "too_long" };
+  }
+  const supabase = await createServerSupabase();
+  const membership = await myMembership(supabase, input.churchId);
+  if (!membership) return { ok: false, error: "not a member" };
+  // 教会名義の発信なので教会設定と同じ owner/pastor ゲート（elder/staff は不可）。
+  if (!membership.roles.some((role) => role === "owner" || role === "pastor")) {
+    return { ok: false, error: "not permitted" };
+  }
+
+  const timing = await getChurchTiming(supabase, input.churchId);
+  const expiresAt = expiryDateToIso(normalizeDateKey(input.expiresAt), timing.timezone);
+  const { error } = await supabase.from("content_items").insert({
+    id: randomUUID(),
+    church_id: input.churchId,
+    author_membership_id: membership.id,
+    type: "prayer_request",
+    status: "published",
+    visibility: "church",
+    requested_visibility: "church",
+    title: { [input.locale]: title },
+    body: { [input.locale]: body },
+    anonymous: false,
+    includes_third_party: false,
+    expires_at: expiresAt,
+    prayer_outcome: "open",
+    published_at: new Date().toISOString(),
+    metadata: { church_official: true },
+  });
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/${input.locale}/church/${input.churchSlug}/prayers`);
+  revalidatePath(`/${input.locale}/admin/${input.churchSlug}/prayer-requests`);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 async function notifyPastorConsultRequested(input: {
   churchId: string;
   churchSlug: string;

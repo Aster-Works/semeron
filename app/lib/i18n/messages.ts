@@ -227,6 +227,23 @@ export const messages = {
   "prayer.answeredSave": { ja: "報告する", en: "Share report" },
   "prayer.reopen": { ja: "祈り続けるに戻す", en: "Reopen (keep praying)" },
   "prayer.testimonyThanks": { ja: "お祈りありがとうございました。", en: "Thank you for praying." },
+  "prayer.churchSection": { ja: "教会の祈り", en: "Church prayers" },
+  "prayer.churchBadge": { ja: "教会", en: "Church" },
+  "churchPrayer.formTitle": { ja: "教会の祈祷課題を投稿", en: "Post a church prayer request" },
+  "churchPrayer.formNote": {
+    ja: "教会名義で即時公開されます。会員の個人課題とは別枠（教会の祈り）に表示されます。",
+    en: "Published immediately in the church's name, shown in its own “Church prayers” section.",
+  },
+  "churchPrayer.titleLabel": { ja: "タイトル", en: "Title" },
+  "churchPrayer.titlePlaceholder": {
+    ja: "例：特別伝道礼拝のために",
+    en: "e.g. For the special outreach service",
+  },
+  "churchPrayer.bodyLabel": { ja: "祈りの課題", en: "Prayer request" },
+  "churchPrayer.expiresLabel": { ja: "表示期限（任意）", en: "Shown until (optional)" },
+  "churchPrayer.submit": { ja: "公開する", en: "Publish" },
+  "churchPrayer.success": { ja: "公開しました。", en: "Published." },
+  "churchPrayer.error": { ja: "公開できませんでした。", en: "Could not publish." },
   "reflection.edited": { ja: "編集済み", en: "edited" },
   "reflection.edit": { ja: "編集する", en: "Edit" },
 

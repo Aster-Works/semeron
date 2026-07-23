@@ -16,8 +16,10 @@ import type {
   Viewer,
 } from "@/app/lib/demo/types";
 import { toDateKey } from "@/app/lib/demo/selectors";
+import { localize } from "@/app/lib/i18n";
 import { startOfDayIso } from "@/app/lib/db/action-helpers";
 import { selectTodayPrayers } from "@/app/lib/prayers/today";
+import { notExpiredOr } from "@/app/lib/prayers/feedFilters";
 import { mapAuditLog, mapContent, mapGroup, mapMembership, mapNotification } from "./map";
 
 type ContentFeedRow = Tables<"content_feed">;
@@ -50,14 +52,7 @@ const DEVOTION_LIST_COLUMNS =
   "scripture_reference, requested_visibility, anonymous, includes_third_party, sensitive_flags, " +
   "prayer_outcome, scheduled_at, published_at, expires_at, devotion_date, created_at, updated_at";
 
-/**
- * 祈祷フィードで「表示期限を過ぎていない」行だけに絞る PostgREST 条件。
- * 期限なし / 期限が未来 / 既に答えられた(証しは残す) の3条件のいずれか。
- * ※期限切れの open な課題がフィードに残り続けるバグの修正。
- */
-function notExpiredOr(nowIso: string): string {
-  return `expires_at.is.null,expires_at.gt.${nowIso},prayer_outcome.in.(answered,thanksgiving)`;
-}
+// 表示期限フィルタは app/lib/prayers/feedFilters.ts（純粋関数・単体テスト対象）。
 const REFLECTION_REACTIONS: ReactionType[] = ["amen", "thanks"];
 
 export interface PrayerVM {
@@ -144,9 +139,12 @@ async function attachPrayerVMs(
   return rows.map((r) => {
     const id = r.id ?? "";
     const item = mapContent(r);
-    const authorName = r.author_membership_id
-      ? (nameById.get(r.author_membership_id) ?? anonName(locale))
-      : anonName(locale);
+    // 教会公式の課題は個人名でなく教会名義で表示する。
+    const authorName = item.churchOfficial
+      ? localize(viewer.church.name, locale, viewer.church.defaultLocale)
+      : r.author_membership_id
+        ? (nameById.get(r.author_membership_id) ?? anonName(locale))
+        : anonName(locale);
     const active = viewerReactions.get(id);
     const prayedToday = prayedTodayIds.has(id);
     const reactions = PRAYER_REACTIONS.map((type) => ({
