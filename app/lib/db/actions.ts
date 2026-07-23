@@ -8,10 +8,14 @@ import {
   expiryDateToIso,
   getChurchTiming,
   isChurchAdminRole,
+  MAX_BODY_LEN,
+  MAX_TITLE_LEN,
   myMembership,
   myMembershipId,
   normalizeDateKey,
+  RATE_LIMITED_MESSAGE,
   scheduleDateToIso,
+  tooManyRecentPosts,
   type ActionResult,
 } from "@/app/lib/db/action-helpers";
 import {
@@ -286,6 +290,13 @@ export async function postReflection(
   const membershipId = await myMembershipId(supabase, churchId);
   if (!membershipId) return { ok: false, error: "not a member" };
 
+  const reflectionBody = body.trim();
+  if (!reflectionBody) return { ok: false, error: "empty" };
+  if (reflectionBody.length > MAX_BODY_LEN) return { ok: false, error: "too_long" };
+  if (await tooManyRecentPosts(supabase, churchId, membershipId)) {
+    return { ok: false, error: RATE_LIMITED_MESSAGE };
+  }
+
   const { data: devotion } = await supabase
     .from("content_feed")
     .select("id, devotion_date")
@@ -304,7 +315,7 @@ export async function postReflection(
     visibility: "church",
     anonymous: true,
     title: {},
-    body: { [locale]: body },
+    body: { [locale]: reflectionBody },
     metadata: {
       devotion_content_id: devotion.id,
       devotion_date: devotion.devotion_date,
@@ -330,6 +341,7 @@ export async function updateReflection(input: {
 }): Promise<ActionResult> {
   const body = input.body.trim();
   if (!body) return { ok: false, error: "empty" };
+  if (body.length > MAX_BODY_LEN) return { ok: false, error: "too_long" };
   const supabase = await createServerSupabase();
   const membershipId = await myMembershipId(supabase, input.churchId);
   if (!membershipId) return { ok: false, error: "not a member" };
@@ -383,6 +395,18 @@ export async function submitPrayerRequest(input: {
   const membershipId = await myMembershipId(supabase, input.churchId);
   if (!membershipId) return { ok: false, error: "not a member" };
 
+  // サーバー側の入力検証（フロントを信用しない）。空・過大は拒否。
+  const title = input.title.trim();
+  const body = input.body.trim();
+  if (!title || !body) return { ok: false, error: "empty" };
+  if (title.length > MAX_TITLE_LEN || body.length > MAX_BODY_LEN) {
+    return { ok: false, error: "too_long" };
+  }
+  // レート制限（連投による濫用を止める）。
+  if (await tooManyRecentPosts(supabase, input.churchId, membershipId)) {
+    return { ok: false, error: RATE_LIMITED_MESSAGE };
+  }
+
   let groupId: string | null = null;
   if (input.visibility === "group") {
     if (!input.groupId) return { ok: false, error: "group required" };
@@ -412,8 +436,8 @@ export async function submitPrayerRequest(input: {
     status: "pending_review",
     visibility: input.visibility,
     requested_visibility: input.visibility,
-    title: { [input.locale]: input.title },
-    body: { [input.locale]: input.body },
+    title: { [input.locale]: title },
+    body: { [input.locale]: body },
     anonymous,
     includes_third_party: input.includesThirdParty,
     expires_at: expiresAt,
@@ -514,6 +538,9 @@ export async function updatePrayerRequest(input: {
   const title = input.title.trim();
   const body = input.body.trim();
   if (!title || !body) return { ok: false, error: "empty" };
+  if (title.length > MAX_TITLE_LEN || body.length > MAX_BODY_LEN) {
+    return { ok: false, error: "too_long" };
+  }
   const supabase = await createServerSupabase();
   const membershipId = await myMembershipId(supabase, input.churchId);
   if (!membershipId) return { ok: false, error: "not a member" };

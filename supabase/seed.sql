@@ -120,11 +120,11 @@ values
   -- 公開（church）
   ('e1000000-0000-0000-0000-000000000011','11111111-1111-1111-1111-111111111111',null,'c1000000-0000-0000-0000-0000000000e7',
    'prayer_request','published','church','{"ja":"転職の決断のために"}','{"ja":"今月、転職を決めます。落ち着いて判断できるように。"}',
-   null,null,null,null,null,'church',false,false,'{}','open','2026-06-25T21:00:00+09:00','2026-07-15',null),
+   null,null,null,null,null,'church',false,false,'{}','open','2026-06-25T21:00:00+09:00',current_date + interval '21 days',null),
   -- 匿名で教会全体（author=aoi、一般会員には作者を隠す）
   ('e1000000-0000-0000-0000-000000000012','11111111-1111-1111-1111-111111111111',null,'c1000000-0000-0000-0000-0000000000e5',
    'prayer_request','published','anonymous_church','{"ja":"信仰が弱っているとき"}','{"ja":"また主に近づけるように祈ってください。"}',
-   null,null,null,null,null,'anonymous_church',true,false,'{faith_struggle}','open','2026-06-25T21:00:00+09:00','2026-07-15',null),
+   null,null,null,null,null,'anonymous_church',true,false,'{faith_struggle}','open','2026-06-25T21:00:00+09:00',current_date + interval '21 days',null),
   -- 祈祷チームのみ
   ('e1000000-0000-0000-0000-000000000013','11111111-1111-1111-1111-111111111111',null,'c1000000-0000-0000-0000-0000000000e2',
    'prayer_request','published','prayer_team','{"ja":"ある家庭のために"}','{"ja":"和解と平安のために、祈祷チームだけで覚えてください。"}',

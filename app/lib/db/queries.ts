@@ -37,6 +37,19 @@ type GroupMembershipWithMember = {
 const isString = (value: unknown): value is string => typeof value === "string" && value.length > 0;
 const PRAYER_REACTIONS: ReactionType[] = ["prayed"];
 
+// 一覧クエリの取得上限。正常な教会活動（数百件）は妨げないが、テーブルが
+// 数千件に育っても1回の転送量とレンダーコストを一定に抑える。
+// ponytail: まずは上限で防御。件数が上限に張り付く教会が出たらカーソルページング。
+const LIST_CAP = 200;
+
+// デボーション一覧（管理）は body/prayer_guide 等の長文（説教本文=数KB）を表示しない。
+// 一覧では軽量列のみ射影して Egress を削る（詳細編集ページは別途 getDevotion が全列取得）。
+// mapContent の loc()/metadata() は欠損列を空扱いにするため安全。
+const DEVOTION_LIST_COLUMNS =
+  "id, church_id, group_id, author_membership_id, type, status, visibility, title, " +
+  "scripture_reference, requested_visibility, anonymous, includes_third_party, sensitive_flags, " +
+  "prayer_outcome, scheduled_at, published_at, expires_at, devotion_date, created_at, updated_at";
+
 /**
  * 祈祷フィードで「表示期限を過ぎていない」行だけに絞る PostgREST 条件。
  * 期限なし / 期限が未来 / 既に答えられた(証しは残す) の3条件のいずれか。
@@ -203,7 +216,8 @@ export async function getPrayerFeed(
     .eq("type", "prayer_request")
     .eq("status", "published")
     .or(notExpiredOr(new Date().toISOString()))
-    .order("published_at", { ascending: false });
+    .order("published_at", { ascending: false })
+    .limit(LIST_CAP);
   const rows = ((data ?? []) as ContentFeedRow[]).filter((row) => canIncludeGroupScopedRow(row, viewer));
   return attachPrayerVMs(supabase, rows, viewer, locale);
 }
@@ -231,7 +245,8 @@ export async function getMyPrayerRequests(
     .eq("church_id", viewer.church.id)
     .eq("type", "prayer_request")
     .eq("author_membership_id", viewer.membership.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(LIST_CAP);
   return attachPrayerVMs(supabase, (data ?? []) as ContentFeedRow[], viewer, locale);
 }
 
@@ -330,7 +345,8 @@ export async function getGroupPrayers(
     .eq("status", "published")
     .eq("group_id", groupId)
     .or(notExpiredOr(new Date().toISOString()))
-    .order("published_at", { ascending: false });
+    .order("published_at", { ascending: false })
+    .limit(LIST_CAP);
   const rows = ((data ?? []) as ContentFeedRow[]).filter((row) => canIncludeGroupScopedRow(row, viewer));
   return attachPrayerVMs(supabase, rows, viewer, locale);
 }
@@ -350,7 +366,8 @@ export async function getInbox(supabase: SupabaseClient, viewer: Viewer): Promis
     .is("archived_at", null)
     .eq("muted_by_recipient", false)
     .or(`read.eq.false,created_at.gte.${todayStart}`)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(LIST_CAP);
   return (data ?? []).map(mapNotification);
 }
 export async function getUnreadInboxCount(supabase: SupabaseClient, viewer: Viewer): Promise<number> {
@@ -380,7 +397,8 @@ export async function getModerationQueue(
     .eq("church_id", viewer.church.id)
     .eq("type", "prayer_request")
     .eq("status", "pending_review")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(LIST_CAP);
   return attachAuthorNames(supabase, (data ?? []) as ContentFeedRow[], locale);
 }
 
@@ -401,7 +419,8 @@ export async function getReviewRequestedPrayers(
     .eq("type", "prayer_request")
     .eq("status", "published")
     .eq("metadata->>admin_review_requested", "true")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(LIST_CAP);
   return attachAuthorNames(supabase, (data ?? []) as ContentFeedRow[], locale);
 }
 
@@ -431,11 +450,14 @@ async function attachAuthorNames(
 export async function getAllDevotions(supabase: SupabaseClient, churchId: string): Promise<ContentItem[]> {
   const { data } = await supabase
     .from("content_feed")
-    .select("*")
+    .select(DEVOTION_LIST_COLUMNS) // 一覧は軽量列のみ（本文・祈りガイド等の長文を除外）
     .eq("church_id", churchId)
     .eq("type", "devotion")
-    .order("devotion_date", { ascending: false });
-  return ((data ?? []) as ContentFeedRow[]).map(mapContent);
+    .order("devotion_date", { ascending: false })
+    .limit(LIST_CAP);
+  // 動的 select 文字列は型推論が効かない（GenericStringError）。射影列は
+  // ContentFeedRow の部分集合で、mapContent は欠損列を空扱いにするため unknown 経由で扱う。
+  return ((data ?? []) as unknown as ContentFeedRow[]).map(mapContent);
 }
 export async function getDevotion(supabase: SupabaseClient, id: string): Promise<ContentItem | null> {
   const { data } = await supabase.from("content_feed").select("*").eq("id", id).eq("type", "devotion").maybeSingle();
@@ -470,7 +492,8 @@ export async function getMembers(supabase: SupabaseClient, churchId: string): Pr
     .from("memberships")
     .select("*, membership_roles(role), group_memberships(group_id)")
     .eq("church_id", churchId)
-    .order("joined_at", { ascending: true });
+    .order("joined_at", { ascending: true })
+    .limit(2000); // メンバー一覧は教会規模で有界だが、暴走防止に上限を置く
   return ((data ?? []) as MembershipWithJoins[]).map((m) =>
     mapMembership(
       m,

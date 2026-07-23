@@ -3,6 +3,49 @@
 対象リポ: /Users/james/syncthing/semeron
 セッション開始: 2026-07-04 00:33 JST / 担当: Codex
 
+## 現在のチェックポイント — セキュリティ監査 Phase 0-3 実装（2026-07-24）
+
+### 今回の依頼
+- セキュリティ・Egress監査（タスク#6-9で完了）の実装計画を実行する。
+- Phase 0-3（migration / 一覧LIMIT / CSP / レート制限 / HIBP）→ docs/security 8文書＋バックアップスクリプト → 検証・デプロイ・最終報告。
+
+### 完了した作業（ローカル検証まで）
+- migration `20260709090000_security_egress_hardening.sql`（新規・本番未適用）:
+  anon からの content_feed / owns_content / prayer_logs 権限剥奪ほか。
+- `app/lib/db/queries.ts`: 一覧系クエリに LIMIT 上限（LIST_CAP）。デボーション一覧は軽量列のみ射影（Egress削減）。
+- `next.config.ts`: CSP 追加。本番= `script-src 'self' 'unsafe-inline'`（unsafe-evalなし）、
+  開発のみ unsafe-eval とローカルSupabase(127.0.0.1:*)への connect-src を許可する NODE_ENV 分岐。
+- レート制限＋入力検証（`app/lib/db/action-helpers.ts` + `actions.ts`）:
+  60秒12件（content_feed カウント・DBベースでサーバーレス安全）、タイトル200字/本文8000字、
+  対象= submitPrayerRequest / postReflection / updatePrayerRequest / updateReflection。
+- pgTAP新規 `supabase/tests/security_hardening.test.sql`（8件）: prayer_logs本人限定・越境拒否・
+  他人membership_idでの書込拒否・anon権限剥奪の回帰。
+- **シードの日付腐敗を根治**: seed.sql の有効期限付き祈祷課題2件（e1…0011/0012）の expires_at を
+  固定日付 '2026-07-15' → `current_date + interval '21 days'` に変更。
+  （固定日付が過去化し rls_content_visibility テスト15と新テスト2件が偽失敗していた）
+
+### 検証結果（すべてローカル）
+- `npm run db:reset` PASS（migration 3本適用: strip_review_request_identities / prayer_logs / security_egress_hardening）
+- `npm run db:test` PASS（7 files / **125 tests** 全緑・新規8件含む）
+- `npm run typecheck` / `npm run lint` / `npm test`（17 files / 73 tests）PASS
+- ブラウザE2E（dev:3070）: ログイン（aoi@eifuku.example）→ 祈祷課題ページ表示 → 新規投稿
+  「セキュリティ検証テスト」送信 → DBに `pending_review` で保存確認。CSP違反コンソール0件。
+- 開発CSPヘッダを curl で実測（unsafe-eval と 127.0.0.1 connect-src が dev のみ入ることを確認）。
+
+### 確定した方針
+- HIBP（漏洩パスワード保護）は Supabase **Proプラン限定**のためFreeでは有効化不可。
+  docs/security とレポートに「Pro化時に有効化」として記録する（実装対象から除外）。
+- node_modules がディスク満杯事故で破損していた → `npm ci` で復旧済み（再発時も同じ）。
+
+### 未完了
+- docs/security 8文書＋バックアップスクリプト（次工程）
+- `npm run build`、本番migration適用（supabase db push）、git commit/push（自動デプロイ）、
+  本番ヘッダ・advisors確認、§22形式の最終報告
+
+### 変更してはいけない確定事項
+- 匿名の不変条件（作者列revoke・feed_author経由・通知逆引き封じ）
+- 「祈りました」は取り消し不可・reactions と prayer_logs の分離
+
 ## 現在のチェックポイント — Todayからのタブ遷移がスケルトンで止まる不具合（2026-07-06）
 
 ### 今回の依頼
