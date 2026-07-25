@@ -116,14 +116,15 @@ export function MyPrayerActions({
 
   return (
     <>
-      <div className="flex items-center gap-4 pt-1">
+      {/* min-h-11 = タップ領域44px（文字サイズは据え置き）。監査 2026-07-26 */}
+      <div className="flex items-center gap-4">
         <button
           type="button"
           onClick={() => {
             setError(null);
             setEditOpen(true);
           }}
-          className="inline-flex items-center gap-1 text-xs font-medium text-muted transition-colors hover:text-ink"
+          className="inline-flex min-h-11 items-center gap-1 text-xs font-medium text-muted transition-colors hover:text-ink"
         >
           <PencilLine className="h-3.5 w-3.5" aria-hidden />
           {t("prayer.edit")}
@@ -134,7 +135,7 @@ export function MyPrayerActions({
             setError(null);
             setWithdrawOpen(true);
           }}
-          className="inline-flex items-center gap-1 text-xs font-medium text-muted transition-colors hover:text-rose-ink"
+          className="inline-flex min-h-11 items-center gap-1 text-xs font-medium text-muted transition-colors hover:text-rose-ink"
         >
           <Trash2 className="h-3.5 w-3.5" aria-hidden />
           {t("prayer.withdraw")}
@@ -146,7 +147,7 @@ export function MyPrayerActions({
               setError(null);
               setAnswerOpen(true);
             }}
-            className="inline-flex items-center gap-1 text-xs font-medium text-sage-ink transition-colors hover:text-sage-strong"
+            className="inline-flex min-h-11 items-center gap-1 text-xs font-medium text-sage-ink transition-colors hover:text-sage-strong"
           >
             <Sparkles className="h-3.5 w-3.5" aria-hidden />
             {isAnswered ? t("prayer.editAnswered") : t("prayer.markAnswered")}

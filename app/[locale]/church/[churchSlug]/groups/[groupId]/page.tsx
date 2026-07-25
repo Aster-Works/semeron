@@ -35,7 +35,7 @@ export default async function GroupDetailPage({
       <div className="space-y-6">
         <Link
           href={`/${locale}/church/${church.slug}/groups`}
-          className="inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-ink"
+          className="inline-flex min-h-11 items-center gap-1 text-sm text-muted transition-colors hover:text-ink"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           {t("groups.title")}

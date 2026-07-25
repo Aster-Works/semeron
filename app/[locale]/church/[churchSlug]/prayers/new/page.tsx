@@ -22,7 +22,7 @@ export default async function NewPrayerPage({
       <div className="space-y-4">
         <Link
           href={`/${locale}/church/${church.slug}/prayers`}
-          className="inline-flex items-center gap-1 text-sm text-muted hover:text-ink"
+          className="inline-flex min-h-11 items-center gap-1 text-sm text-muted hover:text-ink"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           {t("prayer.feedTitle")}

@@ -43,13 +43,13 @@ export default async function LoginPage({
       </header>
 
       <main id="main" className="mx-auto w-full max-w-5xl px-4 pb-16 pt-4 lg:pt-12">
-        <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-16">
-          {/* ヒーロー（何のアプリかを一文で） */}
-          <section className="space-y-4 lg:col-start-1 lg:row-start-1">
+        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-16">
+          {/* ヒーロー（何のアプリかを一文で）。モバイルは text-xl で1段控えめに。 */}
+          <section className="space-y-3 lg:space-y-4 lg:col-start-1 lg:row-start-1">
             <p className="text-xs font-medium uppercase tracking-wide text-sage-ink">
               {t("login.lp.eyebrow")}
             </p>
-            <h1 className="text-2xl font-semibold leading-snug text-ink text-balance-safe sm:text-3xl lg:text-4xl">
+            <h1 className="text-xl font-semibold leading-snug text-ink text-balance-safe sm:text-3xl lg:text-4xl">
               {t("app.tagline")}
             </h1>
             <p className="max-w-xl text-sm leading-relaxed text-ink-soft text-balance-safe sm:text-base">
@@ -63,7 +63,10 @@ export default async function LoginPage({
             <LoginForm locale={locale} nextPath={nextPath} />
             <p className="mt-5 text-center text-sm text-muted">
               {locale === "ja" ? "教会がまだありませんか？ " : "No church yet? "}
-              <a href={`/${locale}/onboarding`} className="font-medium text-sage-ink hover:underline">
+              <a
+                href={`/${locale}/onboarding`}
+                className="inline-flex min-h-11 items-center font-medium text-sage-ink hover:underline"
+              >
                 {locale === "ja" ? "教会を作る / 参加する" : "Create or join a church"}
               </a>
             </p>

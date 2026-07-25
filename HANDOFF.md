@@ -3,6 +3,45 @@
 対象リポ: /Users/james/syncthing/semeron
 セッション開始: 2026-07-04 00:33 JST / 担当: Codex
 
+## 現在のチェックポイント — UI/UX全体精査（2026-07-26 進行中）
+
+### 依頼
+- ui-ux-pro-max スキルでUI/UX全体精査。Jimiの体感=「モバイルで大きすぎるボタン・文字がある」。
+
+### ここまでの確認（コード監査・確定事実）
+- ボタン: 全サイズ h-11(44px)〜h-12（buttonStyles.ts）＝タッチ最小基準どおり。過大ではない。
+- ログインヒーロー: モバイル text-2xl(24px)→sm:3xl→lg:4xl の段階制。仕様上は適正。
+- 下部ナビ: min-h 56px・ラベル11px・アイコン20px＝標準。
+- SectionHeading: text-lg(18px)。Today見出し: text-xl(20px)。リアクションピル: min-h-11。
+- CardBody: p-5 sm:p-6（モバイル20px）。祈祷フォームの公開範囲カード: p-3・アイコンh-9。
+- 唯一sm:なしの text-2xl 系: login hero(適正)・ui/Stat(管理用24px)・admin notifications/page.tsx:65・admin page.tsx:280。
+
+### インフラ障害（記録）
+- ローカルSupabaseのGoTrueが「health 200なのにtoken発行ハング」状態に。Colima再起動→スタック再起動でも
+  断続的に再発。VM(Virtualization.framework)がCPU 275%＝複数プロジェクトのスタック同時再初期化が原因とみられ、
+  負荷収束待ち。監査スクリプト（scratchpad/ui-audit.mjs・375x812・スクショ+実測JSON）はGoTrue復旧後に
+  自動実行されるバックグラウンドジョブ投入済み。本番ビルドサーバー :3071 稼働中（devコンパイル不安定の回避）。
+- 教訓: ローカルprod実行(next start)では本番CSPが127.0.0.1へのconnectを遮断→Googleボタン非表示は正常挙動。
+
+### 視覚監査 完了（2026-07-26）
+- 375x812・実ログインで会員6画面＋管理3画面を取得・実測（admin-prayersのみタイムアウト未取得）。
+  スクショ+metrics.json: scratchpad/ui-audit/。
+- **大きすぎ（Jimiの体感の正体）**: ①祈祷課題フォームの公開範囲カード6枚が各62-65px×フル幅
+  （PrayerRequestForm.tsx:176、モバイル1列で計400px超のボタン壁） ②ログインヒーロー24px+広い縦リズム。
+- **小さすぎ（タップ44px基準違反・逆方向の実問題]**: ①MyPrayerActions.tsx:126,137,149=編集する/取り下げる/
+  祈りが答えられた（タップ高16px） ②LoginForm.tsx:149 ログイン/新規登録タブ(32px)・forgot link(15px)
+  ③InboxList.tsx:107 フィルタチップ(30px) ④me画面の28pxアイコンボタン ⑤AdminNav(36px・デスクトップ主용途で低優先)。
+- 適正確認済み: 下部ナビ56px・主要ボタン44px・本文16px・見出し18-24px・管理ダッシュボードのモバイル表示。
+- 修正はJimi承認待ち。
+
+### インフラ顛末（追記）
+- 根因: semeronのローカルDBボリューム破損（GoTrue/RESTが起動直後だけ動き数分でハング、
+  `supabase start`はpg_meta/studioのヘルス待ちに失敗して**スタック全体を破棄**→コンテナ消失の連鎖）。
+- 解決: `supabase stop --no-backup`でボリューム破棄 → `supabase start -x studio -x postgres-meta -x mailpit`
+  （除外起動でヘルス待ち回避）→ `db:reset`でseed再投入 → GoTrue 5連続200で安定。
+- 恒久メモ: ローカルprod検証は `next start -p 3071`（devコンパイル不安定の回避）。Supabaseコンテナ再作成後は
+  next サーバーも再起動（死んだ接続プール）。
+
 ## 現在のチェックポイント — 証しの1日表示＋教会公式の祈祷課題（2026-07-24 出荷）
 
 ### 今回の依頼

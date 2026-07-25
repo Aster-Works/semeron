@@ -52,7 +52,7 @@ export function DisplayNameEditor({
           type="button"
           onClick={() => { setName(initialName); setEditing(true); }}
           aria-label={ja ? "表示名を編集" : "Edit display name"}
-          className="rounded-lg p-1.5 text-muted hover:bg-mist hover:text-ink"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-muted hover:bg-mist hover:text-ink"
         >
           <PencilLine className="h-4 w-4" aria-hidden />
         </button>

@@ -161,9 +161,9 @@ export function PrayerRequestForm({
             />
           </Field>
 
-          {/* 公開範囲: 誤タップしにくい大きなカード。必須。 */}
+          {/* 公開範囲: 誤タップしにくいカード。必須。モバイルも2列でボタンの壁を防ぐ。 */}
           <Field label={t("prayerForm.visibilityLabel")} required>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-2">
               {visibilityOptions.map(({ key, icon: Icon }) => {
                 const selected = visibility === key;
                 return (
@@ -173,7 +173,7 @@ export function PrayerRequestForm({
                     onClick={() => setVisibility(key)}
                     aria-pressed={selected}
                     className={cn(
-                      "flex items-center gap-3 rounded-xl border p-3 text-left transition-colors",
+                      "flex min-h-11 items-center gap-2.5 rounded-xl border p-2.5 text-left transition-colors",
                       selected
                         ? "border-sage bg-sage-soft ring-2 ring-sage/30"
                         : "border-line-strong bg-surface hover:bg-mist",
@@ -181,7 +181,7 @@ export function PrayerRequestForm({
                   >
                     <span
                       className={cn(
-                        "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                        "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
                         selected ? "bg-surface text-sage-ink" : "bg-mist text-muted",
                       )}
                     >

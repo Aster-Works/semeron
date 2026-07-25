@@ -22,7 +22,7 @@ export default async function ImportPrayersPage({
       <div className="space-y-5">
         <Link
           href={`/${locale}/admin/${church.slug}/prayer-requests`}
-          className="inline-flex items-center gap-1 text-sm text-muted hover:text-ink"
+          className="inline-flex min-h-11 items-center gap-1 text-sm text-muted hover:text-ink"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           {t("moderation.title")}

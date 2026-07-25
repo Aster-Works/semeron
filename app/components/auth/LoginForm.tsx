@@ -146,7 +146,8 @@ export function LoginForm({ locale, nextPath = `/${locale}` }: { locale: Locale;
               type="button"
               onClick={() => { setMode(m); setError(null); }}
               className={cn(
-                "rounded-full px-3 py-1.5 font-medium transition-colors",
+                // min-h-11 = タップ領域44px（セグメントコントロール標準の高さ）
+                "min-h-11 rounded-full px-4 font-medium transition-colors",
                 mode === m ? "bg-ink text-paper" : "text-muted hover:text-ink",
               )}
             >
@@ -195,7 +196,7 @@ export function LoginForm({ locale, nextPath = `/${locale}` }: { locale: Locale;
             <p className="text-right text-xs">
               <Link
                 href={`/${locale}/forgot-password`}
-                className="text-muted hover:text-ink hover:underline"
+                className="inline-flex min-h-11 items-center text-muted hover:text-ink hover:underline"
               >
                 {ja ? "パスワードをお忘れですか？" : "Forgot your password?"}
               </Link>

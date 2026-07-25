@@ -103,9 +103,10 @@ export function InboxList({
               type="button"
               onClick={() => setFilter(value)}
               className={
+                // min-h-11 = タップ領域44px（文字サイズ・見た目の丸みは据え置き）
                 filter === value
-                  ? "rounded-full border border-sage/40 bg-sage-soft px-3 py-1.5 text-xs font-medium text-sage-ink"
-                  : "rounded-full border border-line-strong bg-surface px-3 py-1.5 text-xs font-medium text-muted hover:text-ink"
+                  ? "min-h-11 rounded-full border border-sage/40 bg-sage-soft px-3.5 text-xs font-medium text-sage-ink"
+                  : "min-h-11 rounded-full border border-line-strong bg-surface px-3.5 text-xs font-medium text-muted hover:text-ink"
               }
             >
               {t(`inbox.filter.${value}` as never)}
@@ -190,7 +191,7 @@ export function InboxList({
                   type="button"
                   onClick={() => muteOne(n.id)}
                   disabled={pending}
-                  className="rounded-lg p-2 text-muted hover:bg-mist hover:text-ink disabled:opacity-50"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-mist hover:text-ink disabled:opacity-50"
                   aria-label={t("inbox.mute")}
                   title={t("inbox.mute")}
                 >
