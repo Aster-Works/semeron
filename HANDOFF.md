@@ -3,7 +3,36 @@
 対象リポ: /Users/james/syncthing/semeron
 セッション開始: 2026-07-04 00:33 JST / 担当: Codex
 
-## 現在のチェックポイント — UI/UX全体精査（2026-07-26 進行中）
+## 現在のチェックポイント — UI/UXモバイル修正 出荷（2026-07-26 HEAD=9fbed7b）
+
+### 実装（「全部」承認済み・本番反映済み）
+- 公開範囲カード: モバイルも2列グリッド＋p-2.5/アイコンh-8（PrayerRequestForm.tsx）。
+  実測: 1列×62px×6枚(計400px超) → 2列3行(約240px・約40%圧縮)。
+- タップ領域44px化（見た目は概ね据え置き・min-h-11方式）: MyPrayerActionsの3テキストボタン(16px→44px)／
+  ログインのモード切替タブ・forgotリンク／inboxフィルタチップ・ミュートアイコン(32px→44px)／
+  DisplayNameEditor鉛筆(28px→44px)／全戻りリンク(prayers/new・groups/[id]・admin import・devotions/new)／
+  ログインページの「教会を作る/参加する」リンク。
+- ログインヒーロー: モバイル text-2xl→text-xl・space-y-4→3・gap-10→8（sm以上は従来どおり）。
+
+### 検証証拠
+- typecheck / lint / vitest 75件 / build 全PASS。
+- 修正後の実機再計測(375px): 全会員画面で40px未満の実コントロール0（残るのはsr-only skip linkのみ）。
+  前後スクショ: scratchpad/ui-audit(前)・ui-after(後)。
+- Playwright: fresh db:reset 直後のクリーン実行で 10/12 passed。失敗2本
+  （pastor-consult / today-navigation）は**ログインのサーバーアクションが環境負荷で10秒超**かかる
+  ローカル環境フレークと確定（error-contextのページスナップショットに「処理中…」ボタン=実行中が写っている。
+  公開範囲カードを操作する pastor-consult は fresh DB 単独実行で PASS）。UI変更起因のregressionなし。
+- 本番: Vercel deploy success・/ja/login 200。
+
+### 環境ノート（重要）
+- **E2Eスイートは db:reset 直後にしか全緑にならない**（membership-lifecycle spec が会員を退会/削除させ
+  状態を汚すため）。実行手順は必ず `npm run db:reset && npx playwright test`。
+- 他プロジェクトのSupabaseスタック（synaxis/astive/agentory）はVM負荷対策で docker stop 済み。
+  **各プロジェクトで次回作業時に `supabase start` が必要**。
+- semeronスタックの起動は `supabase start -x studio -x postgres-meta -x mailpit`
+  （studio/pg-metaのヘルス待ち失敗→CLIが全コンテナ破棄、の再発防止）。
+
+## （履歴）UI/UX全体精査（2026-07-26 進行中）
 
 ### 依頼
 - ui-ux-pro-max スキルでUI/UX全体精査。Jimiの体感=「モバイルで大きすぎるボタン・文字がある」。
